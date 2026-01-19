@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
@@ -163,10 +164,11 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
                   // Use mock data if no real fees exist (for preview)
                   final displayFees = fees.isEmpty ? _mockFees : fees;
 
-                  // Filter pending/overdue fees for selection
+                  // Filter pending/overdue fees for selection (exclude zero amounts)
                   final pendingFees = displayFees
                       .where((f) =>
-                          f.status == FeeStatus.pending || f.status == FeeStatus.overdue)
+                          (f.status == FeeStatus.pending || f.status == FeeStatus.overdue) &&
+                          f.balanceAmount > 0)
                       .toList();
 
                   if (pendingFees.isEmpty) {
@@ -516,6 +518,29 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
 
   Widget _buildFeeItem(FeeModel fee) {
     final isSelected = ref.watch(cartProvider).containsFee(fee.id);
+
+    // Determine subtitle based on fee type
+    final isVanFee = fee.feeTypeName.toUpperCase().contains('VAN');
+    String subtitle;
+
+    if (isVanFee) {
+      // For VAN FEES, show month from due date
+      final month = fee.duedate != null
+          ? DateFormat('MMMM yyyy').format(fee.duedate!)
+          : fee.demfeeterm;
+      final dueDate = fee.duedate != null
+          ? DateFormat('dd MMM').format(fee.duedate!)
+          : '';
+      subtitle = dueDate.isNotEmpty ? '$month • Due: $dueDate' : month;
+    } else {
+      // For other fees, show term and due date
+      final dueDate = fee.duedate != null
+          ? DateFormat('dd MMM yyyy').format(fee.duedate!)
+          : '';
+      subtitle = dueDate.isNotEmpty
+          ? '${fee.demfeeterm} • Due: $dueDate'
+          : fee.demfeeterm;
+    }
 
     return GestureDetector(
       onTap: () {

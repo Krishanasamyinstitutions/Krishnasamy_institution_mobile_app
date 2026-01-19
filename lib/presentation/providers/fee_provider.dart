@@ -56,12 +56,12 @@ final feesByStudentIdProvider = FutureProvider.family<List<FeeModel>, int>((ref,
   }
 });
 
-/// Fetch pending (unpaid) fees for selected student
+/// Fetch pending (unpaid) fees for selected student (excludes zero balance)
 final pendingFeesProvider = Provider<List<FeeModel>>((ref) {
   final feesAsync = ref.watch(feesProvider);
   return feesAsync.maybeWhen(
     data: (fees) => fees
-        .where((f) => f.paidstatus == 'U')
+        .where((f) => f.paidstatus == 'U' && f.balancedue > 0)
         .toList(),
     orElse: () => [],
   );
