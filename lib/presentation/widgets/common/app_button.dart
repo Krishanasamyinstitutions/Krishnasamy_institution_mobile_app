@@ -72,7 +72,7 @@ class AppButton extends StatelessWidget {
             backgroundColor: backgroundColor ?? AppColors.primary,
             disabledBackgroundColor: AppColors.gray300,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSizes.roundedLg),
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
           child: _buildContent(textColor ?? Colors.white),
@@ -87,7 +87,7 @@ class AppButton extends StatelessWidget {
                   : (backgroundColor ?? AppColors.primary),
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSizes.roundedLg),
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
           child: _buildContent(textColor ?? AppColors.primary),

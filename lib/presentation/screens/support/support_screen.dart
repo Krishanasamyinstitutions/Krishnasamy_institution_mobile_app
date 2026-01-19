@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 
@@ -43,19 +44,25 @@ class _SupportScreenState extends State<SupportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgSecondary,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            // Header (Fixed)
-            _buildHeader(context),
-            const SizedBox(height: 24),
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: Column(
+        children: [
+          // Header with SafeArea
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                _buildHeader(context),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
             // Scrollable Content
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -98,19 +105,18 @@ class _SupportScreenState extends State<SupportScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Back Button
           GestureDetector(
-            onTap: () => context.pop(),
+            onTap: () => context.go(Routes.home),
             child: Container(
               width: 44,
               height: 44,
@@ -119,21 +125,18 @@ class _SupportScreenState extends State<SupportScreen> {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF808087).withValues(alpha: 0.1),
-                    blurRadius: 40,
-                    offset: const Offset(0, 5),
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                    blurRadius: 1,
-                    offset: Offset.zero,
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.arrow_back,
-                size: 24,
-                color: Color(0xFF1F2933),
+              child: const Center(
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 18,
+                  color: Color(0xFF1F2933),
+                ),
               ),
             ),
           ),
@@ -142,9 +145,9 @@ class _SupportScreenState extends State<SupportScreen> {
           const Text(
             'Help & Support',
             style: TextStyle(
-              fontSize: AppSizes.sectionTitle,
-              fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1F2933),
             ),
           ),
 
@@ -164,14 +167,9 @@ class _SupportScreenState extends State<SupportScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF808087).withValues(alpha: 0.1),
-            blurRadius: 40,
-            offset: const Offset(0, 5),
-          ),
-          BoxShadow(
-            color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-            blurRadius: 1,
-            offset: Offset.zero,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),

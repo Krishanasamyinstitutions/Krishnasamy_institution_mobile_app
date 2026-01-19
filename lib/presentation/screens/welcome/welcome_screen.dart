@@ -14,7 +14,7 @@ class WelcomeScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(AppSizes.s6),
+          padding: const EdgeInsets.all(16),
           child: Column(
             children: [
               const Spacer(),

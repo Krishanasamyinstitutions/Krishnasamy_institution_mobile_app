@@ -12,7 +12,7 @@ class CountryCode {
   final String code;
   final String country;
   final int phoneLength;
-  final String pattern; // Regex pattern for validation
+  final String pattern;
 
   const CountryCode({
     required this.flag,
@@ -23,120 +23,77 @@ class CountryCode {
   });
 }
 
-// Countries where parents might be located (NRI parents, etc.)
-// Note: Some countries have overlapping number formats, OTP verification confirms validity
 const _countryCodes = [
   CountryCode(
     flag: '🇮🇳',
     code: '+91',
     country: 'India',
     phoneLength: 10,
-    pattern: r'^[6-9][0-9]{9}$', // Indian mobile: starts with 6, 7, 8, or 9
+    pattern: r'^[6-9][0-9]{9}$',
   ),
   CountryCode(
     flag: '🇦🇪',
     code: '+971',
     country: 'UAE',
     phoneLength: 9,
-    pattern: r'^5[0-9]{8}$', // UAE mobile: starts with 5
+    pattern: r'^5[0-9]{8}$',
   ),
   CountryCode(
     flag: '🇸🇦',
     code: '+966',
     country: 'Saudi Arabia',
     phoneLength: 9,
-    pattern: r'^5[0-9]{8}$', // Saudi mobile: starts with 5
+    pattern: r'^5[0-9]{8}$',
   ),
   CountryCode(
     flag: '🇸🇬',
     code: '+65',
     country: 'Singapore',
     phoneLength: 8,
-    pattern: r'^[89][0-9]{7}$', // Singapore mobile: starts with 8 or 9
+    pattern: r'^[89][0-9]{7}$',
   ),
   CountryCode(
     flag: '🇦🇺',
     code: '+61',
     country: 'Australia',
     phoneLength: 9,
-    pattern: r'^4[0-9]{8}$', // Australian mobile: starts with 4
+    pattern: r'^4[0-9]{8}$',
   ),
   CountryCode(
     flag: '🇺🇸',
     code: '+1',
     country: 'USA / Canada',
     phoneLength: 10,
-    pattern: r'^[2-9][0-9]{2}[2-9][0-9]{6}$', // NANP format
+    pattern: r'^[2-9][0-9]{2}[2-9][0-9]{6}$',
   ),
   CountryCode(
     flag: '🇬🇧',
     code: '+44',
     country: 'United Kingdom',
     phoneLength: 10,
-    pattern: r'^7[0-9]{9}$', // UK mobile: starts with 7
+    pattern: r'^7[0-9]{9}$',
   ),
 ];
 
-class SignInScreen extends ConsumerStatefulWidget {
-  const SignInScreen({super.key});
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
+  const ForgotPasswordScreen({super.key});
 
   @override
-  ConsumerState<SignInScreen> createState() => _SignInScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _SignInScreenState extends ConsumerState<SignInScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _mobileController = TextEditingController();
-  final _passwordController = TextEditingController();
   final _mobileFocusNode = FocusNode();
-  final _passwordFocusNode = FocusNode();
   bool _isLoading = false;
-  bool _showPassword = false;
   int _selectedCountryIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-  }
 
   @override
   void dispose() {
     _mobileController.dispose();
-    _passwordController.dispose();
     _mobileFocusNode.dispose();
-    _passwordFocusNode.dispose();
     super.dispose();
-  }
-
-  Future<void> _handleSignIn() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      await ref.read(authProvider.notifier).signIn(
-        mobile: _mobileController.text,
-        password: _passwordController.text,
-      );
-
-      if (mounted) {
-        // Pass flag to bypass auth check in router redirect
-        context.go(Routes.studentSelection, extra: {'fromLogin': true});
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: AppColors.error,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
   }
 
   void _showCountryPicker() {
@@ -197,7 +154,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     onTap: () {
                       setState(() {
                         _selectedCountryIndex = index;
-                        // Clear mobile input when country changes
                         _mobileController.clear();
                       });
                       Navigator.pop(context);
@@ -211,6 +167,38 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _handleRequestOtp() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      await ref.read(authProvider.notifier).requestOtp(
+        mobile: _mobileController.text,
+      );
+
+      if (mounted) {
+        context.push(
+          Routes.forgotPasswordOtp,
+          extra: _mobileController.text,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -244,49 +232,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         // Mobile Number Field
                         _buildMobileField(),
 
-                        const SizedBox(height: AppSizes.s4),
-
-                        // Password Field
-                        _buildPasswordField(),
-
-                        const SizedBox(height: AppSizes.s2),
-
-                        // Forgot Password
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              context.push(Routes.forgotPassword);
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text(
-                              'Forgot Password ?',
-                              style: TextStyle(
-                                fontSize: AppSizes.textSm,
-                                color: AppColors.accent,
-                              ),
-                            ),
-                          ),
-                        ),
-
                         const SizedBox(height: AppSizes.s8),
 
-                        // Sign In Button
-                        _buildSignInButton(),
+                        // Get OTP Button
+                        _buildGetOtpButton(),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
-            // Sign Up Link at bottom
+            // Back to Sign In Link at bottom
             Padding(
               padding: const EdgeInsets.only(bottom: AppSizes.s6),
-              child: _buildSignUpLink(),
+              child: _buildSignInLink(),
             ),
           ],
         ),
@@ -335,7 +294,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Sign In',
+                'Forgot Password',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w600,
@@ -345,7 +304,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               SizedBox(height: AppSizes.s2),
               Text(
-                'Welcome back !',
+                'Enter your mobile number to reset your password',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w400,
@@ -361,7 +320,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           width: 120,
           height: 120,
           child: Image.asset(
-            'assets/Authendication gif/Tablet login.gif',
+            'assets/Authendication gif/Sign up.gif',
             fit: BoxFit.contain,
           ),
         ),
@@ -374,11 +333,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Mobile No.',
+          'Mobile Number',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF1F2933),
+            color: Color(0xFF6B7280),
           ),
         ),
         const SizedBox(height: 8),
@@ -464,7 +423,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               return 'Please enter a valid ${selectedCountry.phoneLength}-digit ${selectedCountry.country} number';
             }
 
-            // Validate against country-specific pattern
             final regex = RegExp(selectedCountry.pattern);
             if (!regex.hasMatch(value)) {
               return 'Please enter a valid ${selectedCountry.country} mobile number';
@@ -477,86 +435,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     );
   }
 
-  Widget _buildPasswordField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Password',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w400,
-            color: Color(0xFF1F2933),
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _passwordController,
-          focusNode: _passwordFocusNode,
-          obscureText: !_showPassword,
-          style: const TextStyle(
-            fontSize: 15,
-            color: Color(0xFF1F2933),
-          ),
-          decoration: InputDecoration(
-            hintText: 'Enter your password',
-            hintStyle: const TextStyle(
-              fontSize: 15,
-              color: Color(0xFF9CA3AF),
-            ),
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF007DFC), width: 1.5),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFEF4444)),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-            ),
-            prefixIcon: const Icon(
-              Icons.lock_outline_rounded,
-              size: 22,
-              color: Color(0xFF6B7280),
-            ),
-            suffixIcon: GestureDetector(
-              onTap: () => setState(() => _showPassword = !_showPassword),
-              child: Icon(
-                _showPassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                size: 22,
-                color: const Color(0xFF6B7280),
-              ),
-            ),
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Please enter your password';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSignInButton() {
+  Widget _buildGetOtpButton() {
     return GestureDetector(
-      onTap: _isLoading ? null : _handleSignIn,
+      onTap: _isLoading ? null : _handleRequestOtp,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
@@ -590,7 +471,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               )
             else ...[
               const Text(
-                'Sign In',
+                'Get OTP',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -599,7 +480,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
               const SizedBox(width: 10),
               const Icon(
-                Icons.login_rounded,
+                Icons.verified_user_outlined,
                 size: 24,
                 color: Colors.white,
               ),
@@ -610,12 +491,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     );
   }
 
-  Widget _buildSignUpLink() {
+  Widget _buildSignInLink() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Text(
-          "Don't have an Account ?",
+          'Remember your password ?',
           style: TextStyle(
             fontSize: 15,
             color: Color(0xFF6B7280),
@@ -623,9 +504,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         ),
         const SizedBox(width: 4),
         GestureDetector(
-          onTap: () => context.push(Routes.signUp),
+          onTap: () => context.go(Routes.signIn),
           child: const Text(
-            'Sign up',
+            'Sign In',
             style: TextStyle(
               fontSize: 15,
               color: AppColors.accent,

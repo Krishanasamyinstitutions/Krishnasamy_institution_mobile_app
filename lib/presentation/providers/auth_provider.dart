@@ -372,6 +372,36 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     await _client.auth.signOut();
   }
 
+/// Reset password for existing parent
+  Future<void> resetPassword({
+    required String mobile,
+    required String newPassword,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      // Clean mobile number
+      final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
+
+      // Update password in parents table
+      final response = await _client
+          .from('parents')
+          .update({'parpassword': newPassword})
+          .eq('payinchargemob', cleanMobile)
+          .eq('activestatus', 1)
+          .select()
+          .maybeSingle();
+
+      if (response == null) {
+        throw Exception('Mobile number not found');
+      }
+
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
   /// Generate cryptographically secure 6-digit OTP
   String _generateSecureOtp() {
     final random = Random.secure();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
@@ -16,68 +17,70 @@ class PaidScreen extends ConsumerWidget {
     final paidFees = ref.watch(paidFeesProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bgSecondary,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            // Header (Fixed)
-            _buildHeader(context),
-            const SizedBox(height: 24),
-            // Paid Fee List
-            Expanded(
-              child: paidFees.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      itemCount: paidFees.length,
-                      itemBuilder: (context, index) {
-                        final fee = paidFees[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: _buildPaidCard(context, fee),
-                        );
-                      },
-                    ),
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: Column(
+        children: [
+          // Header with SafeArea
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                _buildHeader(context),
+                const SizedBox(height: 16),
+              ],
             ),
-          ],
-        ),
+          ),
+          // Paid Fee List
+          Expanded(
+            child: paidFees.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: paidFees.length,
+                    itemBuilder: (context, index) {
+                      final fee = paidFees[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: _buildPaidCard(context, fee),
+                      );
+                    },
+                  ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Back Button
           GestureDetector(
-            onTap: () => context.pop(),
+            onTap: () => context.go(Routes.home),
             child: Container(
-              width: 46,
-              height: 46,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF808087).withValues(alpha: 0.1),
-                    blurRadius: 40,
-                    offset: const Offset(0, 5),
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                    blurRadius: 1,
-                    offset: Offset.zero,
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.arrow_back,
-                size: 24,
-                color: Color(0xFF1F2933),
+              child: const Center(
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 18,
+                  color: Color(0xFF1F2933),
+                ),
               ),
             ),
           ),
@@ -86,56 +89,56 @@ class PaidScreen extends ConsumerWidget {
           const Text(
             'Paid',
             style: TextStyle(
-              fontSize: AppSizes.sectionTitle,
-              fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1F2933),
             ),
           ),
 
           // Notification Button
           GestureDetector(
             onTap: () => context.go(Routes.notifications),
-            child: Stack(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF808087).withValues(alpha: 0.1),
-                        blurRadius: 40,
-                        offset: const Offset(0, 5),
-                      ),
-                      BoxShadow(
-                        color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                        blurRadius: 1,
-                        offset: Offset.zero,
-                      ),
-                    ],
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
-                  child: const Icon(
-                    Icons.notifications_outlined,
-                    size: 24,
-                    color: Color(0xFF1F2933),
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  left: 25,
-                  child: Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.bgSecondary, width: 1.5),
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/images/notification.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFF1F2933),
+                      BlendMode.srcIn,
                     ),
                   ),
-                ),
-              ],
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -156,14 +159,9 @@ class PaidScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF808087).withValues(alpha: 0.1),
-              blurRadius: 40,
-              offset: const Offset(0, 5),
-            ),
-            BoxShadow(
-              color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-              blurRadius: 1,
-              offset: Offset.zero,
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -306,7 +304,7 @@ class PaidScreen extends ConsumerWidget {
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
