@@ -211,7 +211,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.s6),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Form(
                     key: _formKey,
                     child: Column(

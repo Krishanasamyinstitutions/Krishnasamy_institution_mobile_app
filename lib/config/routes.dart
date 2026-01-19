@@ -12,6 +12,7 @@ import '../presentation/screens/auth/forgot_password_screen.dart';
 import '../presentation/screens/auth/forgot_password_otp_screen.dart';
 import '../presentation/screens/student_selection/student_selection_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
+import '../presentation/screens/home/home_screen_copy.dart';
 import '../presentation/screens/fees/fees_screen.dart';
 import '../presentation/screens/fees/fee_details_screen.dart';
 import '../presentation/screens/payments/payment_history_screen.dart';
@@ -21,6 +22,9 @@ import '../presentation/screens/profile/profile_screen.dart';
 import '../presentation/screens/support/support_screen.dart';
 import '../presentation/screens/paid/paid_screen.dart';
 import '../presentation/screens/pending/pending_screen.dart';
+import '../presentation/screens/cart/cart_screen.dart';
+import '../presentation/screens/fees/all_pending_fees_screen.dart';
+import '../presentation/screens/fees/pay_all_fees_screen.dart';
 import '../presentation/widgets/common/main_scaffold.dart';
 import '../presentation/providers/auth_provider.dart' show parentAuthStateProvider;
 import '../presentation/providers/student_provider.dart';
@@ -48,6 +52,11 @@ class Routes {
   static const support = '/support';
   static const paid = '/paid';
   static const pending = '/pending';
+  static const cart = '/cart';
+  static const cartStandalone = '/cart-standalone';
+  static const allPendingFees = '/all-pending-fees';
+  static const payAllFees = '/pay-all-fees';
+  static const homeTest = '/home-test';
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -63,6 +72,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnSplash = state.matchedLocation == Routes.splash;
       if (isOnSplash) {
         return null; // Let splash screen handle navigation
+      }
+
+      // TESTING: Allow home test screen without auth
+      if (state.matchedLocation == Routes.homeTest) {
+        return null;
       }
 
       // Bypass authentication when using dummy data
@@ -192,7 +206,41 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Pending Screen (standalone without bottom nav)
       GoRoute(
         path: Routes.pending,
-        builder: (context, state) => const PendingScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final feeType = extra?['feeType'] as String?;
+          return PendingScreen(feeType: feeType);
+        },
+      ),
+
+      // Standalone Cart Screen (without bottom nav, with back button)
+      GoRoute(
+        path: Routes.cartStandalone,
+        builder: (context, state) => const CartScreen(isStandalone: true),
+      ),
+
+      // All Pending Fees Screen (accordion view)
+      GoRoute(
+        path: Routes.allPendingFees,
+        builder: (context, state) => const AllPendingFeesScreen(),
+      ),
+
+      // Pay All Fees Screen (all fees pre-selected)
+      GoRoute(
+        path: Routes.payAllFees,
+        builder: (context, state) => const PayAllFeesScreen(),
+      ),
+
+      // Cart Screen (standalone without bottom nav)
+      GoRoute(
+        path: Routes.cart,
+        builder: (context, state) => const CartScreen(),
+      ),
+
+      // TESTING: Home Screen Copy (new design)
+      GoRoute(
+        path: Routes.homeTest,
+        builder: (context, state) => const HomeScreenCopy(),
       ),
 
       // Main App with Bottom Navigation (Shell Route)

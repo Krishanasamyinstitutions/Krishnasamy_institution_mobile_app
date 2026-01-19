@@ -18,7 +18,7 @@ class FeeDetailsScreen extends ConsumerWidget {
     final feesAsync = ref.watch(feesProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bgSecondary,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Text('Fee Details'),
       ),
@@ -32,7 +32,7 @@ class FeeDetailsScreen extends ConsumerWidget {
           );
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSizes.s6, vertical: AppSizes.s4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: AppSizes.s4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

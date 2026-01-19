@@ -223,7 +223,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             Expanded(
               child: SingleChildScrollView(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSizes.s6),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Form(
                     key: _formKey,
                     child: Column(

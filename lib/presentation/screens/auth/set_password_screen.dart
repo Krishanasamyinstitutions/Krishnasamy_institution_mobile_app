@@ -100,7 +100,7 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSizes.s6),
+          padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
             child: Column(

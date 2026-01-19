@@ -8,7 +8,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/fee_provider.dart';
-import '../../providers/drawer_provider.dart';
+import '../../providers/student_provider.dart';
+import '../../providers/cart_provider.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
   const PaymentHistoryScreen({super.key});
@@ -25,41 +26,45 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   Widget build(BuildContext context) {
     final paidFees = ref.watch(paidFeesProvider);
 
-    // Get unique terms for filter tabs
-    final terms = _getUniqueTerms(paidFees);
-    final filters = ['All', ...terms];
+    // Status-based filter tabs
+    final filters = ['All', 'Paid', 'Failed'];
 
     return Scaffold(
-      backgroundColor: AppColors.bgSecondary,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            // Custom Header
-            _buildHeader(context),
-            const SizedBox(height: 24),
-            // Filter Tabs
-            _buildFilterTabs(filters),
-            const SizedBox(height: 24),
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: Column(
+        children: [
+          // Header with SafeArea
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                _buildHeader(context),
+                const SizedBox(height: 24),
+                // Filter Tabs
+                _buildFilterTabs(filters),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
             // Transaction List
             Expanded(
               child: _buildTransactionList(paidFees),
             ),
           ],
         ),
-      ),
     );
-  }
-
-  List<String> _getUniqueTerms(List<FeeModel> fees) {
-    final terms = fees.map((f) => f.demfeeterm).toSet().toList();
-    terms.sort();
-    return terms;
   }
 
   List<FeeModel> _filterFees(List<FeeModel> fees) {
     if (_activeFilter == 'All') return fees;
-    return fees.where((f) => f.demfeeterm == _activeFilter).toList();
+    if (_activeFilter == 'Paid') {
+      return fees.where((f) => f.paidstatus == 'P').toList();
+    }
+    if (_activeFilter == 'Failed') {
+      return fees.where((f) => f.paidstatus != 'P').toList();
+    }
+    return fees;
   }
 
   Widget _buildTransactionList(List<FeeModel> fees) {
@@ -70,7 +75,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       itemCount: filteredFees.length,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
@@ -80,107 +85,159 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final studentName = selectedStudent?.name ?? 'Student';
+    final admNo = selectedStudent?.admissionNumber ?? 'N/A';
+    final className = selectedStudent?.className ?? 'N/A';
+    final cartItemCount = ref.watch(cartItemCountProvider);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Menu Button
+          // Profile Image
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE5E7EB),
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: const Icon(
+              Icons.person,
+              size: 28,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Student Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  studentName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1F2933),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Admn No: $admNo  |  Class: $className',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF6B7280),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Cart Icon
           GestureDetector(
-            onTap: () => openMainDrawer(ref),
+            onTap: () => context.push(Routes.cart),
             child: Container(
-              width: 46,
-              height: 46,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF808087).withValues(alpha: 0.1),
-                    blurRadius: 40,
-                    offset: const Offset(0, 5),
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                    blurRadius: 1,
-                    offset: Offset.zero,
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/images/menu.svg',
-                  width: 24,
-                  height: 24,
-                  colorFilter: const ColorFilter.mode(
-                    Color(0xFF1F2933),
-                    BlendMode.srcIn,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  const Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 24,
+                    color: Color(0xFF1F2933),
                   ),
-                ),
+                  if (cartItemCount > 0)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Text(
+                          cartItemCount > 9 ? '9+' : '$cartItemCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
-
-          // Title
-          const Text(
-            'History',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2933),
-            ),
-          ),
-
-          // Notification Button
+          const SizedBox(width: 8),
+          // Notification Icon
           GestureDetector(
-            onTap: () => context.push(Routes.notifications),
-            child: Stack(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF808087).withValues(alpha: 0.1),
-                        blurRadius: 40,
-                        offset: const Offset(0, 5),
-                      ),
-                      BoxShadow(
-                        color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                        blurRadius: 1,
-                        offset: Offset.zero,
-                      ),
-                    ],
+            onTap: () => context.go(Routes.notifications),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
-                  child: Center(
-                    child: SvgPicture.asset(
-                      'assets/images/notification.svg',
-                      width: 24,
-                      height: 24,
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xFF1F2933),
-                        BlendMode.srcIn,
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/images/notification.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFF1F2933),
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
                       ),
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 11,
-                  left: 24,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF007DFC),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -191,7 +248,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   Widget _buildFilterTabs(List<String> filters) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: filters.map((filter) {
           final isActive = _activeFilter == filter;
@@ -249,14 +306,9 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF808087).withValues(alpha: 0.1),
-              blurRadius: 40,
-              offset: const Offset(0, 5),
-            ),
-            BoxShadow(
-              color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-              blurRadius: 1,
-              offset: Offset.zero,
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -408,9 +460,30 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   }
 
   Widget _buildEmptyState() {
+    String title;
+    String subtitle;
+    IconData icon;
+
+    switch (_activeFilter) {
+      case 'Paid':
+        title = 'No Paid Payments';
+        subtitle = 'Your successful payments will appear here.';
+        icon = Icons.check_circle_outline;
+        break;
+      case 'Failed':
+        title = 'No Failed Payments';
+        subtitle = 'Failed payment attempts will appear here.';
+        icon = Icons.error_outline;
+        break;
+      default:
+        title = 'No Payments Yet';
+        subtitle = 'Your payment history will appear here once you make a payment.';
+        icon = Icons.receipt_long_rounded;
+    }
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSizes.s6),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -421,26 +494,26 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                 color: AppColors.gray100,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.receipt_long_rounded,
+              child: Icon(
+                icon,
                 size: 48,
                 color: AppColors.gray400,
               ),
             ),
             const SizedBox(height: AppSizes.s6),
-            const Text(
-              'No Payments Yet',
-              style: TextStyle(
+            Text(
+              title,
+              style: const TextStyle(
                 fontSize: AppSizes.textLg,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: AppSizes.s2),
-            const Text(
-              'Your payment history will appear here once you make a payment.',
+            Text(
+              subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppSizes.textSm,
                 color: AppColors.textSecondary,
               ),

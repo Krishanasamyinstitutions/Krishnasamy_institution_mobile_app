@@ -18,10 +18,9 @@ class MainScaffold extends ConsumerWidget {
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith(Routes.home)) return 0;
-    if (location.startsWith(Routes.fees)) return 1;
-    if (location.startsWith(Routes.paymentHistory)) return 2;
-    if (location.startsWith(Routes.notifications)) return 3;
-    if (location.startsWith(Routes.profile)) return 4;
+    if (location.startsWith(Routes.paymentHistory)) return 1;
+    if (location.startsWith(Routes.notifications)) return 2;
+    if (location.startsWith(Routes.profile)) return 3;
     return 0;
   }
 
@@ -65,15 +64,6 @@ class MainScaffold extends ConsumerWidget {
                   context: context,
                   index: 1,
                   selectedIndex: selectedIndex,
-                  label: 'Fees',
-                  strokeIcon: 'assets/nav bar icons/fees stroke.svg',
-                  filledIcon: 'assets/nav bar icons/fees filled.svg',
-                  route: Routes.fees,
-                ),
-                _buildNavItem(
-                  context: context,
-                  index: 2,
-                  selectedIndex: selectedIndex,
                   label: 'History',
                   strokeIcon: 'assets/nav bar icons/history stroke.svg',
                   filledIcon: 'assets/nav bar icons/history filled.svg',
@@ -81,7 +71,7 @@ class MainScaffold extends ConsumerWidget {
                 ),
                 _buildNavItem(
                   context: context,
-                  index: 3,
+                  index: 2,
                   selectedIndex: selectedIndex,
                   label: 'Alerts',
                   strokeIcon: 'assets/nav bar icons/alerts stroke.svg',
@@ -90,7 +80,7 @@ class MainScaffold extends ConsumerWidget {
                 ),
                 _buildNavItem(
                   context: context,
-                  index: 4,
+                  index: 3,
                   selectedIndex: selectedIndex,
                   label: 'Profile',
                   strokeIcon: 'assets/nav bar icons/profile stroke.svg',
@@ -145,4 +135,5 @@ class MainScaffold extends ConsumerWidget {
       ),
     );
   }
+
 }

@@ -1,3 +1,6 @@
+
+
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -10,8 +13,8 @@ import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
 
-class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+class HomeScreenCopy extends ConsumerWidget {
+  const HomeScreenCopy({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -61,9 +64,9 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.push(Routes.payAllFees),
+                      onTap: () => context.push(Routes.allPendingFees),
                       child: const Text(
-                        'Pay All Fees',
+                        'See All',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
@@ -85,6 +88,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
+      bottomNavigationBar: _buildBottomNavBar(context, ref),
     );
   }
 
@@ -115,7 +119,7 @@ class HomeScreen extends ConsumerWidget {
     final studentName = selectedStudent?.name ?? 'Student';
     final admNo = selectedStudent?.admissionNumber ?? 'N/A';
     final className = selectedStudent?.className ?? 'N/A';
-    final cartItemCount = ref.watch(cartItemCountProvider);
+    final bloodGroup = selectedStudent?.stubloodgrp ?? 'N/A';
 
     return Row(
       children: [
@@ -149,7 +153,7 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                'Admn No: $admNo  |  Class: $className',
+                'Admn No: $admNo  |  Class: $className  |  $bloodGroup',
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w400,
@@ -158,63 +162,6 @@ class HomeScreen extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        // Cart Icon
-        GestureDetector(
-          onTap: () => context.push(Routes.cart),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                const Icon(
-                  Icons.shopping_cart_outlined,
-                  size: 24,
-                  color: Color(0xFF1F2933),
-                ),
-                if (cartItemCount > 0)
-                  Positioned(
-                    top: -2,
-                    right: -2,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: Text(
-                        cartItemCount > 9 ? '9+' : '$cartItemCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
           ),
         ),
         const SizedBox(width: 8),
@@ -538,44 +485,192 @@ class HomeScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 16),
-            // Title and Arrow Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
+            // Title
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1F2933),
+              ),
+            ),
+            const SizedBox(height: 4),
+            // Amount or placeholder text
+            Text(
+              isDummy ? 'View details' : '₹ ${NumberFormat('#,##,###').format(amount.toInt())}',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBottomNavBar(BuildContext context, WidgetRef ref) {
+    final cartItemCount = ref.watch(cartItemCountProvider);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                context: context,
+                label: 'Home',
+                strokeIcon: 'assets/nav bar icons/home stroke.svg',
+                filledIcon: 'assets/nav bar icons/home filled.svg',
+                isSelected: true,
+                onTap: () {},
+              ),
+              _buildCartNavItem(
+                context: context,
+                cartItemCount: cartItemCount,
+                isSelected: false,
+              ),
+              _buildNavItem(
+                context: context,
+                label: 'History',
+                strokeIcon: 'assets/nav bar icons/history stroke.svg',
+                filledIcon: 'assets/nav bar icons/history filled.svg',
+                isSelected: false,
+                onTap: () => context.go(Routes.paymentHistory),
+              ),
+              _buildNavItem(
+                context: context,
+                label: 'Alerts',
+                strokeIcon: 'assets/nav bar icons/alerts stroke.svg',
+                filledIcon: 'assets/nav bar icons/alerts filled.svg',
+                isSelected: false,
+                onTap: () => context.go(Routes.notifications),
+              ),
+              _buildNavItem(
+                context: context,
+                label: 'Profile',
+                strokeIcon: 'assets/nav bar icons/profile stroke.svg',
+                filledIcon: 'assets/nav bar icons/profile filled.svg',
+                isSelected: false,
+                onTap: () => context.go(Routes.profile),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required BuildContext context,
+    required String label,
+    required String strokeIcon,
+    required String filledIcon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final color = isSelected ? AppColors.primary : AppColors.textSecondary;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset(
+              isSelected ? filledIcon : strokeIcon,
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCartNavItem({
+    required BuildContext context,
+    required int cartItemCount,
+    required bool isSelected,
+  }) {
+    final color = isSelected ? AppColors.primary : AppColors.textSecondary;
+
+    return GestureDetector(
+      onTap: () => context.go(Routes.cart),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
               children: [
-                // Title and Amount Column
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF6B7280),
-                        ),
+                Icon(
+                  isSelected ? Icons.shopping_cart : Icons.shopping_cart_outlined,
+                  size: 24,
+                  color: color,
+                ),
+                if (cartItemCount > 0)
+                  Positioned(
+                    top: -6,
+                    right: -8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
                       ),
-                      const SizedBox(height: 4),
-                      // Amount or placeholder text
-                      Text(
-                        isDummy ? 'View details' : '₹ ${NumberFormat('#,##,###').format(amount.toInt())}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1F2933),
-                        ),
+                      decoration: const BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
                       ),
-                    ],
+                      child: Text(
+                        cartItemCount > 9 ? '9+' : '$cartItemCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
-                ),
-                // Arrow Icon
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 16,
-                  color: Color(0xFF9CA3AF),
-                ),
               ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Cart',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: color,
+              ),
             ),
           ],
         ),
