@@ -43,9 +43,9 @@ class AppSizes {
   static const double text5xl = 48;
 
   // Semantic Font Sizes (UI-specific)
-  static const double appTitle = 22;        // App Title - 22px, w600
-  static const double sectionTitle = 18;    // Section Title - 18px, w600
-  static const double mainAmount = 24;      // Main Amount - 24px, w700
+  static const double appTitle = 20;        // App Title - 20px, w600
+  static const double sectionTitle = 16;    // Section Title - 16px, w600
+  static const double mainAmount = 26;      // Main Amount - 26px, w700
   static const double bodyText = 14;        // Body Text - 14px, w400
   static const double secondaryText = 12;   // Secondary Text - 12px, w400
   static const double buttonText = 15;      // Buttons - 15px, w600

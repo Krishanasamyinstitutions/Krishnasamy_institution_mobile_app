@@ -19,7 +19,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
     final selectedStudent = ref.watch(selectedStudentProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bgSecondary,
+      backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
         child: paymentAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -49,7 +49,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                 // Main Content
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Column(
                       children: [
                         // Transaction Card
@@ -79,37 +79,38 @@ class TransactionDetailsScreen extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Back Button
           GestureDetector(
-            onTap: () => context.pop(),
+            onTap: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go(Routes.paymentHistory);
+              }
+            },
             child: Container(
-              width: 46,
-              height: 46,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF808087).withValues(alpha: 0.1),
-                    blurRadius: 40,
-                    offset: const Offset(0, 5),
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                    blurRadius: 1,
-                    offset: Offset.zero,
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: const Center(
                 child: Icon(
-                  Icons.arrow_back,
-                  size: 24,
-                  color: AppColors.textPrimary,
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 18,
+                  color: Color(0xFF1F2933),
                 ),
               ),
             ),
@@ -121,60 +122,54 @@ class TransactionDetailsScreen extends ConsumerWidget {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: Color(0xFF1F2933),
             ),
           ),
 
           // Notification Button
           GestureDetector(
-            onTap: () => context.push(Routes.notifications),
-            child: Stack(
-              children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF808087).withValues(alpha: 0.1),
-                        blurRadius: 40,
-                        offset: const Offset(0, 5),
-                      ),
-                      BoxShadow(
-                        color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                        blurRadius: 1,
-                        offset: Offset.zero,
-                      ),
-                    ],
+            onTap: () => context.go(Routes.notifications),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
-                  child: Center(
-                    child: SvgPicture.asset(
-                      'assets/images/notification.svg',
-                      width: 24,
-                      height: 24,
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xFF1F2933),
-                        BlendMode.srcIn,
+                ],
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/images/notification.svg',
+                    width: 22,
+                    height: 22,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFF1F2933),
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1.5),
                       ),
                     ),
                   ),
-                ),
-                Positioned(
-                  top: 10,
-                  left: 24,
-                  child: Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1),
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -199,14 +194,9 @@ class TransactionDetailsScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF808087).withValues(alpha: 0.1),
-            blurRadius: 40,
-            offset: const Offset(0, 5),
-          ),
-          BoxShadow(
-            color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-            blurRadius: 1,
-            offset: Offset.zero,
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -226,20 +216,9 @@ class TransactionDetailsScreen extends ConsumerWidget {
                     width: 56,
                     height: 56,
                     decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                       border: Border.all(color: const Color(0xFFF1F6FD), width: 1),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF1F2933).withValues(alpha: 0.1),
-                          blurRadius: 40,
-                          offset: const Offset(0, 3),
-                        ),
-                        BoxShadow(
-                          color: const Color(0xFF1F2933).withValues(alpha: 0.75),
-                          blurRadius: 1,
-                          offset: Offset.zero,
-                        ),
-                      ],
                     ),
                     child: Center(
                       child: isPaid

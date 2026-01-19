@@ -10,10 +10,12 @@ import '../../widgets/common/app_text_field.dart';
 
 class SetPasswordScreen extends ConsumerStatefulWidget {
   final String mobile;
+  final bool isResetPassword;
 
   const SetPasswordScreen({
     super.key,
     required this.mobile,
+    this.isResetPassword = false,
   });
 
   @override
@@ -39,14 +41,32 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Use completeAccountCreation to UPDATE existing parent record
-      await ref.read(authProvider.notifier).completeAccountCreation(
-            mobile: widget.mobile,
-            password: _passwordController.text,
-          );
+      if (widget.isResetPassword) {
+        // Reset password flow
+        await ref.read(authProvider.notifier).resetPassword(
+          mobile: widget.mobile,
+          newPassword: _passwordController.text,
+        );
 
-      if (mounted) {
-        context.go(Routes.studentSelection);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Password reset successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+          context.go(Routes.signIn);
+        }
+      } else {
+        // Sign up flow - use completeAccountCreation to UPDATE existing parent record
+        await ref.read(authProvider.notifier).completeAccountCreation(
+          mobile: widget.mobile,
+          password: _passwordController.text,
+        );
+
+        if (mounted) {
+          context.go(Routes.studentSelection);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -80,24 +100,26 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(AppSizes.s6),
+          padding: const EdgeInsets.all(16),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Set Password',
-                  style: TextStyle(
+                Text(
+                  widget.isResetPassword ? 'Reset Password' : 'Set Password',
+                  style: const TextStyle(
                     fontSize: AppSizes.text2xl,
                     fontWeight: FontWeight.bold,
                     color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: AppSizes.s2),
-                const Text(
-                  'Create a secure password for your account',
-                  style: TextStyle(
+                Text(
+                  widget.isResetPassword
+                      ? 'Create a new password for your account'
+                      : 'Create a secure password for your account',
+                  style: const TextStyle(
                     fontSize: AppSizes.textBase,
                     color: AppColors.textSecondary,
                   ),
@@ -171,7 +193,7 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
                 const SizedBox(height: AppSizes.s8),
 
                 AppButton(
-                  text: 'Create Account',
+                  text: widget.isResetPassword ? 'Reset Password' : 'Create Account',
                   onPressed: _handleSetPassword,
                   isLoading: _isLoading,
                   isFullWidth: true,

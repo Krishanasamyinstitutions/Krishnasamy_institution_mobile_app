@@ -8,8 +8,11 @@ import '../presentation/screens/auth/sign_in_screen.dart';
 import '../presentation/screens/auth/sign_up_screen.dart';
 import '../presentation/screens/auth/otp_verification_screen.dart';
 import '../presentation/screens/auth/set_password_screen.dart';
+import '../presentation/screens/auth/forgot_password_screen.dart';
+import '../presentation/screens/auth/forgot_password_otp_screen.dart';
 import '../presentation/screens/student_selection/student_selection_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
+import '../presentation/screens/home/home_screen_copy.dart';
 import '../presentation/screens/fees/fees_screen.dart';
 import '../presentation/screens/fees/fee_details_screen.dart';
 import '../presentation/screens/payments/payment_history_screen.dart';
@@ -19,6 +22,9 @@ import '../presentation/screens/profile/profile_screen.dart';
 import '../presentation/screens/support/support_screen.dart';
 import '../presentation/screens/paid/paid_screen.dart';
 import '../presentation/screens/pending/pending_screen.dart';
+import '../presentation/screens/cart/cart_screen.dart';
+import '../presentation/screens/fees/all_pending_fees_screen.dart';
+import '../presentation/screens/fees/pay_all_fees_screen.dart';
 import '../presentation/widgets/common/main_scaffold.dart';
 import '../presentation/providers/auth_provider.dart' show parentAuthStateProvider;
 import '../presentation/providers/student_provider.dart';
@@ -32,6 +38,9 @@ class Routes {
   static const signUp = '/sign-up';
   static const otpVerification = '/otp-verification';
   static const setPassword = '/set-password';
+  static const forgotPassword = '/forgot-password';
+  static const forgotPasswordOtp = '/forgot-password-otp';
+  static const resetPassword = '/reset-password';
   static const studentSelection = '/student-selection';
   static const home = '/home';
   static const fees = '/fees';
@@ -43,6 +52,11 @@ class Routes {
   static const support = '/support';
   static const paid = '/paid';
   static const pending = '/pending';
+  static const cart = '/cart';
+  static const cartStandalone = '/cart-standalone';
+  static const allPendingFees = '/all-pending-fees';
+  static const payAllFees = '/pay-all-fees';
+  static const homeTest = '/home-test';
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -60,6 +74,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null; // Let splash screen handle navigation
       }
 
+      // TESTING: Allow home test screen without auth
+      if (state.matchedLocation == Routes.homeTest) {
+        return null;
+      }
+
       // Bypass authentication when using dummy data
       if (useDummyData) {
         return null;
@@ -71,7 +90,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnAuthPage = state.matchedLocation == Routes.signIn ||
           state.matchedLocation == Routes.signUp ||
           state.matchedLocation == Routes.otpVerification ||
-          state.matchedLocation == Routes.setPassword;
+          state.matchedLocation == Routes.setPassword ||
+          state.matchedLocation == Routes.forgotPassword ||
+          state.matchedLocation == Routes.forgotPasswordOtp ||
+          state.matchedLocation == Routes.resetPassword;
       final isOnOnboarding = state.matchedLocation == Routes.onboarding;
       final isOnWelcome = state.matchedLocation == Routes.welcome;
       final isOnStudentSelection = state.matchedLocation == Routes.studentSelection;
@@ -143,6 +165,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
 
+      // Forgot Password Routes
+      GoRoute(
+        path: Routes.forgotPassword,
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: Routes.forgotPasswordOtp,
+        builder: (context, state) {
+          final mobile = state.extra as String?;
+          return ForgotPasswordOtpScreen(mobile: mobile ?? '');
+        },
+      ),
+      GoRoute(
+        path: Routes.resetPassword,
+        builder: (context, state) {
+          final mobile = state.extra as String?;
+          return SetPasswordScreen(mobile: mobile ?? '', isResetPassword: true);
+        },
+      ),
+
       // Student Selection
       GoRoute(
         path: Routes.studentSelection,
@@ -164,7 +206,41 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Pending Screen (standalone without bottom nav)
       GoRoute(
         path: Routes.pending,
-        builder: (context, state) => const PendingScreen(),
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          final feeType = extra?['feeType'] as String?;
+          return PendingScreen(feeType: feeType);
+        },
+      ),
+
+      // Standalone Cart Screen (without bottom nav, with back button)
+      GoRoute(
+        path: Routes.cartStandalone,
+        builder: (context, state) => const CartScreen(isStandalone: true),
+      ),
+
+      // All Pending Fees Screen (accordion view)
+      GoRoute(
+        path: Routes.allPendingFees,
+        builder: (context, state) => const AllPendingFeesScreen(),
+      ),
+
+      // Pay All Fees Screen (all fees pre-selected)
+      GoRoute(
+        path: Routes.payAllFees,
+        builder: (context, state) => const PayAllFeesScreen(),
+      ),
+
+      // Cart Screen (standalone without bottom nav)
+      GoRoute(
+        path: Routes.cart,
+        builder: (context, state) => const CartScreen(),
+      ),
+
+      // TESTING: Home Screen Copy (new design)
+      GoRoute(
+        path: Routes.homeTest,
+        builder: (context, state) => const HomeScreenCopy(),
       ),
 
       // Main App with Bottom Navigation (Shell Route)

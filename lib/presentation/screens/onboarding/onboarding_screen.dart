@@ -158,7 +158,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             // Top Navigation - Back Button
             Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: AppSizes.s6,
+                horizontal: 16,
                 vertical: AppSizes.s4,
               ),
               child: Row(
@@ -197,7 +197,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
             // Bottom Navigation - Skip and Next
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSizes.s6),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -288,7 +288,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 29, vertical: 11),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
         ),
       ),
       child: const Text(
@@ -310,7 +310,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
           color: AppColors.primary,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
               color: AppColors.primary.withValues(alpha: 0.24),
@@ -358,7 +358,7 @@ class _OnboardingPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.s6),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

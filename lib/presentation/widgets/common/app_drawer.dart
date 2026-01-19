@@ -53,13 +53,7 @@ class AppDrawer extends ConsumerWidget {
                       label: 'Change Password',
                       onTap: () {
                         Navigator.pop(context);
-                        // TODO: Navigate to change password screen
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Change Password - Coming Soon'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
+                        context.push(Routes.forgotPassword);
                       },
                     ),
                     const SizedBox(height: 16),
@@ -97,6 +91,8 @@ class AppDrawer extends ConsumerWidget {
                   _buildDivider(),
                   const SizedBox(height: 20),
                   _buildLogoutButton(context, ref),
+                  const SizedBox(height: 24),
+                  _buildSchoolFooter(institution),
                 ],
               ),
             ],
@@ -346,6 +342,34 @@ class AppDrawer extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSchoolFooter(InstitutionModel? institution) {
+    return Column(
+      children: [
+        // School Name
+        Text(
+          institution?.name ?? 'School Name',
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textPrimary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        // School Location
+        Text(
+          institution?.shortAddress ?? 'Location not available',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            color: AppColors.textSecondary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
+import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../data/models/notification_model.dart';
 import '../../providers/notification_provider.dart';
-import '../../providers/drawer_provider.dart';
+import '../../providers/student_provider.dart';
+import '../../providers/cart_provider.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -64,14 +67,20 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final notificationsAsync = ref.watch(notificationsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bgSecondary,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            // Custom Header
-            _buildHeader(context),
-            const SizedBox(height: 10),
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: Column(
+        children: [
+          // Header with SafeArea
+          SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                _buildHeader(context),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
             // Notification List
             Expanded(
               child: notificationsAsync.when(
@@ -89,7 +98,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   final groupedNotifications = _groupNotificationsByDate(displayNotifications);
 
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: groupedNotifications.length,
                     itemBuilder: (context, index) {
                       final group = groupedNotifications[index];
@@ -101,7 +110,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -140,105 +148,157 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final studentName = selectedStudent?.name ?? 'Student';
+    final admNo = selectedStudent?.admissionNumber ?? 'N/A';
+    final className = selectedStudent?.className ?? 'N/A';
+    final cartItemCount = ref.watch(cartItemCountProvider);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Menu Button
+          // Profile Image
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE5E7EB),
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: const Icon(
+              Icons.person,
+              size: 28,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Student Details
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  studentName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1F2933),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Admn No: $admNo  |  Class: $className',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF6B7280),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Cart Icon
           GestureDetector(
-            onTap: () => openMainDrawer(ref),
+            onTap: () => context.push(Routes.cart),
             child: Container(
-              width: 46,
-              height: 46,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF808087).withValues(alpha: 0.1),
-                    blurRadius: 40,
-                    offset: const Offset(0, 5),
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                    blurRadius: 1,
-                    offset: Offset.zero,
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/images/menu.svg',
-                  width: 24,
-                  height: 24,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  const Icon(
+                    Icons.shopping_cart_outlined,
+                    size: 24,
+                    color: Color(0xFF1F2933),
+                  ),
+                  if (cartItemCount > 0)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Text(
+                          cartItemCount > 9 ? '9+' : '$cartItemCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Notification Icon
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                SvgPicture.asset(
+                  'assets/images/notification.svg',
+                  width: 22,
+                  height: 22,
                   colorFilter: const ColorFilter.mode(
                     Color(0xFF1F2933),
                     BlendMode.srcIn,
                   ),
                 ),
-              ),
-            ),
-          ),
-
-          // Title
-          const Text(
-            'Notification',
-            style: TextStyle(
-              fontSize: AppSizes.sectionTitle,
-              fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-
-          // Notification Button
-          Stack(
-            children: [
-              Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF808087).withValues(alpha: 0.1),
-                      blurRadius: 40,
-                      offset: const Offset(0, 5),
-                    ),
-                    BoxShadow(
-                      color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                      blurRadius: 1,
-                      offset: Offset.zero,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: SvgPicture.asset(
-                    'assets/images/notification.svg',
-                    width: 24,
-                    height: 24,
-                    colorFilter: const ColorFilter.mode(
-                      Color(0xFF1F2933),
-                      BlendMode.srcIn,
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
                     ),
                   ),
                 ),
-              ),
-              Positioned(
-                top: 10,
-                left: 24,
-                child: Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -282,21 +342,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         decoration: BoxDecoration(
           color: notification.isRead ? const Color(0xFFFAFAFA) : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: notification.isRead
-              ? Border.all(color: const Color(0xFFAAD4FD), width: 1)
-              : null,
           boxShadow: notification.isRead
               ? null
               : [
                   BoxShadow(
-                    color: const Color(0xFF808087).withValues(alpha: 0.1),
-                    blurRadius: 40,
-                    offset: const Offset(0, 5),
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                    blurRadius: 1,
-                    offset: Offset.zero,
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
         ),
@@ -429,7 +481,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSizes.s6),
+        padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

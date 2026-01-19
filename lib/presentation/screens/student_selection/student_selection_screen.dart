@@ -20,7 +20,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgSecondary,
+      backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
         child: Column(
           children: [
@@ -46,7 +46,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
 
   Widget _buildTopNavigation() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -90,7 +90,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +154,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
         }
 
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: students.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
@@ -186,28 +186,12 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF808087).withValues(alpha: 0.1),
-                    blurRadius: 40,
-                    offset: const Offset(0, 5),
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF0051C6).withValues(alpha: 0.75),
-                    blurRadius: 1,
-                    offset: Offset.zero,
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ]
-              : [
-                  BoxShadow(
-                    color: const Color(0xFF0051C6).withValues(alpha: 0.35),
-                    blurRadius: 1,
-                    offset: Offset.zero,
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF0051C6).withValues(alpha: 0.2),
-                    blurRadius: 2,
-                    offset: Offset.zero,
-                  ),
-                ],
+              : null,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,7 +345,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
 
   Widget _buildContinueButton() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: GestureDetector(
         onTap: _selectedStudentId != null
             ? () async {
@@ -383,9 +367,9 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
           padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
             color: _selectedStudentId != null
-                ? AppColors.accent
-                : AppColors.accent.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(12),
+                ? AppColors.primary
+                : AppColors.primary.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(8),
             boxShadow: [
               BoxShadow(
                 color: const Color(0xFF3D75FC).withValues(alpha: 0.24),

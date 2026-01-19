@@ -20,7 +20,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
     final selectedStudent = ref.watch(selectedStudentProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bgSecondary,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Text('Payment Receipt'),
         actions: [
@@ -41,7 +41,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSizes.s6, vertical: AppSizes.s4),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: AppSizes.s4),
             child: Column(
               children: [
                 _buildReceiptCard(payment, selectedStudent?.name ?? ''),
