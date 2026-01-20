@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
@@ -210,10 +211,16 @@ class CartScreen extends ConsumerWidget {
               color: Color(0xFFF3F4F6),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.shopping_cart_outlined,
-              size: 56,
-              color: Color(0xFF9CA3AF),
+            child: Center(
+              child: SvgPicture.asset(
+                'assets/icons/Cart.svg',
+                width: 56,
+                height: 56,
+                colorFilter: const ColorFilter.mode(
+                  Color(0xFF9CA3AF),
+                  BlendMode.srcIn,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 24),
@@ -341,10 +348,22 @@ class CartScreen extends ConsumerWidget {
                     color: isBus ? const Color(0xFFF59E0B) : const Color(0xFF8B5CF6),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
-                    isBus ? Icons.directions_bus : Icons.school,
-                    size: 22,
-                    color: Colors.white,
+                  child: Center(
+                    child: isBus
+                        ? SvgPicture.asset(
+                            'assets/icons/bus-solid.svg',
+                            width: 22,
+                            height: 22,
+                            colorFilter: const ColorFilter.mode(
+                              Colors.white,
+                              BlendMode.srcIn,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.school,
+                            size: 22,
+                            color: Colors.white,
+                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -459,10 +478,22 @@ class CartScreen extends ConsumerWidget {
                   : const Color(0xFFEDE9FE),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              isBus ? Icons.directions_bus_outlined : Icons.receipt_outlined,
-              size: 18,
-              color: isBus ? const Color(0xFFF59E0B) : const Color(0xFF8B5CF6),
+            child: Center(
+              child: isBus
+                  ? SvgPicture.asset(
+                      'assets/icons/bus-solid.svg',
+                      width: 18,
+                      height: 18,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFFF59E0B),
+                        BlendMode.srcIn,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.receipt_outlined,
+                      size: 18,
+                      color: Color(0xFF8B5CF6),
+                    ),
             ),
           ),
           const SizedBox(width: 12),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
@@ -200,10 +201,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  const Icon(
-                    Icons.shopping_cart_outlined,
-                    size: 24,
-                    color: Color(0xFF1F2933),
+                  SvgPicture.asset(
+                    'assets/icons/Cart.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFF1F2933),
+                      BlendMode.srcIn,
+                    ),
                   ),
                   if (cartItemCount > 0)
                     Positioned(
@@ -253,10 +258,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.notifications_outlined,
-                size: 24,
-                color: Color(0xFF1F2933),
+              child: Center(
+                child: SvgPicture.asset(
+                  'assets/images/notification.svg',
+                  width: 22,
+                  height: 22,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF1F2933),
+                    BlendMode.srcIn,
+                  ),
+                ),
               ),
             ),
           ),

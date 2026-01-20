@@ -155,19 +155,6 @@ class TransactionDetailsScreen extends ConsumerWidget {
                       BlendMode.srcIn,
                     ),
                   ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

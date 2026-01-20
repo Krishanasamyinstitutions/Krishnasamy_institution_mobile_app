@@ -158,19 +158,6 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                       BlendMode.srcIn,
                     ),
                   ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -762,12 +749,16 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.shopping_cart_outlined, size: 20),
-                  SizedBox(width: 8),
-                  Text('View Cart'),
+                  SvgPicture.asset(
+                    'assets/icons/Cart.svg',
+                    width: 20,
+                    height: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('View Cart'),
                 ],
               ),
             ),
