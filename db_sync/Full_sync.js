@@ -35,6 +35,7 @@ const TABLES_ORDER = [
   'year',
   'concessioncategory',
   'paymentgateway',
+  'bank',
   'payment',
   'shoppingcart',
   'modules',
@@ -51,12 +52,15 @@ const TABLES_ORDER = [
   // Activity and sequence
   'activitytype',
   'sequence',
+  // Fee structure (depends on institution, year)
+  'feegroup',
+  'feetype',
   // Parents and students
   'parents',
   'students',
   // Junction table (depends on parents and students)
   'parentdetail',
-  // Fee related (depends on students, year, payment)
+  // Fee related (depends on students, year, feetype)
   'challan',
   'feedemand',
   'shoppingcartdetails',
@@ -65,6 +69,7 @@ const TABLES_ORDER = [
 ];
 
 // Identity columns for sequence reset
+// Note: concessioncategory, userlogin, bank, feegroup, feetype do NOT have identity columns
 const identityColumns = {
   currency: 'cur_id',
   institutiontype: 'it_id',
@@ -89,7 +94,7 @@ const identityColumns = {
   challan: 'cha_id',
   feedemand: 'dem_id',
   shoppingcartdetails: 'cd_id',
-  userlogin: 'login_id',
+  // userlogin has ul_id but it's NOT an identity column
 };
 
 const isDryRun = process.argv.includes('--dry-run');
