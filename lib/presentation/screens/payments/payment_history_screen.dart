@@ -75,7 +75,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       itemCount: filteredFees.length,
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
@@ -92,7 +92,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     final cartItemCount = ref.watch(cartItemCountProvider);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
           // Profile Image
@@ -158,10 +158,14 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  const Icon(
-                    Icons.shopping_cart_outlined,
-                    size: 24,
-                    color: Color(0xFF1F2933),
+                  SvgPicture.asset(
+                    'assets/icons/Cart.svg',
+                    width: 24,
+                    height: 24,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFF1F2933),
+                      BlendMode.srcIn,
+                    ),
                   ),
                   if (cartItemCount > 0)
                     Positioned(
@@ -223,19 +227,6 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                       BlendMode.srcIn,
                     ),
                   ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -246,48 +237,57 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   }
 
   Widget _buildFilterTabs(List<String> filters) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: filters.map((filter) {
-          final isActive = _activeFilter == filter;
-          return Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _activeFilter = filter;
-                });
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color:
-                      isActive ? const Color(0xFF1F2933) : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  border: isActive
-                      ? null
-                      : Border.all(
-                          color: const Color(0xFF6B7280),
-                          width: 1,
-                        ),
-                ),
-                child: Text(
-                  filter,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: isActive
-                        ? const Color(0xFFFAFAFA)
-                        : const Color(0xFF6B7280),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: filters.map((filter) {
+            final isActive = _activeFilter == filter;
+            return Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _activeFilter = filter;
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isActive ? Colors.white : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: isActive
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.08),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      filter,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                        color: isActive
+                            ? const Color(0xFF1F2933)
+                            : const Color(0xFF6B7280),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

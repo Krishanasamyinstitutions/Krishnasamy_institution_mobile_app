@@ -36,7 +36,7 @@ class PaidScreen extends ConsumerWidget {
             child: paidFees.isEmpty
                 ? _buildEmptyState()
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount: paidFees.length,
                     itemBuilder: (context, index) {
                       final fee = paidFees[index];
@@ -54,7 +54,7 @@ class PaidScreen extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -122,19 +122,6 @@ class PaidScreen extends ConsumerWidget {
                     colorFilter: const ColorFilter.mode(
                       Color(0xFF1F2933),
                       BlendMode.srcIn,
-                    ),
-                  ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
                     ),
                   ),
                 ],
