@@ -1,6 +1,110 @@
 /// Fee status based on paidstatus field ('P' = Paid, 'U' = Unpaid)
 enum FeeStatus { pending, partial, paid, overdue }
 
+/// Fee Group model matching Supabase 'feegroup' table
+class FeeGroupModel {
+  final int fgId;
+  final String fgdesc;
+  final int? banId;
+  final int insId;
+  final int yrId;
+  final String yrlabel;
+  final int activestatus;
+
+  FeeGroupModel({
+    required this.fgId,
+    required this.fgdesc,
+    this.banId,
+    required this.insId,
+    required this.yrId,
+    required this.yrlabel,
+    this.activestatus = 1,
+  });
+
+  factory FeeGroupModel.fromJson(Map<String, dynamic> json) {
+    return FeeGroupModel(
+      fgId: json['fg_id'] is int ? json['fg_id'] : int.parse(json['fg_id'].toString()),
+      fgdesc: json['fgdesc'] ?? '',
+      banId: json['ban_id'] != null
+          ? (json['ban_id'] is int ? json['ban_id'] : int.parse(json['ban_id'].toString()))
+          : null,
+      insId: json['ins_id'] is int ? json['ins_id'] : int.parse(json['ins_id'].toString()),
+      yrId: json['yr_id'] is int ? json['yr_id'] : int.parse(json['yr_id'].toString()),
+      yrlabel: json['yrlabel'] ?? '',
+      activestatus: json['activestatus'] ?? 1,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'fg_id': fgId,
+    'fgdesc': fgdesc,
+    'ban_id': banId,
+    'ins_id': insId,
+    'yr_id': yrId,
+    'yrlabel': yrlabel,
+    'activestatus': activestatus,
+  };
+}
+
+/// Fee Type model matching Supabase 'feetype' table
+class FeeTypeModel {
+  final int feeId;
+  final String feedesc;
+  final String feeshort;
+  final int? feeoptional;
+  final int? feecategory;
+  final int fgId;
+  final int yrId;
+  final String yrlabel;
+  final int activestatus;
+
+  // Joined data from feegroup
+  final FeeGroupModel? feeGroup;
+
+  FeeTypeModel({
+    required this.feeId,
+    required this.feedesc,
+    required this.feeshort,
+    this.feeoptional,
+    this.feecategory,
+    required this.fgId,
+    required this.yrId,
+    required this.yrlabel,
+    this.activestatus = 1,
+    this.feeGroup,
+  });
+
+  factory FeeTypeModel.fromJson(Map<String, dynamic> json) {
+    return FeeTypeModel(
+      feeId: json['fee_id'] is int ? json['fee_id'] : int.parse(json['fee_id'].toString()),
+      feedesc: json['feedesc'] ?? '',
+      feeshort: json['feeshort'] ?? '',
+      feeoptional: json['feeoptional'],
+      feecategory: json['feecategory'],
+      fgId: json['fg_id'] is int ? json['fg_id'] : int.parse(json['fg_id'].toString()),
+      yrId: json['yr_id'] is int ? json['yr_id'] : int.parse(json['yr_id'].toString()),
+      yrlabel: json['yrlabel'] ?? '',
+      activestatus: json['activestatus'] ?? 1,
+      feeGroup: json['feegroup'] != null ? FeeGroupModel.fromJson(json['feegroup']) : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'fee_id': feeId,
+    'feedesc': feedesc,
+    'feeshort': feeshort,
+    'feeoptional': feeoptional,
+    'feecategory': feecategory,
+    'fg_id': fgId,
+    'yr_id': yrId,
+    'yrlabel': yrlabel,
+    'activestatus': activestatus,
+  };
+
+  /// Get fee group name (from joined data or empty)
+  String get feeGroupName => feeGroup?.fgdesc ?? '';
+}
+
 /// Fee demand model matching Supabase 'feedemand' table
 class FeeModel {
   final int demId;
@@ -14,6 +118,7 @@ class FeeModel {
   final String stuclass;
   final String demfeeyear;
   final String demfeeterm;
+  final int? feeId; // NEW: Links to feetype table
   final String demfeetype;
   final String? demfeecategory;
   final double feeamount;
@@ -29,6 +134,9 @@ class FeeModel {
   final DateTime? inactivedate;
   final DateTime? duedate;
 
+  // Joined data from feetype/feegroup
+  final FeeTypeModel? feeType;
+
   FeeModel({
     required this.demId,
     required this.demno,
@@ -41,6 +149,7 @@ class FeeModel {
     required this.stuclass,
     required this.demfeeyear,
     required this.demfeeterm,
+    this.feeId,
     required this.demfeetype,
     this.demfeecategory,
     required this.feeamount,
@@ -55,6 +164,7 @@ class FeeModel {
     this.activestatus = 1,
     this.inactivedate,
     this.duedate,
+    this.feeType,
   });
 
   /// Create from Supabase JSON response
@@ -71,6 +181,9 @@ class FeeModel {
       stuclass: json['stuclass'] ?? '',
       demfeeyear: json['demfeeyear'] ?? '',
       demfeeterm: json['demfeeterm'] ?? '',
+      feeId: json['fee_id'] != null
+          ? (json['fee_id'] is int ? json['fee_id'] : int.parse(json['fee_id'].toString()))
+          : null,
       demfeetype: json['demfeetype'] ?? '',
       demfeecategory: json['demfeecategory'],
       feeamount: (json['feeamount'] as num?)?.toDouble() ?? 0,
@@ -95,6 +208,7 @@ class FeeModel {
       duedate: json['duedate'] != null
           ? DateTime.parse(json['duedate'])
           : null,
+      feeType: json['feetype'] != null ? FeeTypeModel.fromJson(json['feetype']) : null,
     );
   }
 
@@ -112,6 +226,7 @@ class FeeModel {
       'stuclass': stuclass,
       'demfeeyear': demfeeyear,
       'demfeeterm': demfeeterm,
+      'fee_id': feeId,
       'demfeetype': demfeetype,
       'demfeecategory': demfeecategory,
       'feeamount': feeamount,
@@ -163,6 +278,7 @@ class FeeModel {
     String? stuclass,
     String? demfeeyear,
     String? demfeeterm,
+    int? feeId,
     String? demfeetype,
     String? demfeecategory,
     double? feeamount,
@@ -177,6 +293,7 @@ class FeeModel {
     int? activestatus,
     DateTime? inactivedate,
     DateTime? duedate,
+    FeeTypeModel? feeType,
   }) {
     return FeeModel(
       demId: demId ?? this.demId,
@@ -190,6 +307,7 @@ class FeeModel {
       stuclass: stuclass ?? this.stuclass,
       demfeeyear: demfeeyear ?? this.demfeeyear,
       demfeeterm: demfeeterm ?? this.demfeeterm,
+      feeId: feeId ?? this.feeId,
       demfeetype: demfeetype ?? this.demfeetype,
       demfeecategory: demfeecategory ?? this.demfeecategory,
       feeamount: feeamount ?? this.feeamount,
@@ -204,8 +322,17 @@ class FeeModel {
       activestatus: activestatus ?? this.activestatus,
       inactivedate: inactivedate ?? this.inactivedate,
       duedate: duedate ?? this.duedate,
+      feeType: feeType ?? this.feeType,
     );
   }
+
+  /// Helper getters for fee type/group info from joined data
+  String get feeGroupName => feeType?.feeGroupName ?? '';
+  String get feeCategory => feeType?.feecategory?.toString() ?? '';
+  bool get isTransportFee => feeType?.feeGroup?.fgdesc.toLowerCase().contains('transport') ??
+                              demfeetype.toLowerCase().contains('transport') ||
+                              demfeetype.toLowerCase().contains('bus') ||
+                              demfeetype.toLowerCase().contains('van');
 }
 
 /// Fee summary for dashboard display
