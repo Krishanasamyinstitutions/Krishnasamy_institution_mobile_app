@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../data/models/fee_model.dart';
+import '../../../data/models/fee_model.dart' show FeeSummary;
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -17,10 +17,9 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedStudent = ref.watch(selectedStudentProvider);
     final feeSummaryAsync = ref.watch(feeSummaryProvider);
-    final pendingFees = ref.watch(pendingFeesProvider);
 
-    // Calculate fees by category
-    final feesByCategory = _calculateFeesByCategory(pendingFees);
+    // Use the new provider that fetches feegroup.fgdesc from database
+    final feesByGroup = ref.watch(pendingFeesByGroupProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -77,7 +76,7 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
 
                 // Fee Cards Grid
-                _buildFeeCardsGrid(context, feesByCategory),
+                _buildFeeCardsGrid(context, feesByGroup),
 
                 const SizedBox(height: 20),
               ],
@@ -86,29 +85,6 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  /// Calculate fees grouped by term and bus
-  Map<String, double> _calculateFeesByCategory(List<FeeModel> fees) {
-    double termFees = 0;
-    double busFees = 0;
-
-    for (final fee in fees) {
-      final feeType = fee.demfeetype.toLowerCase();
-
-      // Check if it's a bus fee
-      if (feeType.contains('bus') || feeType.contains('transport') || feeType.contains('van')) {
-        busFees += fee.balancedue;
-      } else {
-        // All term fees combined
-        termFees += fee.balancedue;
-      }
-    }
-
-    return {
-      'termFees': termFees,
-      'bus': busFees,
-    };
   }
 
   Widget _buildHeader(BuildContext context, WidgetRef ref, dynamic selectedStudent) {
@@ -407,39 +383,112 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeeCardsGrid(BuildContext context, Map<String, double> feesByCategory) {
-    return Column(
-      children: [
-        // First Row - Term Fees and Bus Fees
-        Row(
+  Widget _buildFeeCardsGrid(BuildContext context, Map<String, double> feesByGroup) {
+    // Get fee group entries and sort them
+    final feeGroups = feesByGroup.entries.toList();
+
+    // Define styling for different fee groups
+    Map<String, dynamic> getGroupStyle(String groupName) {
+      final lower = groupName.toLowerCase();
+      if (lower.contains('bus') || lower.contains('transport') || lower.contains('van')) {
+        return {
+          'icon': Icons.directions_bus_outlined,
+          'backgroundColor': const Color(0xFFD4EDDA),
+          'iconColor': const Color(0xFF28A745),
+          'feeType': 'bus',
+        };
+      } else if (lower.contains('tuition') || lower.contains('term')) {
+        return {
+          'icon': Icons.school_outlined,
+          'backgroundColor': const Color(0xFFE8E4F3),
+          'iconColor': const Color(0xFF6B5B95),
+          'feeType': 'term',
+        };
+      } else if (lower.contains('hostel') || lower.contains('boarding')) {
+        return {
+          'icon': Icons.home_outlined,
+          'backgroundColor': const Color(0xFFFFE4E1),
+          'iconColor': const Color(0xFFDC143C),
+          'feeType': 'hostel',
+        };
+      } else if (lower.contains('exam') || lower.contains('lab')) {
+        return {
+          'icon': Icons.science_outlined,
+          'backgroundColor': const Color(0xFFE0F7FA),
+          'iconColor': const Color(0xFF00ACC1),
+          'feeType': 'exam',
+        };
+      } else {
+        // Default style for other fee groups
+        return {
+          'icon': Icons.school_outlined,
+          'backgroundColor': const Color(0xFFE8E4F3),
+          'iconColor': const Color(0xFF6B5B95),
+          'feeType': 'other',
+        };
+      }
+    }
+
+    // Build fee group cards dynamically
+    List<Widget> buildFeeGroupCards() {
+      final cards = <Widget>[];
+
+      for (int i = 0; i < feeGroups.length; i += 2) {
+        final firstGroup = feeGroups[i];
+        final firstStyle = getGroupStyle(firstGroup.key);
+
+        final row = Row(
           children: [
             Expanded(
               child: _buildFeeCard(
-                icon: Icons.school_outlined,
-                title: 'Term Fees',
-                amount: feesByCategory['termFees'] ?? 0,
-                backgroundColor: const Color(0xFFE8E4F3),
-                iconColor: const Color(0xFF6B5B95),
+                icon: firstStyle['icon'] as IconData,
+                title: firstGroup.key,
+                amount: firstGroup.value,
+                backgroundColor: firstStyle['backgroundColor'] as Color,
+                iconColor: firstStyle['iconColor'] as Color,
                 statusTag: 'Pending',
-                onTap: () => context.push(Routes.pending, extra: {'feeType': 'term'}),
+                onTap: () => context.push(Routes.pending, extra: {'feeType': firstStyle['feeType'], 'groupName': firstGroup.key}),
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(
-              child: _buildFeeCard(
-                icon: Icons.directions_bus_outlined,
-                title: 'Bus Fees',
-                amount: feesByCategory['bus'] ?? 0,
-                backgroundColor: const Color(0xFFD4EDDA),
-                iconColor: const Color(0xFF28A745),
-                statusTag: 'Pending',
-                onTap: () => context.push(Routes.pending, extra: {'feeType': 'bus'}),
-              ),
-            ),
+            if (i + 1 < feeGroups.length)
+              Expanded(
+                child: Builder(builder: (context) {
+                  final secondGroup = feeGroups[i + 1];
+                  final secondStyle = getGroupStyle(secondGroup.key);
+                  return _buildFeeCard(
+                    icon: secondStyle['icon'] as IconData,
+                    title: secondGroup.key,
+                    amount: secondGroup.value,
+                    backgroundColor: secondStyle['backgroundColor'] as Color,
+                    iconColor: secondStyle['iconColor'] as Color,
+                    statusTag: 'Pending',
+                    onTap: () => context.push(Routes.pending, extra: {'feeType': secondStyle['feeType'], 'groupName': secondGroup.key}),
+                  );
+                }),
+              )
+            else
+              const Expanded(child: SizedBox()), // Empty placeholder for odd count
           ],
-        ),
+        );
+
+        cards.add(row);
+        if (i + 2 < feeGroups.length) {
+          cards.add(const SizedBox(height: 12));
+        }
+      }
+
+      return cards;
+    }
+
+    return Column(
+      children: [
+        // Dynamic Fee Group Cards
+        ...buildFeeGroupCards(),
+
         const SizedBox(height: 12),
-        // Second Row - Dummy Cards
+
+        // Bottom Row - History and Support
         Row(
           children: [
             Expanded(

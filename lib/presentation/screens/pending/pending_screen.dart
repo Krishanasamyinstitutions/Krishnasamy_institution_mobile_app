@@ -11,8 +11,9 @@ import '../../providers/cart_provider.dart';
 
 class PendingScreen extends ConsumerStatefulWidget {
   final String? feeType;
+  final String? groupName; // feegroup.fgdesc name for filtering
 
-  const PendingScreen({super.key, this.feeType});
+  const PendingScreen({super.key, this.feeType, this.groupName});
 
   @override
   ConsumerState<PendingScreen> createState() => _PendingScreenState();
@@ -46,13 +47,19 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
     final allPendingFees = ref.read(pendingFeesProvider);
     final cartNotifier = ref.read(cartProvider.notifier);
     final cartState = ref.read(cartProvider);
+    final feeTypeMapping = ref.read(feeTypeToGroupMappingProvider).valueOrNull ?? {};
 
-    // Filter fees based on feeType (term or bus)
-    final feesToSelect = widget.feeType == 'bus'
-        ? allPendingFees.where((f) => _isBusFee(f.demfeetype)).toList()
-        : widget.feeType == 'term'
-            ? allPendingFees.where((f) => !_isBusFee(f.demfeetype)).toList()
-            : allPendingFees;
+    // Filter fees based on feeType or groupName
+    List<FeeModel> feesToSelect;
+    if (widget.groupName != null && widget.groupName!.isNotEmpty) {
+      feesToSelect = _filterByFeeGroup(allPendingFees, widget.groupName!, feeTypeMapping);
+    } else if (widget.feeType == 'bus') {
+      feesToSelect = allPendingFees.where((f) => _isBusFee(f.demfeetype)).toList();
+    } else if (widget.feeType == 'term') {
+      feesToSelect = allPendingFees.where((f) => !_isBusFee(f.demfeetype)).toList();
+    } else {
+      feesToSelect = allPendingFees;
+    }
 
     // Add all filtered fees to cart
     for (final fee in feesToSelect) {
@@ -68,27 +75,48 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
     return lowerType.contains('bus') || lowerType.contains('transport') || lowerType.contains('van');
   }
 
-  /// Get fee group options based on fee type
+  /// Check if a group name is transport-related (VAN FEES, BUS FEES, etc.)
+  bool _isTransportGroup(String groupName) {
+    final lower = groupName.toLowerCase();
+    return lower.contains('bus') || lower.contains('transport') || lower.contains('van');
+  }
+
+  /// Get fee group options based on fee type or groupName
   List<String> _getFeeGroupOptions(List<FeeModel> fees) {
-    if (widget.feeType == 'term') {
-      // For term fees page, show term-based options
+    // Determine if this is a transport-type or term-type view
+    final isTransportView = widget.feeType == 'bus' ||
+        (widget.groupName != null && _isTransportGroup(widget.groupName!));
+    final isTermView = widget.feeType == 'term' ||
+        (widget.groupName != null && !_isTransportGroup(widget.groupName!));
+
+    if (isTermView) {
+      // For term fees page, show term-based options sorted by earliest due date
       final options = <String>['ALL'];
-      final terms = fees.map((f) => f.demfeeterm).toSet().toList();
-      terms.sort();
+      // Group fees by term and find earliest due date for each
+      final termDueDates = <String, DateTime>{};
+      for (final fee in fees) {
+        final term = fee.demfeeterm;
+        if (!termDueDates.containsKey(term) || fee.dueDate.isBefore(termDueDates[term]!)) {
+          termDueDates[term] = fee.dueDate;
+        }
+      }
+      final terms = termDueDates.keys.toList()
+        ..sort((a, b) => termDueDates[a]!.compareTo(termDueDates[b]!));
       options.addAll(terms);
       return options;
-    } else if (widget.feeType == 'bus') {
-      // For bus fees page, show month-based options
+    } else if (isTransportView) {
+      // For bus fees page, show month-based options sorted by due date
       final options = <String>['ALL'];
-      final months = fees.map((f) => _extractMonthFromDate(f)).toSet().toList();
-      // Sort months chronologically
-      months.sort((a, b) {
-        final monthOrder = ['APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER',
-                           'OCTOBER', 'NOVEMBER', 'DECEMBER', 'JANUARY', 'FEBRUARY', 'MARCH'];
-        final aMonth = a.split(' ').first.toUpperCase();
-        final bMonth = b.split(' ').first.toUpperCase();
-        return monthOrder.indexOf(aMonth).compareTo(monthOrder.indexOf(bMonth));
-      });
+      // Group fees by month and find earliest due date for each
+      final monthDueDates = <String, DateTime>{};
+      for (final fee in fees) {
+        final month = _extractMonthFromDate(fee);
+        if (!monthDueDates.containsKey(month) || fee.dueDate.isBefore(monthDueDates[month]!)) {
+          monthDueDates[month] = fee.dueDate;
+        }
+      }
+      final months = monthDueDates.keys.toList()
+        ..sort((a, b) => monthDueDates[a]!.compareTo(monthDueDates[b]!));
       options.addAll(months);
       return options;
     }
@@ -101,9 +129,15 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
       return fees;
     }
 
-    if (widget.feeType == 'term') {
+    // Determine if this is a transport-type or term-type view
+    final isTransportView = widget.feeType == 'bus' ||
+        (widget.groupName != null && _isTransportGroup(widget.groupName!));
+    final isTermView = widget.feeType == 'term' ||
+        (widget.groupName != null && !_isTransportGroup(widget.groupName!));
+
+    if (isTermView) {
       return fees.where((f) => f.demfeeterm == _selectedFeeGroup).toList();
-    } else if (widget.feeType == 'bus') {
+    } else if (isTransportView) {
       return fees.where((f) => _extractMonthFromDate(f) == _selectedFeeGroup).toList();
     }
     return fees;
@@ -119,13 +153,21 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
       }
     }
 
+    // Determine if this is a transport-type or term-type view
+    final isTransportView = widget.feeType == 'bus' ||
+        (widget.groupName != null && _isTransportGroup(widget.groupName!));
+    final isTermView = widget.feeType == 'term' ||
+        (widget.groupName != null && !_isTransportGroup(widget.groupName!));
+
     List<FeeModel> feesToSelect;
     if (group == 'ALL') {
       feesToSelect = allFees;
-    } else if (widget.feeType == 'term') {
+    } else if (isTermView) {
       feesToSelect = allFees.where((f) => f.demfeeterm == group).toList();
-    } else {
+    } else if (isTransportView) {
       feesToSelect = allFees.where((f) => _extractMonthFromDate(f) == group).toList();
+    } else {
+      feesToSelect = allFees;
     }
 
     for (final fee in feesToSelect) {
@@ -164,32 +206,49 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
     return 'Academic Year $academicYear';
   }
 
-  /// Sort bus fees by month
+  /// Sort fees by due date (earliest first)
   List<FeeModel> _getSortedBusFees(List<FeeModel> fees) {
     final sortedFees = List<FeeModel>.from(fees);
-    final monthOrder = ['APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER',
-                       'OCTOBER', 'NOVEMBER', 'DECEMBER', 'JANUARY', 'FEBRUARY', 'MARCH'];
-
-    sortedFees.sort((a, b) {
-      final aMonth = _extractMonthFromDate(a).split(' ').first.toUpperCase();
-      final bMonth = _extractMonthFromDate(b).split(' ').first.toUpperCase();
-      return monthOrder.indexOf(aMonth).compareTo(monthOrder.indexOf(bMonth));
-    });
-
+    sortedFees.sort((a, b) => a.dueDate.compareTo(b.dueDate));
     return sortedFees;
+  }
+
+  /// Filter fees by feegroup name using fee_id -> feegroup mapping
+  List<FeeModel> _filterByFeeGroup(List<FeeModel> fees, String groupName, Map<int, String> mapping) {
+    return fees.where((fee) {
+      // Check if fee has fee_id and maps to the selected group
+      if (fee.feeId != null && mapping.containsKey(fee.feeId)) {
+        return mapping[fee.feeId] == groupName;
+      }
+      // Fallback: use keyword matching for demfeetype
+      final lower = fee.demfeetype.toLowerCase();
+      final groupLower = groupName.toLowerCase();
+      if (groupLower.contains('van') || groupLower.contains('bus') || groupLower.contains('transport')) {
+        return lower.contains('van') || lower.contains('bus') || lower.contains('transport');
+      } else {
+        // School fees - everything that's not transport
+        return !lower.contains('van') && !lower.contains('bus') && !lower.contains('transport');
+      }
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final allPendingFees = ref.watch(pendingFeesProvider);
     final cartState = ref.watch(cartProvider);
+    final feeTypeMapping = ref.watch(feeTypeToGroupMappingProvider).valueOrNull ?? {};
 
-    // Filter fees based on feeType parameter (term or bus)
-    final baseFees = widget.feeType == 'bus'
-        ? allPendingFees.where((f) => _isBusFee(f.demfeetype)).toList()
-        : widget.feeType == 'term'
-            ? allPendingFees.where((f) => !_isBusFee(f.demfeetype)).toList()
-            : allPendingFees;
+    // Filter fees based on groupName (from feegroup.fgdesc) if provided
+    List<FeeModel> baseFees;
+    if (widget.groupName != null && widget.groupName!.isNotEmpty) {
+      baseFees = _filterByFeeGroup(allPendingFees, widget.groupName!, feeTypeMapping);
+    } else if (widget.feeType == 'bus') {
+      baseFees = allPendingFees.where((f) => _isBusFee(f.demfeetype)).toList();
+    } else if (widget.feeType == 'term') {
+      baseFees = allPendingFees.where((f) => !_isBusFee(f.demfeetype)).toList();
+    } else {
+      baseFees = allPendingFees;
+    }
 
     // Further filter based on dropdown selection
     final filteredFees = _getFilteredFees(baseFees);
@@ -274,13 +333,13 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
             ),
           ),
 
-          // Title
+          // Title - show groupName if provided, otherwise fallback to feeType
           Text(
-            widget.feeType == 'bus'
+            widget.groupName ?? (widget.feeType == 'bus'
                 ? 'Bus Fees'
                 : widget.feeType == 'term'
                     ? 'Term Fees'
-                    : 'Pending',
+                    : 'Pending'),
             style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -369,11 +428,17 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
                 _buildFeeGroupFilter(feeGroupOptions, filteredFees, totalAmount),
                 const SizedBox(height: 16),
 
-                // Fee cards based on type
+                // Fee cards based on type or groupName
                 if (widget.feeType == 'term')
                   ..._buildTermFeeCards(filteredFees, cartState)
                 else if (widget.feeType == 'bus')
-                  _buildBusFeeCard(filteredFees, cartState),
+                  _buildBusFeeCard(filteredFees, cartState)
+                else if (widget.groupName != null && widget.groupName!.isNotEmpty)
+                  // Render based on groupName - VAN/BUS/TRANSPORT uses bus card, otherwise term cards
+                  if (_isTransportGroup(widget.groupName!))
+                    _buildBusFeeCard(filteredFees, cartState)
+                  else
+                    ..._buildTermFeeCards(filteredFees, cartState),
               ],
             ),
           ),
@@ -387,8 +452,12 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
   }
 
   Widget _buildFeeGroupFilter(List<String> options, List<FeeModel> filteredFees, double totalAmount) {
+    // Determine view type for labels
+    final isTransportView = widget.feeType == 'bus' ||
+        (widget.groupName != null && _isTransportGroup(widget.groupName!));
+
     final displayText = _selectedFeeGroup == 'ALL'
-        ? (widget.feeType == 'term' ? 'ALL TERMS' : 'ALL MONTHS')
+        ? (isTransportView ? 'ALL MONTHS' : 'ALL TERMS')
         : _selectedFeeGroup;
 
     return Container(
@@ -408,7 +477,7 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            widget.feeType == 'term' ? 'Select Term' : 'Select Month',
+            isTransportView ? 'Select Month' : 'Select Term',
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
@@ -496,6 +565,10 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
   }
 
   Widget _buildFloatingDropdown(List<String> options, List<FeeModel> allFees, List<FeeModel> filteredFees, CartState cartState) {
+    // Determine view type for labels
+    final isTransportView = widget.feeType == 'bus' ||
+        (widget.groupName != null && _isTransportGroup(widget.groupName!));
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -521,7 +594,7 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
             final isFirst = index == 0;
             final isLast = index == options.length - 1;
             final displayText = option == 'ALL'
-                ? (widget.feeType == 'term' ? 'ALL TERMS' : 'ALL MONTHS')
+                ? (isTransportView ? 'ALL MONTHS' : 'ALL TERMS')
                 : option;
             return GestureDetector(
               onTap: () {
@@ -593,7 +666,18 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
       feesByTerm[term]!.add(fee);
     }
 
-    final sortedTerms = feesByTerm.keys.toList()..sort((a, b) => a.compareTo(b));
+    // Sort fees within each term by due date
+    for (final term in feesByTerm.keys) {
+      feesByTerm[term]!.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+    }
+
+    // Sort terms by earliest due date in each term group
+    final sortedTerms = feesByTerm.keys.toList()
+      ..sort((a, b) {
+        final aEarliest = feesByTerm[a]!.first.dueDate;
+        final bEarliest = feesByTerm[b]!.first.dueDate;
+        return aEarliest.compareTo(bEarliest);
+      });
 
     return sortedTerms.map((term) {
       final termFees = feesByTerm[term]!;
@@ -738,33 +822,79 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
               Container(height: 1, color: const Color(0xFFE5E7EB)),
 
               // Fee Items (no individual checkboxes for term fees)
-              ...fees.map((fee) => Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        fee.demfeetype.toUpperCase(),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF6B7280),
+              ...fees.map((fee) {
+                final isOverdue = fee.duedate != null && fee.duedate!.isBefore(DateTime.now());
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: const BoxDecoration(
+                    border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              fee.demfeetype.toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF6B7280),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 12,
+                                  color: isOverdue ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Due: ${DateFormat('dd MMM yyyy').format(fee.dueDate)}',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: isOverdue ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
+                                  ),
+                                ),
+                                if (isOverdue) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'OVERDUE',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFFEF4444),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    Text(
-                      '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1F2933),
+                      Text(
+                        '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2933),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              )),
+                    ],
+                  ),
+                );
+              }),
 
               // Total Row
               Padding(
@@ -943,6 +1073,7 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
               ...sortedFees.map((fee) {
                 final monthName = _extractMonthFromDate(fee);
                 final isSelected = cartState.containsFee(fee.id);
+                final isOverdue = fee.duedate != null && fee.duedate!.isBefore(DateTime.now());
                 return GestureDetector(
                   onTap: () {
                     if (isSelected) {
@@ -957,6 +1088,7 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
                       border: Border(bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1)),
                     ),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Container(
                           width: 28,
@@ -973,13 +1105,55 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(
-                            monthName,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF1F2933),
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                monthName,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF1F2933),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today_outlined,
+                                    size: 11,
+                                    color: isOverdue ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Due: ${DateFormat('dd MMM yyyy').format(fee.dueDate)}',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                      color: isOverdue ? const Color(0xFFEF4444) : const Color(0xFF9CA3AF),
+                                    ),
+                                  ),
+                                  if (isOverdue) ...[
+                                    const SizedBox(width: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(3),
+                                      ),
+                                      child: const Text(
+                                        'OVERDUE',
+                                        style: TextStyle(
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFFEF4444),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                         Text(
@@ -1047,6 +1221,10 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
   }
 
   Widget _buildBottomBar(BuildContext context, int selectedCount, double selectedAmount) {
+    // Determine view type for labels
+    final isTransportView = widget.feeType == 'bus' ||
+        (widget.groupName != null && _isTransportGroup(widget.groupName!));
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1069,7 +1247,7 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '$selectedCount ${widget.feeType == 'bus' ? 'month' : 'fee'}${selectedCount > 1 ? 's' : ''} selected',
+                    '$selectedCount ${isTransportView ? 'month' : 'fee'}${selectedCount > 1 ? 's' : ''} selected',
                     style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.textSecondary,
@@ -1113,18 +1291,32 @@ class _PendingScreenState extends ConsumerState<PendingScreen> {
   }
 
   Widget _buildEmptyState() {
+    // Determine view type for labels
+    final isTransportView = widget.feeType == 'bus' ||
+        (widget.groupName != null && _isTransportGroup(widget.groupName!));
+
+    // Get display name for the empty state message
+    final String displayName;
+    if (widget.groupName != null && widget.groupName!.isNotEmpty) {
+      displayName = widget.groupName!.toLowerCase();
+    } else if (isTransportView) {
+      displayName = 'bus fees';
+    } else {
+      displayName = 'term fees';
+    }
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            widget.feeType == 'bus' ? Icons.directions_bus_outlined : Icons.receipt_long_outlined,
+            isTransportView ? Icons.directions_bus_outlined : Icons.receipt_long_outlined,
             size: 64,
             color: const Color(0xFFD1D5DB),
           ),
           const SizedBox(height: 16),
           Text(
-            widget.feeType == 'bus' ? 'No bus fees pending' : 'No term fees pending',
+            'No $displayName pending',
             style: const TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w500,

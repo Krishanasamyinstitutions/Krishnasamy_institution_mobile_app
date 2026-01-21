@@ -209,7 +209,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>?;
           final feeType = extra?['feeType'] as String?;
-          return PendingScreen(feeType: feeType);
+          final groupName = extra?['groupName'] as String?;
+          return PendingScreen(feeType: feeType, groupName: groupName);
         },
       ),
 
