@@ -18,50 +18,6 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
-  // Mock data for preview (remove when real data is available)
-  List<NotificationModel> get _mockNotifications => [
-    NotificationModel(
-      id: '1',
-      schoolId: 'school-1',
-      parentId: 'parent-1',
-      title: 'Upcoming Fee Due',
-      message: 'Term 2 tuition fee of ₹12,000 is due by 20 July 2025. Avoid late charges by paying on time.',
-      type: NotificationType.feeReminder,
-      isRead: true,
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-    ),
-    NotificationModel(
-      id: '2',
-      schoolId: 'school-1',
-      parentId: 'parent-1',
-      title: 'Payment Successful',
-      message: 'Your payment of ₹4,500 for Term 1 was received on 10 July 2025. Receipt is now available to download.',
-      type: NotificationType.paymentSuccess,
-      isRead: true,
-      createdAt: DateTime.now().subtract(const Duration(hours: 10)),
-    ),
-    NotificationModel(
-      id: '3',
-      schoolId: 'school-1',
-      parentId: 'parent-1',
-      title: 'Late Fee Applied',
-      message: 'A late fee of ₹200 has been added to your Transport Fee for Term 1. Please clear dues to avoid further penalties.',
-      type: NotificationType.alert,
-      isRead: false,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    NotificationModel(
-      id: '4',
-      schoolId: 'school-1',
-      parentId: 'parent-1',
-      title: 'Parent-Teacher Meeting',
-      message: 'PTM for Class 6 will be held on 25 July 2025 at 10:00 AM in the school auditorium. Attendance is encouraged.',
-      type: NotificationType.announcement,
-      isRead: false,
-      createdAt: DateTime(2025, 7, 7, 18, 0),
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final notificationsAsync = ref.watch(notificationsProvider);
@@ -87,18 +43,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => Center(child: Text('Error: $error')),
                 data: (notifications) {
-                  // Use mock data if no real notifications exist
-                  final displayNotifications = notifications.isEmpty ? _mockNotifications : notifications;
-
-                  if (displayNotifications.isEmpty) {
+                  if (notifications.isEmpty) {
                     return _buildEmptyState();
                   }
 
                   // Group notifications by date
-                  final groupedNotifications = _groupNotificationsByDate(displayNotifications);
+                  final groupedNotifications = _groupNotificationsByDate(notifications);
 
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     itemCount: groupedNotifications.length,
                     itemBuilder: (context, index) {
                       final group = groupedNotifications[index];
@@ -155,7 +108,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final cartItemCount = ref.watch(cartItemCountProvider);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
           // Profile Image
@@ -322,26 +275,31 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildNotificationCard(NotificationModel notification) {
+    final isUnread = !notification.isRead;
+
     return GestureDetector(
-      onTap: () {
-        if (!notification.isRead) {
+      onTap: () async {
+        // Mark as read if unread
+        if (isUnread) {
           ref.read(notificationActionsProvider.notifier).markAsRead(notification.id);
         }
+        // Navigate to notification detail page
+        await context.push('/notifications/${notification.id}', extra: notification);
       },
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: notification.isRead ? const Color(0xFFFAFAFA) : Colors.white,
+          color: isUnread ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
-          boxShadow: notification.isRead
-              ? null
-              : [
+          boxShadow: isUnread
+              ? [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                ],
+                ]
+              : null,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,8 +320,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     notification.title,
                     style: TextStyle(
                       fontSize: 15,
-                      fontWeight: AppSizes.fontNormal,
-                      color: notification.isRead ? AppColors.textSecondary : AppColors.textPrimary,
+                      fontWeight: isUnread ? FontWeight.w600 : FontWeight.w400,
+                      color: isUnread ? AppColors.textPrimary : AppColors.textSecondary,
                       height: 1.47,
                     ),
                   ),

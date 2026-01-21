@@ -48,7 +48,7 @@ class CartScreen extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context, WidgetRef ref, CartState cartState) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [

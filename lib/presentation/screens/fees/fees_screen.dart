@@ -195,7 +195,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
     final cartItemCount = ref.watch(cartItemCountProvider);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
           // Profile Image

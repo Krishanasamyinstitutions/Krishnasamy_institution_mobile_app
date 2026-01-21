@@ -18,6 +18,8 @@ import '../presentation/screens/fees/fee_details_screen.dart';
 import '../presentation/screens/payments/payment_history_screen.dart';
 import '../presentation/screens/payments/transaction_details_screen.dart';
 import '../presentation/screens/notifications/notifications_screen.dart';
+import '../presentation/screens/notifications/notification_detail_screen.dart';
+import '../data/models/notification_model.dart';
 import '../presentation/screens/profile/profile_screen.dart';
 import '../presentation/screens/support/support_screen.dart';
 import '../presentation/screens/paid/paid_screen.dart';
@@ -289,6 +291,19 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: NotificationsScreen(),
             ),
+            routes: [
+              GoRoute(
+                path: ':notificationId',
+                builder: (context, state) {
+                  final notificationId = state.pathParameters['notificationId']!;
+                  final notification = state.extra as NotificationModel?;
+                  return NotificationDetailScreen(
+                    notificationId: notificationId,
+                    notification: notification,
+                  );
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: Routes.profile,
