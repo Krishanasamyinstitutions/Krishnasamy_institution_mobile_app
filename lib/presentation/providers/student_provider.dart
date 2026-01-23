@@ -225,6 +225,24 @@ final studentByAdmissionProvider = FutureProvider.family<StudentModel?, String>(
   }
 });
 
+/// Provider to check if parent has multiple students
+final hasMultipleStudentsProvider = Provider<bool>((ref) {
+  final studentsAsync = ref.watch(studentsByParentProvider);
+  return studentsAsync.maybeWhen(
+    data: (students) => students.length > 1,
+    orElse: () => false,
+  );
+});
+
+/// Provider to get student count
+final studentCountProvider = Provider<int>((ref) {
+  final studentsAsync = ref.watch(studentsByParentProvider);
+  return studentsAsync.maybeWhen(
+    data: (students) => students.length,
+    orElse: () => 0,
+  );
+});
+
 /// Fetch institution for selected student based on ins_id
 final selectedStudentWithInstitutionProvider = FutureProvider<InstitutionModel?>((ref) async {
   final selectedStudent = ref.watch(selectedStudentProvider);

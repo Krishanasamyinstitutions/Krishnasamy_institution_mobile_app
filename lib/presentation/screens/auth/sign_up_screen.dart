@@ -216,52 +216,52 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: AppSizes.s2),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
 
-                        // Back Button
-                        _buildBackButton(),
+                          // Back Button
+                          _buildBackButton(),
 
-                        const SizedBox(height: AppSizes.s6),
+                          const SizedBox(height: 24),
 
-                        // Header with title and illustration
-                        _buildHeader(),
+                          // Header with title and illustration
+                          _buildHeader(),
 
-                        const SizedBox(height: AppSizes.s10),
+                          const SizedBox(height: 32),
 
-                        // Mobile Number Field
-                        _buildMobileField(),
+                          // Mobile Number Field
+                          _buildMobileField(),
 
-                        const SizedBox(height: AppSizes.s8),
+                          const SizedBox(height: 32),
 
-                        // Get OTP Button
-                        _buildGetOtpButton(),
-                      ],
+                          // Get OTP Button
+                          _buildGetOtpButton(),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
-            // Sign In Link at bottom
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSizes.s6),
-              child: _buildSignInLink(),
-            ),
-          ],
+              // Sign In Link at bottom
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: _buildSignInLink(),
+              ),
+            ],
+          ),
         ),
-      ),
     );
   }
 
@@ -271,26 +271,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       child: Container(
         width: 44,
         height: 44,
-        decoration: BoxDecoration(
-          color: Colors.white,
+        decoration: const BoxDecoration(
+          color: Color(0xFF1F2937),
           shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              blurRadius: 1,
-              offset: Offset.zero,
-            ),
-            BoxShadow(
-              color: const Color(0xFFE5E7EB).withValues(alpha: 0.8),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: const Icon(
           Icons.arrow_back_rounded,
           size: 20,
-          color: Color(0xFF1F2933),
+          color: Colors.white,
         ),
       ),
     );
@@ -301,27 +289,25 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Title and subtitle
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Sign Up',
                 style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F2933),
-                  height: 1.27,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              SizedBox(height: AppSizes.s2),
+              const SizedBox(height: 8),
               Text(
                 'Create your Account !',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF6B7280),
-                  height: 1.47,
+                  color: AppColors.textTertiary,
                 ),
               ),
             ],
@@ -453,20 +439,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       onTap: _isLoading ? null : _handleRequestOtp,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.accent,
-          borderRadius: BorderRadius.circular(12),
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, AppColors.primary600],
+          ),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF3D75FC).withValues(alpha: 0.24),
-              blurRadius: 1,
-              offset: Offset.zero,
-            ),
-            const BoxShadow(
-              color: Color(0xFFE5E7EB),
-              blurRadius: 4,
-              offset: Offset(0, 2),
+              color: AppColors.primary.withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -494,7 +477,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               const SizedBox(width: 10),
               const Icon(
                 Icons.verified_user_outlined,
-                size: 24,
+                size: 22,
                 color: Colors.white,
               ),
             ],
@@ -508,21 +491,22 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
+        Text(
           'Already have an Account ?',
           style: TextStyle(
             fontSize: 15,
-            color: Color(0xFF6B7280),
+            color: AppColors.textTertiary,
           ),
         ),
         const SizedBox(width: 4),
         GestureDetector(
           onTap: () => context.push(Routes.signIn),
-          child: const Text(
+          child: Text(
             'Sign In',
             style: TextStyle(
               fontSize: 15,
-              color: AppColors.accent,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
             ),
           ),
         ),

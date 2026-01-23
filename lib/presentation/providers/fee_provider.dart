@@ -397,6 +397,141 @@ final pendingFeesByGroupProvider = Provider<Map<String, double>>((ref) {
   return grouped;
 });
 
+/// Get overdue fees (past due date)
+final overdueFeesProvider = Provider<List<FeeModel>>((ref) {
+  final pendingFees = ref.watch(pendingFeesProvider);
+  final now = DateTime.now();
+  return pendingFees
+      .where((f) => f.duedate != null && f.duedate!.isBefore(now))
+      .toList()
+    ..sort((a, b) => a.duedate!.compareTo(b.duedate!));
+});
+
+/// Get fees due soon (within next 30 days)
+final dueSoonFeesProvider = Provider<List<FeeModel>>((ref) {
+  final pendingFees = ref.watch(pendingFeesProvider);
+  final now = DateTime.now();
+  final thirtyDaysLater = now.add(const Duration(days: 30));
+  return pendingFees
+      .where((f) =>
+          f.duedate != null &&
+          f.duedate!.isAfter(now) &&
+          f.duedate!.isBefore(thirtyDaysLater))
+      .toList()
+    ..sort((a, b) => a.duedate!.compareTo(b.duedate!));
+});
+
+/// Group summary model for activity display
+class FeeGroupSummary {
+  final String groupName;
+  final double totalAmount;
+  final int itemCount;
+  final DateTime? nearestDueDate;
+  final bool isOverdue;
+
+  FeeGroupSummary({
+    required this.groupName,
+    required this.totalAmount,
+    required this.itemCount,
+    this.nearestDueDate,
+    required this.isOverdue,
+  });
+}
+
+/// Get overdue fees grouped by fee group
+final overdueByGroupProvider = Provider<List<FeeGroupSummary>>((ref) {
+  final overdueFees = ref.watch(overdueFeesProvider);
+  final mappingAsync = ref.watch(feeTypeToGroupMappingProvider);
+  final feeGroupsAsync = ref.watch(feeGroupListProvider);
+
+  final mapping = mappingAsync.valueOrNull ?? {};
+  final feeGroups = feeGroupsAsync.valueOrNull ?? [];
+
+  final Map<String, List<FeeModel>> grouped = {};
+  for (final fee in overdueFees) {
+    String groupName;
+    if (fee.feeId != null && mapping.containsKey(fee.feeId)) {
+      groupName = mapping[fee.feeId]!;
+    } else if (fee.feeGroupName.isNotEmpty) {
+      groupName = fee.feeGroupName;
+    } else {
+      groupName = _matchFeeTypeToGroup(fee.demfeetype, feeGroups);
+    }
+    grouped.putIfAbsent(groupName, () => []).add(fee);
+  }
+
+  return grouped.entries.map((entry) {
+    final fees = entry.value;
+    final total = fees.fold(0.0, (sum, f) => sum + f.balancedue);
+    final nearest = fees.map((f) => f.duedate).whereType<DateTime>().reduce((a, b) => a.isBefore(b) ? a : b);
+    return FeeGroupSummary(
+      groupName: entry.key,
+      totalAmount: total,
+      itemCount: fees.length,
+      nearestDueDate: nearest,
+      isOverdue: true,
+    );
+  }).toList()..sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
+});
+
+/// Get due soon fees grouped by fee group
+final dueSoonByGroupProvider = Provider<List<FeeGroupSummary>>((ref) {
+  final dueSoonFees = ref.watch(dueSoonFeesProvider);
+  final mappingAsync = ref.watch(feeTypeToGroupMappingProvider);
+  final feeGroupsAsync = ref.watch(feeGroupListProvider);
+
+  final mapping = mappingAsync.valueOrNull ?? {};
+  final feeGroups = feeGroupsAsync.valueOrNull ?? [];
+
+  final Map<String, List<FeeModel>> grouped = {};
+  for (final fee in dueSoonFees) {
+    String groupName;
+    if (fee.feeId != null && mapping.containsKey(fee.feeId)) {
+      groupName = mapping[fee.feeId]!;
+    } else if (fee.feeGroupName.isNotEmpty) {
+      groupName = fee.feeGroupName;
+    } else {
+      groupName = _matchFeeTypeToGroup(fee.demfeetype, feeGroups);
+    }
+    grouped.putIfAbsent(groupName, () => []).add(fee);
+  }
+
+  return grouped.entries.map((entry) {
+    final fees = entry.value;
+    final total = fees.fold(0.0, (sum, f) => sum + f.balancedue);
+    final nearest = fees.map((f) => f.duedate).whereType<DateTime>().reduce((a, b) => a.isBefore(b) ? a : b);
+    return FeeGroupSummary(
+      groupName: entry.key,
+      totalAmount: total,
+      itemCount: fees.length,
+      nearestDueDate: nearest,
+      isOverdue: false,
+    );
+  }).toList()..sort((a, b) => a.nearestDueDate!.compareTo(b.nearestDueDate!));
+});
+
+/// Get pending fees by group name
+final pendingFeesByGroupNameProvider = Provider.family<List<FeeModel>, String>((ref, groupName) {
+  final pendingFees = ref.watch(pendingFeesProvider);
+  final mappingAsync = ref.watch(feeTypeToGroupMappingProvider);
+  final feeGroupsAsync = ref.watch(feeGroupListProvider);
+
+  final mapping = mappingAsync.valueOrNull ?? {};
+  final feeGroups = feeGroupsAsync.valueOrNull ?? [];
+
+  return pendingFees.where((fee) {
+    String feeGroupName;
+    if (fee.feeId != null && mapping.containsKey(fee.feeId)) {
+      feeGroupName = mapping[fee.feeId]!;
+    } else if (fee.feeGroupName.isNotEmpty) {
+      feeGroupName = fee.feeGroupName;
+    } else {
+      feeGroupName = _matchFeeTypeToGroup(fee.demfeetype, feeGroups);
+    }
+    return feeGroupName.toLowerCase() == groupName.toLowerCase();
+  }).toList();
+});
+
 /// Match fee type name to a feegroup.fgdesc using keyword matching
 String _matchFeeTypeToGroup(String demfeetype, List<String> feeGroups) {
   final lower = demfeetype.toLowerCase();

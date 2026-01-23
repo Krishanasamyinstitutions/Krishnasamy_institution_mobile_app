@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/routes.dart';
+import '../../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -23,8 +24,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final selectedStudent = ref.watch(selectedStudentProvider);
-    final cartItemCount = ref.watch(cartItemCountProvider);
     final currentParent = ref.watch(currentParentProvider);
+    final hasMultipleStudents = ref.watch(hasMultipleStudentsProvider);
 
     final studentData = selectedStudent != null
         ? {
@@ -53,69 +54,85 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           };
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: Column(
         children: [
-          // Header with SafeArea
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                _buildHeader(context, studentData, cartItemCount),
-                const SizedBox(height: 16),
-              ],
+          // Fixed Header with white SafeArea and subtle shadow
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildHeader(context),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
             ),
           ),
-          // Scrollable Content
+
+          // Scrollable content
           Expanded(
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Profile Avatar Section
-                    _buildProfileAvatar(studentData),
                     const SizedBox(height: 24),
 
-                    // Quick Actions
-                    _buildQuickActions(context),
+                    // Student Profile Card - Compact version
+                    _buildStudentCard(studentData),
+
                     const SizedBox(height: 20),
 
-                    // Personal Information Card
-                    _buildInfoCard(
-                      title: 'Personal Information',
-                      icon: Icons.person_outline,
-                      iconColor: const Color(0xFF8B5CF6),
-                      iconBgColor: const Color(0xFFEDE9FE),
-                      items: [
-                        _InfoItem(icon: Icons.badge_outlined, label: 'Admission No', value: studentData['adminNo']!),
-                        _InfoItem(icon: Icons.school_outlined, label: 'Class', value: studentData['class']!),
-                        _InfoItem(icon: Icons.wc_outlined, label: 'Gender', value: studentData['gender']!),
-                        _InfoItem(icon: Icons.cake_outlined, label: 'Date of Birth', value: studentData['dob']!),
-                        _InfoItem(icon: Icons.bloodtype_outlined, label: 'Blood Group', value: studentData['blood']!),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                    // Quick Actions Section
+                    _buildQuickActionsSection(context, hasMultipleStudents),
 
-                    // Contact Information Card
-                    _buildInfoCard(
-                      title: 'Contact Information',
-                      icon: Icons.contact_phone_outlined,
-                      iconColor: const Color(0xFF059669),
-                      iconBgColor: const Color(0xFFD1FAE5),
-                      items: [
-                        _InfoItem(icon: Icons.person_outline, label: 'Parent Name', value: studentData['parentName']!),
-                        _InfoItem(icon: Icons.phone_outlined, label: 'Mobile', value: studentData['mobile']!),
-                        _InfoItem(icon: Icons.email_outlined, label: 'Email', value: studentData['email']!),
-                        _InfoItem(icon: Icons.location_on_outlined, label: 'Address', value: studentData['address']!),
-                      ],
-                    ),
+                    const SizedBox(height: 24),
+
+                    // Personal Information Section
+                    _buildSectionTitle('Personal Information'),
+                    const SizedBox(height: 12),
+                    _buildInfoCard([
+                      _InfoItem(icon: Icons.badge_outlined, label: 'Admission No', value: studentData['adminNo']!),
+                      _InfoItem(icon: Icons.class_outlined, label: 'Class', value: studentData['class']!),
+                      _InfoItem(icon: Icons.wc_outlined, label: 'Gender', value: studentData['gender']!),
+                      _InfoItem(icon: Icons.cake_outlined, label: 'Date of Birth', value: studentData['dob']!),
+                      _InfoItem(icon: Icons.bloodtype_outlined, label: 'Blood Group', value: studentData['blood']!),
+                    ]),
+
+                    const SizedBox(height: 20),
+
+                    // Contact Information Section
+                    _buildSectionTitle('Contact Information'),
+                    const SizedBox(height: 12),
+                    _buildInfoCard([
+                      _InfoItem(icon: Icons.person_outline_rounded, label: 'Parent Name', value: studentData['parentName']!),
+                      _InfoItem(icon: Icons.phone_outlined, label: 'Phone', value: studentData['mobile']!, isNotProvided: studentData['mobile'] == 'N/A'),
+                      _InfoItem(icon: Icons.email_outlined, label: 'Email', value: studentData['email']!),
+                      _InfoItem(icon: Icons.location_on_outlined, label: 'Address', value: studentData['address']!, isNotProvided: studentData['address'] == 'N/A'),
+                    ]),
+
                     const SizedBox(height: 24),
 
                     // Logout Button
                     _buildLogoutButton(context),
-                    const SizedBox(height: 24),
+
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
@@ -126,76 +143,46 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, Map<String, String> studentData, int cartItemCount) {
+  Widget _buildHeader(BuildContext context) {
+    final cartItemCount = ref.watch(cartItemCountProvider);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
-          // Profile Image
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Center(
-              child: Text(
-                studentData['name']!.isNotEmpty
-                    ? studentData['name']![0].toUpperCase()
-                    : 'S',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Student Details
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  studentData['name']!,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2933),
+                  'Profile',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1F2937),
                   ),
                 ),
-                const SizedBox(height: 2),
+                SizedBox(height: 4),
                 Text(
-                  'Admn No: ${studentData['adminNo']}  |  ${studentData['class']}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
+                  'Manage your account',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                     color: Color(0xFF6B7280),
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          // Cart Icon
+          // Cart Icon - Dark theme
           GestureDetector(
             onTap: () => context.push(Routes.cart),
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: Stack(
                 clipBehavior: Clip.none,
@@ -203,33 +190,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 children: [
                   SvgPicture.asset(
                     'assets/icons/Cart.svg',
-                    width: 24,
-                    height: 24,
+                    width: 20,
+                    height: 20,
                     colorFilter: const ColorFilter.mode(
-                      Color(0xFF1F2933),
+                      Colors.white,
                       BlendMode.srcIn,
                     ),
                   ),
                   if (cartItemCount > 0)
                     Positioned(
-                      top: -2,
-                      right: -2,
+                      top: -4,
+                      right: -4,
                       child: Container(
                         padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(
-                          minWidth: 18,
-                          minHeight: 18,
-                        ),
+                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEF4444),
+                          color: AppColors.error,
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
+                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
                         ),
                         child: Text(
                           cartItemCount > 9 ? '9+' : '$cartItemCount',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 10,
+                            fontSize: 9,
                             fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
@@ -240,31 +224,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          // Notification Icon
+          const SizedBox(width: 10),
+          // Notification Icon - Dark theme
           GestureDetector(
             onTap: () => context.go(Routes.notifications),
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: Center(
                 child: SvgPicture.asset(
                   'assets/images/notification.svg',
-                  width: 22,
-                  height: 22,
+                  width: 20,
+                  height: 20,
                   colorFilter: const ColorFilter.mode(
-                    Color(0xFF1F2933),
+                    Colors.white,
                     BlendMode.srcIn,
                   ),
                 ),
@@ -276,147 +253,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileAvatar(Map<String, String> studentData) {
-    return Column(
-      children: [
-        // Avatar
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFFEDE9FE),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Text(
-              studentData['name']!.isNotEmpty
-                  ? studentData['name']![0].toUpperCase()
-                  : 'S',
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF8B5CF6),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Student Name
-        Text(
-          studentData['name']!,
-          style: const TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1F2933),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActions(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildQuickActionCard(
-            icon: Icons.swap_horiz_rounded,
-            label: 'Switch Student',
-            color: const Color(0xFF8B5CF6),
-            bgColor: const Color(0xFFEDE9FE),
-            onTap: () => context.go(Routes.studentSelection),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildQuickActionCard(
-            icon: Icons.history_rounded,
-            label: 'Payment History',
-            color: const Color(0xFFF59E0B),
-            bgColor: const Color(0xFFFEF3C7),
-            onTap: () => context.go(Routes.paymentHistory),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildQuickActionCard(
-            icon: Icons.support_agent_rounded,
-            label: 'Support',
-            color: const Color(0xFF059669),
-            bgColor: const Color(0xFFD1FAE5),
-            onTap: () => context.push(Routes.support),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActionCard({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required Color bgColor,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, size: 24, color: color),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF6B7280),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCard({
-    required String title,
-    required IconData icon,
-    required Color iconColor,
-    required Color iconBgColor,
-    required List<_InfoItem> items,
-  }) {
+  Widget _buildStudentCard(Map<String, String> studentData) {
     return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -425,99 +267,277 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: iconBgColor,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, size: 22, color: iconColor),
+          // Large Avatar
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primary, AppColors.primary600],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-                const SizedBox(width: 12),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                _getInitials(studentData['name']!),
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Student Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  title,
+                  studentData['name']!,
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2933),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardGreen,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, size: 14, color: AppColors.cardGreenDark),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Active Student',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.cardGreenDark,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          // Divider
-          Container(
-            height: 1,
-            color: const Color(0xFFF3F4F6),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionsSection(BuildContext context, bool hasMultipleStudents) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Quick Actions',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF1F2937),
           ),
-          // Items
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: items.asMap().entries.map((entry) {
-                final index = entry.key;
-                final item = entry.value;
-                final isLast = index == items.length - 1;
-                return Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F9FA),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            item.icon,
-                            size: 18,
-                            color: const Color(0xFF6B7280),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.label,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF9CA3AF),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                item.value,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF1F2933),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (!isLast) const SizedBox(height: 16),
-                  ],
-                );
-              }).toList(),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            // Switch Student
+            if (hasMultipleStudents) ...[
+              Expanded(
+                child: _buildActionCard(
+                  icon: Icons.swap_horiz_rounded,
+                  label: 'Switch Student',
+                  bgColor: AppColors.cardBlue,
+                  iconColor: AppColors.cardBlueDark,
+                  onTap: () => context.push(Routes.switchStudent),
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+            // Get Support
+            Expanded(
+              child: _buildActionCard(
+                icon: Icons.support_agent_rounded,
+                label: 'Get Support',
+                bgColor: AppColors.cardCyan,
+                iconColor: AppColors.cardCyanDark,
+                onTap: () => context.push(Routes.support),
+              ),
             ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionCard({
+    required IconData icon,
+    required String label,
+    required Color bgColor,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 22, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16,
+              color: AppColors.textHint,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: Color(0xFF1F2937),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(List<_InfoItem> items) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final isLast = index == items.length - 1;
+            return Column(
+              children: [
+                _buildInfoRow(item),
+                if (!isLast) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 1,
+                    color: const Color(0xFFF3F4F6),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+              ],
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(_InfoItem item) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.bgSecondary,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            item.icon,
+            size: 20,
+            color: AppColors.textTertiary,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                item.label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF9CA3AF),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                item.isNotProvided ? 'Not provided' : item.value,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: item.isNotProvided
+                      ? AppColors.textDisabled
+                      : const Color(0xFF1F2937),
+                  fontStyle: item.isNotProvided ? FontStyle.italic : FontStyle.normal,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -528,41 +548,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.3)),
+          gradient: LinearGradient(
+            colors: [AppColors.error, AppColors.error.withValues(alpha: 0.85)],
+          ),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
+              color: AppColors.error.withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
-        child: Row(
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEE2E2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Icon(
-                Icons.logout_rounded,
-                size: 20,
-                color: Color(0xFFDC2626),
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
+            Text(
               'Sign Out',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFFDC2626),
+                color: Colors.white,
               ),
+            ),
+            SizedBox(width: 10),
+            Icon(
+              Icons.logout_rounded,
+              size: 22,
+              color: Colors.white,
             ),
           ],
         ),
@@ -574,13 +587,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Sign Out'),
         content: const Text('Are you sure you want to sign out?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textTertiary),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -589,8 +605,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               context.go(Routes.welcome);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
+              backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             child: const Text('Sign Out'),
           ),
@@ -598,16 +616,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'S';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
 }
 
 class _InfoItem {
   final IconData icon;
   final String label;
   final String value;
+  final bool isNotProvided;
 
   _InfoItem({
     required this.icon,
     required this.label,
     required this.value,
+    this.isNotProvided = false,
   });
 }

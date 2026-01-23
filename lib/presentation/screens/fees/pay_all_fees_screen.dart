@@ -166,18 +166,33 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     final selectedAmount = selectedFees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: Column(
         children: [
-          // Header with SafeArea
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                _buildHeader(context),
-                const SizedBox(height: 16),
-              ],
+          // Header with white SafeArea and subtle shadow
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildHeader(context),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
             ),
           ),
           // Content
@@ -220,22 +235,15 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: const Center(
                 child: Icon(
                   Icons.arrow_back_ios_new_rounded,
                   size: 18,
-                  color: Color(0xFF1F2933),
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -251,32 +259,25 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             ),
           ),
 
-          // Notification Button
+          // Notification Button - Dark theme
           GestureDetector(
             onTap: () => context.go(Routes.notifications),
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   SvgPicture.asset(
                     'assets/images/notification.svg',
-                    width: 22,
-                    height: 22,
+                    width: 20,
+                    height: 20,
                     colorFilter: const ColorFilter.mode(
-                      Color(0xFF1F2933),
+                      Colors.white,
                       BlendMode.srcIn,
                     ),
                   ),

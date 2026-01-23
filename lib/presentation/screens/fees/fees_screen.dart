@@ -138,204 +138,172 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
     final selectedStudent = ref.watch(selectedStudentProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: Column(
-        children: [
-          // Header with SafeArea
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                _buildHeader(context),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-          // Content
-          Expanded(
-              child: feesAsync.when(
-                loading: () => const LoadingIndicator(),
-                error: (error, stack) => AppErrorWidget(
-                  message: error.toString(),
-                  onRetry: () => ref.refresh(feesProvider),
+          children: [
+            // Fixed Header with white SafeArea and subtle shadow
+            Container(
+              color: Colors.white,
+              child: SafeArea(
+                bottom: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: _buildHeader(context),
                 ),
-                data: (fees) {
-                  // Use mock data if no real fees exist (for preview)
-                  final displayFees = fees.isEmpty ? _mockFees : fees;
-
-                  // Filter pending/overdue fees for selection (exclude zero amounts)
-                  final pendingFees = displayFees
-                      .where((f) =>
-                          (f.status == FeeStatus.pending || f.status == FeeStatus.overdue) &&
-                          f.balanceAmount > 0)
-                      .toList();
-
-                  if (pendingFees.isEmpty) {
-                    return _buildEmptyState();
-                  }
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: _buildFeeBreakdownCard(pendingFees, selectedStudent?.name),
-                  );
-                },
               ),
             ),
-          ],
-        ),
+            // Content
+            Expanded(
+                child: feesAsync.when(
+                  loading: () => const LoadingIndicator(),
+                  error: (error, stack) => AppErrorWidget(
+                    message: error.toString(),
+                    onRetry: () => ref.refresh(feesProvider),
+                  ),
+                  data: (fees) {
+                    // Use mock data if no real fees exist (for preview)
+                    final displayFees = fees.isEmpty ? _mockFees : fees;
+
+                    // Filter pending/overdue fees for selection (exclude zero amounts)
+                    final pendingFees = displayFees
+                        .where((f) =>
+                            (f.status == FeeStatus.pending || f.status == FeeStatus.overdue) &&
+                            f.balanceAmount > 0)
+                        .toList();
+
+                    if (pendingFees.isEmpty) {
+                      return _buildEmptyState();
+                    }
+
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: _buildFeeBreakdownCard(pendingFees, selectedStudent?.name),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
-    final selectedStudent = ref.watch(selectedStudentProvider);
-    final studentName = selectedStudent?.name ?? 'Student';
-    final admNo = selectedStudent?.admissionNumber ?? 'N/A';
-    final className = selectedStudent?.className ?? 'N/A';
     final cartItemCount = ref.watch(cartItemCountProvider);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        children: [
-          // Profile Image
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: const Icon(
-              Icons.person,
-              size: 28,
-              color: Color(0xFF6B7280),
-            ),
+    return Row(
+      children: [
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Fees',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'View and manage all fees',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          // Student Details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        // Cart Icon - Dark theme
+        GestureDetector(
+          onTap: () => context.push(Routes.cart),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFF1F2937),
+              shape: BoxShape.circle,
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
               children: [
-                Text(
-                  studentName,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2933),
+                SvgPicture.asset(
+                  'assets/icons/Cart.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Admn No: $admNo  |  Class: $className',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF6B7280),
+                if (cartItemCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                      ),
+                      child: Text(
+                        cartItemCount > 9 ? '9+' : '$cartItemCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          // Cart Icon
-          GestureDetector(
-            onTap: () => context.push(Routes.cart),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  SvgPicture.asset(
-                    'assets/icons/Cart.svg',
-                    width: 24,
-                    height: 24,
-                    colorFilter: const ColorFilter.mode(
-                      Color(0xFF1F2933),
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                  if (cartItemCount > 0)
-                    Positioned(
-                      top: -2,
-                      right: -2,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(
-                          minWidth: 18,
-                          minHeight: 18,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: Text(
-                          cartItemCount > 9 ? '9+' : '$cartItemCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
+        ),
+        const SizedBox(width: 10),
+        // Notification Icon - Dark theme
+        GestureDetector(
+          onTap: () => context.go(Routes.notifications),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFF1F2937),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: SvgPicture.asset(
+                'assets/images/notification.svg',
+                width: 20,
+                height: 20,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
+                ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          // Notification Icon
-          GestureDetector(
-            onTap: () => context.go(Routes.notifications),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  SvgPicture.asset(
-                    'assets/images/notification.svg',
-                    width: 22,
-                    height: 22,
-                    colorFilter: const ColorFilter.mode(
-                      Color(0xFF1F2933),
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -357,13 +325,13 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppSizes.roundedXl),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: AppColors.shadowPurple,
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -717,39 +685,39 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
               width: 100,
               height: 100,
-              decoration: const BoxDecoration(
-                color: AppColors.gray100,
+              decoration: BoxDecoration(
+                color: AppColors.cardPurple,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.receipt_long_rounded,
                 size: 48,
-                color: AppColors.gray400,
+                color: AppColors.cardPurpleDark,
               ),
             ),
-            const SizedBox(height: AppSizes.s6),
-            const Text(
+            const SizedBox(height: 24),
+            Text(
               'No Fees Found',
               style: TextStyle(
-                fontSize: AppSizes.textLg,
+                fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(height: AppSizes.s2),
-            const Text(
+            const SizedBox(height: 8),
+            Text(
               'There are no fees assigned to this student yet.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: AppSizes.textSm,
-                color: AppColors.textSecondary,
+                fontSize: 14,
+                color: AppColors.textTertiary,
               ),
             ),
           ],

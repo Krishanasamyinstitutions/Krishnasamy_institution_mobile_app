@@ -18,37 +18,52 @@ class CartScreen extends ConsumerWidget {
     final cartState = ref.watch(cartProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: Column(
-        children: [
-          // Header with SafeArea
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                _buildHeader(context, ref, cartState),
-                const SizedBox(height: 16),
-              ],
+          children: [
+            // Header with white SafeArea and subtle shadow
+            Container(
+              color: Colors.white,
+              child: SafeArea(
+                bottom: false,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildHeader(context, ref, cartState),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-          // Content
-          Expanded(
-            child: cartState.isEmpty
-                ? _buildEmptyState(context)
-                : _buildCartContent(context, ref, cartState),
-          ),
-          // Bottom payment bar
-          if (cartState.isNotEmpty)
-            _buildBottomBar(context, ref, cartState),
-        ],
-      ),
+            // Content
+            Expanded(
+              child: cartState.isEmpty
+                  ? _buildEmptyState(context)
+                  : _buildCartContent(context, ref, cartState),
+            ),
+            // Bottom payment bar
+            if (cartState.isNotEmpty)
+              _buildBottomBar(context, ref, cartState),
+          ],
+        ),
     );
   }
 
   Widget _buildHeader(BuildContext context, WidgetRef ref, CartState cartState) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -64,47 +79,40 @@ class CartScreen extends ConsumerWidget {
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 18,
-                  color: Color(0xFF1F2933),
-                ),
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                size: 20,
+                color: Colors.white,
               ),
             ),
           ),
 
-          // Title with item count
+          // Title with description
           Column(
             children: [
-              const Text(
+              Text(
                 'Payment Summary',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F2933),
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              if (cartState.isNotEmpty)
-                Text(
-                  '${cartState.items.length} item${cartState.items.length > 1 ? 's' : ''}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF6B7280),
-                  ),
+              const SizedBox(height: 4),
+              Text(
+                cartState.isNotEmpty
+                    ? '${cartState.items.length} item${cartState.items.length > 1 ? 's' : ''} selected'
+                    : 'Review your selected fees',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textTertiary,
                 ),
+              ),
             ],
           ),
 
@@ -113,23 +121,23 @@ class CartScreen extends ConsumerWidget {
             GestureDetector(
               onTap: () => _showClearCartDialog(context, ref),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEE2E2),
+                  color: AppColors.cardRose,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
+                child: Text(
                   'Clear All',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFFDC2626),
+                    color: AppColors.cardRoseDark,
                   ),
                 ),
               ),
             )
           else
-            const SizedBox(width: 44),
+            const SizedBox(width: 48),
         ],
       ),
     );
@@ -207,8 +215,8 @@ class CartScreen extends ConsumerWidget {
           Container(
             width: 120,
             height: 120,
-            decoration: const BoxDecoration(
-              color: Color(0xFFF3F4F6),
+            decoration: BoxDecoration(
+              color: AppColors.cardPurple,
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -216,46 +224,67 @@ class CartScreen extends ConsumerWidget {
                 'assets/icons/Cart.svg',
                 width: 56,
                 height: 56,
-                colorFilter: const ColorFilter.mode(
-                  Color(0xFF9CA3AF),
+                colorFilter: ColorFilter.mode(
+                  AppColors.cardPurpleDark,
                   BlendMode.srcIn,
                 ),
               ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Your Cart is Empty',
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2933),
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               'Select fees from the pending section to add them to your cart',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF6B7280),
+                color: AppColors.textTertiary,
                 height: 1.5,
               ),
             ),
           ),
           const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: () => context.go(Routes.home),
-            icon: const Icon(Icons.home_outlined, size: 20),
-            label: const Text('Go to Home'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
+          GestureDetector(
+            onTap: () => context.go(Routes.home),
+            child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, AppColors.primary600],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.home_rounded, size: 20, color: Colors.white),
+                  SizedBox(width: 8),
+                  Text(
+                    'Go to Home',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -317,13 +346,13 @@ class CartScreen extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: isBus ? AppColors.shadowGreen : AppColors.shadowPurple,
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -333,35 +362,35 @@ class CartScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: isBus ? const Color(0xFFFEF3C7) : const Color(0xFFEDE9FE),
+              color: isBus ? AppColors.cardOrange : AppColors.cardPurple,
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
             ),
             child: Row(
               children: [
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
-                    color: isBus ? const Color(0xFFF59E0B) : const Color(0xFF8B5CF6),
-                    borderRadius: BorderRadius.circular(10),
+                    color: isBus ? AppColors.cardOrangeDark : AppColors.cardPurpleDark,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Center(
                     child: isBus
                         ? SvgPicture.asset(
                             'assets/icons/bus-solid.svg',
-                            width: 22,
-                            height: 22,
+                            width: 24,
+                            height: 24,
                             colorFilter: const ColorFilter.mode(
                               Colors.white,
                               BlendMode.srcIn,
                             ),
                           )
                         : const Icon(
-                            Icons.school,
-                            size: 22,
+                            Icons.school_rounded,
+                            size: 24,
                             color: Colors.white,
                           ),
                   ),
@@ -373,66 +402,61 @@ class CartScreen extends ConsumerWidget {
                     children: [
                       Text(
                         category,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2933),
+                          color: AppColors.textPrimary,
                         ),
                       ),
+                      const SizedBox(height: 2),
                       Text(
                         '${fees.length} item${fees.length > 1 ? 's' : ''}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textTertiary,
                         ),
                       ),
                     ],
                   ),
                 ),
                 // Amount and Remove Button
-                GestureDetector(
-                  onTap: () => _showRemoveGroupDialog(context, ref, category, fees),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDC2626),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFDC2626).withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                Row(
+                  children: [
+                    // Amount Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
                         ),
-                      ],
+                      ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
+                    const SizedBox(width: 8),
+                    // Remove Button
+                    GestureDetector(
+                      onTap: () => _showRemoveGroupDialog(context, ref, category, fees),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.cardRose,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        const SizedBox(width: 8),
-                        Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.25),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.close_rounded,
-                            size: 14,
-                            color: Colors.white,
-                          ),
+                        child: Icon(
+                          Icons.close_rounded,
+                          size: 18,
+                          color: AppColors.cardRoseDark,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
@@ -456,13 +480,13 @@ class CartScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         border: isLast
             ? null
-            : const Border(
-                bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+            : Border(
+                bottom: BorderSide(color: AppColors.borderLight, width: 1),
               ),
         borderRadius: isLast
             ? const BorderRadius.only(
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
               )
             : null,
       ),
@@ -470,29 +494,27 @@ class CartScreen extends ConsumerWidget {
         children: [
           // Fee Icon
           Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
-              color: isBus
-                  ? const Color(0xFFFEF3C7)
-                  : const Color(0xFFEDE9FE),
-              borderRadius: BorderRadius.circular(8),
+              color: isBus ? AppColors.cardOrange : AppColors.cardPurple,
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
               child: isBus
                   ? SvgPicture.asset(
                       'assets/icons/bus-solid.svg',
-                      width: 18,
-                      height: 18,
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xFFF59E0B),
+                      width: 20,
+                      height: 20,
+                      colorFilter: ColorFilter.mode(
+                        AppColors.cardOrangeDark,
                         BlendMode.srcIn,
                       ),
                     )
-                  : const Icon(
+                  : Icon(
                       Icons.receipt_outlined,
-                      size: 18,
-                      color: Color(0xFF8B5CF6),
+                      size: 20,
+                      color: AppColors.cardPurpleDark,
                     ),
             ),
           ),
@@ -504,18 +526,18 @@ class CartScreen extends ConsumerWidget {
               children: [
                 Text(
                   fee.feeTypeName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF1F2933),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   isBus ? _extractMonthFromDate(fee) : fee.demfeeterm,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.textTertiary,
                   ),
                 ),
               ],
@@ -524,10 +546,10 @@ class CartScreen extends ConsumerWidget {
           // Amount
           Text(
             '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2933),
+              color: AppColors.textPrimary,
             ),
           ),
         ],
@@ -560,14 +582,14 @@ class CartScreen extends ConsumerWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            Color(0xFF1E40AF),
-            Color(0xFF3B82F6),
+            AppColors.primary,
+            AppColors.primary600,
           ],
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+            color: AppColors.primary.withValues(alpha: 0.4),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -576,19 +598,27 @@ class CartScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(
-                Icons.receipt_long_outlined,
-                color: Colors.white,
-                size: 24,
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.receipt_long_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
-              SizedBox(width: 10),
-              Text(
+              const SizedBox(width: 12),
+              const Text(
                 'Order Summary',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
               ),
@@ -603,18 +633,28 @@ class CartScreen extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Term Fees',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.school_rounded,
+                        size: 18,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Term Fees',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
                     '₹ ${NumberFormat('#,##,###').format(termFeesTotal.toInt())}',
                     style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
                   ),
@@ -629,18 +669,28 @@ class CartScreen extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Bus Fees',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.directions_bus_rounded,
+                        size: 18,
+                        color: Colors.white.withValues(alpha: 0.7),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Bus Fees',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
                     '₹ ${NumberFormat('#,##,###').format(busFeesTotal.toInt())}',
                     style: const TextStyle(
                       fontSize: 14,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
                   ),
@@ -651,8 +701,8 @@ class CartScreen extends ConsumerWidget {
           // Divider
           Container(
             height: 1,
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            color: Colors.white24,
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            color: Colors.white.withValues(alpha: 0.2),
           ),
 
           // Total Row
@@ -670,7 +720,7 @@ class CartScreen extends ConsumerWidget {
               Text(
                 '₹ ${NumberFormat('#,##,###').format(cartState.totalAmount.toInt())}',
                 style: const TextStyle(
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
@@ -686,15 +736,15 @@ class CartScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
+            color: AppColors.shadowPurple,
+            blurRadius: 24,
             offset: const Offset(0, -8),
           ),
         ],
@@ -711,49 +761,57 @@ class CartScreen extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Total Amount',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Color(0xFF6B7280),
+                        color: AppColors.textTertiary,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '₹ ${NumberFormat('#,##,###').format(cartState.totalAmount.toInt())}',
-                      style: const TextStyle(
-                        fontSize: 26,
+                      style: TextStyle(
+                        fontSize: 28,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF1F2933),
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ],
                 ),
                 // Proceed to Pay Button
-                ElevatedButton(
-                  onPressed: () => _handleProceedToPayment(context, ref),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Pay Now',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                GestureDetector(
+                  onTap: () => _handleProceedToPayment(context, ref),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.primary600],
                       ),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward_rounded, size: 20),
-                    ],
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.4),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Text(
+                          'Pay Now',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+                      ],
+                    ),
                   ),
                 ),
               ],

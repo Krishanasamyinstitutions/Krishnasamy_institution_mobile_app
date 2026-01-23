@@ -11,7 +11,9 @@ import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
 
 class AllPendingFeesScreen extends ConsumerStatefulWidget {
-  const AllPendingFeesScreen({super.key});
+  final String? filterGroup;
+
+  const AllPendingFeesScreen({super.key, this.filterGroup});
 
   @override
   ConsumerState<AllPendingFeesScreen> createState() => _AllPendingFeesScreenState();
@@ -19,12 +21,36 @@ class AllPendingFeesScreen extends ConsumerStatefulWidget {
 
 class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
   // Track which accordions are expanded
-  final Map<String, bool> _expandedSections = {
-    'term1': true,
-    'term2': false,
-    'term3': false,
-    'bus': false,
-  };
+  late Map<String, bool> _expandedSections;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize expanded sections based on filter
+    final filter = widget.filterGroup?.toLowerCase();
+    if (filter != null && (filter.contains('van') || filter.contains('bus') || filter.contains('transport'))) {
+      _expandedSections = {
+        'term1': false,
+        'term2': false,
+        'term3': false,
+        'bus': true,
+      };
+    } else if (filter != null && filter.contains('school')) {
+      _expandedSections = {
+        'term1': true,
+        'term2': true,
+        'term3': true,
+        'bus': false,
+      };
+    } else {
+      _expandedSections = {
+        'term1': true,
+        'term2': false,
+        'term3': false,
+        'bus': false,
+      };
+    }
+  }
 
   /// Check if a fee is a bus/transport/van fee
   bool _isBusFee(String feeType) {
@@ -37,9 +63,25 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
     final allPendingFees = ref.watch(pendingFeesProvider);
     final cartState = ref.watch(cartProvider);
 
-    // Separate fees by category
-    final termFees = allPendingFees.where((f) => !_isBusFee(f.demfeetype)).toList();
-    final busFees = allPendingFees.where((f) => _isBusFee(f.demfeetype)).toList();
+    // Apply filter based on filterGroup parameter
+    final filter = widget.filterGroup?.toLowerCase();
+    final bool showOnlyBusFees = filter != null &&
+        (filter.contains('van') || filter.contains('bus') || filter.contains('transport'));
+    final bool showOnlySchoolFees = filter != null && filter.contains('school');
+
+    // Filter fees based on the selected group
+    List<FeeModel> filteredFees;
+    if (showOnlyBusFees) {
+      filteredFees = allPendingFees.where((f) => _isBusFee(f.demfeetype)).toList();
+    } else if (showOnlySchoolFees) {
+      filteredFees = allPendingFees.where((f) => !_isBusFee(f.demfeetype)).toList();
+    } else {
+      filteredFees = allPendingFees;
+    }
+
+    // Separate fees by category (from filtered fees)
+    final termFees = filteredFees.where((f) => !_isBusFee(f.demfeetype)).toList();
+    final busFees = filteredFees.where((f) => _isBusFee(f.demfeetype)).toList();
 
     // Group term fees by term
     final Map<String, List<FeeModel>> feesByTerm = {};
@@ -49,30 +91,45 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
       feesByTerm[term]!.add(fee);
     }
 
-    // Calculate selected amount
-    final selectedFees = allPendingFees.where((f) => cartState.containsFee(f.id)).toList();
+    // Calculate selected amount (from filtered fees only)
+    final selectedFees = filteredFees.where((f) => cartState.containsFee(f.id)).toList();
     final selectedAmount = selectedFees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: Stack(
         children: [
           Column(
             children: [
-              // Header with SafeArea
-              SafeArea(
-                bottom: false,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    _buildHeader(context),
-                    const SizedBox(height: 16),
-                  ],
+              // Header with white SafeArea and subtle shadow
+              Container(
+                color: Colors.white,
+                child: SafeArea(
+                  bottom: false,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+                        _buildHeader(context),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               // Content
               Expanded(
-                child: allPendingFees.isEmpty
+                child: filteredFees.isEmpty
                     ? _buildEmptyState()
                     : _buildAccordionList(context, feesByTerm, busFees, cartState),
               ),
@@ -92,69 +149,55 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Back Button
+          // Back Button - Dark theme
           GestureDetector(
             onTap: () => context.go(Routes.home),
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: const Center(
                 child: Icon(
                   Icons.arrow_back_ios_new_rounded,
                   size: 18,
-                  color: Color(0xFF1F2933),
+                  color: Colors.white,
                 ),
               ),
             ),
           ),
 
           // Title
-          const Text(
-            'All Pending Fees',
-            style: TextStyle(
+          Text(
+            widget.filterGroup != null ? '${_toTitleCase(widget.filterGroup!)} Details' : 'All Pending Fees',
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
               color: Color(0xFF1F2933),
             ),
           ),
 
-          // Notification Button
+          // Notification Button - Dark theme
           GestureDetector(
             onTap: () => context.go(Routes.notifications),
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   SvgPicture.asset(
                     'assets/images/notification.svg',
-                    width: 22,
-                    height: 22,
+                    width: 20,
+                    height: 20,
                     colorFilter: const ColorFilter.mode(
-                      Color(0xFF1F2933),
+                      Colors.white,
                       BlendMode.srcIn,
                     ),
                   ),
@@ -402,6 +445,9 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
   }
 
   Widget _buildFeeRow(FeeModel fee) {
+    final dueDate = fee.dueDate;
+    final isOverdue = dueDate.isBefore(DateTime.now());
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
@@ -410,16 +456,59 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Text(
-              fee.demfeetype.toUpperCase(),
-              style: const TextStyle(
-                fontSize: AppSizes.bodyText,
-                fontWeight: AppSizes.fontNormal,
-                color: AppColors.textSecondary,
-                height: 1.47,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  fee.demfeetype.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: AppSizes.bodyText,
+                    fontWeight: AppSizes.fontNormal,
+                    color: AppColors.textSecondary,
+                    height: 1.47,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.calendar_today_outlined,
+                      size: 12,
+                      color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Due: ${DateFormat('dd MMM yyyy').format(dueDate)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                    if (isOverdue) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Overdue',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
             ),
           ),
           Text(
@@ -643,6 +732,8 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
 
   Widget _buildBusFeeRow(FeeModel fee) {
     final monthName = _extractMonthFromDate(fee);
+    final dueDate = fee.dueDate;
+    final isOverdue = dueDate.isBefore(DateTime.now());
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -652,10 +743,12 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Month Name with bus icon
           Expanded(
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
                   width: 28,
@@ -672,14 +765,56 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    monthName,
-                    style: const TextStyle(
-                      fontSize: AppSizes.bodyText,
-                      fontWeight: AppSizes.fontMedium,
-                      color: AppColors.textPrimary,
-                      height: 1.47,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        monthName,
+                        style: const TextStyle(
+                          fontSize: AppSizes.bodyText,
+                          fontWeight: AppSizes.fontMedium,
+                          color: AppColors.textPrimary,
+                          height: 1.47,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 12,
+                            color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Due: ${DateFormat('dd MMM yyyy').format(dueDate)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            ),
+                          ),
+                          if (isOverdue) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'Overdue',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.error,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -858,5 +993,12 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
   String _extractMonthFromDate(FeeModel fee) {
     final date = fee.duedate ?? fee.createdat;
     return DateFormat('MMMM yyyy').format(date);
+  }
+
+  String _toTitleCase(String text) {
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
   }
 }
