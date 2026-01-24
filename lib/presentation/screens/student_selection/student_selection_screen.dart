@@ -16,72 +16,173 @@ class StudentSelectionScreen extends ConsumerStatefulWidget {
 
 class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen> {
   int? _selectedStudentId;
+  bool _hasAutoSelected = false;
+  bool _isCheckingStudents = true; // Show loading while checking
+
+  @override
+  void initState() {
+    super.initState();
+    // Check for single student after the widget is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkForSingleStudent();
+    });
+  }
+
+  Future<void> _checkForSingleStudent() async {
+    if (_hasAutoSelected) return;
+
+    final studentsAsync = ref.read(studentsByParentProvider);
+    studentsAsync.when(
+      loading: () {
+        // Still loading, keep showing loader
+      },
+      error: (_, __) {
+        // Error occurred, show the screen
+        if (mounted) {
+          setState(() => _isCheckingStudents = false);
+        }
+      },
+      data: (students) async {
+        if (students.length == 1 && mounted) {
+          _hasAutoSelected = true;
+          // Auto-select the only student and navigate to home
+          final student = students.first;
+          await ref.read(selectedStudentProvider.notifier).selectStudent(student);
+          if (mounted) {
+            context.go(Routes.home);
+          }
+        } else if (mounted) {
+          // Multiple students or no students - show selection screen
+          setState(() => _isCheckingStudents = false);
+        }
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            // Top Navigation - Back Button
-            _buildTopNavigation(),
-            const SizedBox(height: 32),
-            // Header with Title and Illustration
-            _buildHeader(),
-            const SizedBox(height: 56),
-            // Student List
-            Expanded(
-              child: _buildStudentList(),
-            ),
-            // Continue Button
-            _buildContinueButton(),
-            const SizedBox(height: 24),
-          ],
+    // Listen for students loading and auto-select if single student
+    ref.listen<AsyncValue<List<StudentModel>>>(studentsByParentProvider, (previous, next) {
+      next.when(
+        loading: () {},
+        error: (_, __) {
+          if (mounted && _isCheckingStudents) {
+            setState(() => _isCheckingStudents = false);
+          }
+        },
+        data: (students) async {
+          if (students.length == 1 && !_hasAutoSelected && mounted) {
+            _hasAutoSelected = true;
+            final student = students.first;
+            await ref.read(selectedStudentProvider.notifier).selectStudent(student);
+            if (mounted) {
+              context.go(Routes.home);
+            }
+          } else if (mounted && _isCheckingStudents) {
+            // Multiple students - show selection screen
+            setState(() => _isCheckingStudents = false);
+          }
+        },
+      );
+    });
+
+    // Show loading screen while checking for single student
+    if (_isCheckingStudents) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8F9FB),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Loading...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF9CA3AF),
+                ),
+              ),
+            ],
+          ),
         ),
+      );
+    }
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FB),
+      body: Column(
+        children: [
+          // Header with white SafeArea and subtle shadow
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildTopNavigation(),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Content
+          Expanded(
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  const SizedBox(height: 24),
+                  _buildHeader(),
+                  const SizedBox(height: 32),
+                  Expanded(
+                    child: _buildStudentList(),
+                  ),
+                  _buildContinueButton(),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildTopNavigation() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Back Button
           GestureDetector(
             onTap: () => context.pop(),
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF3D75FC).withValues(alpha: 0.24),
-                    blurRadius: 1,
-                    offset: Offset.zero,
-                  ),
-                  const BoxShadow(
-                    color: Color(0xFFE5E7EB),
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ],
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.arrow_back,
-                  size: 20,
-                  color: Color(0xFF1F2933),
-                ),
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                size: 20,
+                color: Colors.white,
               ),
             ),
           ),
-          // Empty space for balance (no filter button in design)
           const SizedBox(width: 44),
         ],
       ),
@@ -90,37 +191,35 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
 
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title and Subtitle
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Select Student',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F2933),
-                  height: 1.21,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Select Student',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Welcome back!',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.normal,
-                  color: Color(0xFF6B7280),
-                  height: 1.47,
+                const SizedBox(height: 8),
+                Text(
+                  'Choose a student to continue',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textTertiary,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-          // Illustration
           Image.asset(
             'assets/images/select_student_illustration.png',
             width: 120,
@@ -142,34 +241,58 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
       ),
       data: (students) {
         if (students.isEmpty) {
-          return const Center(
-            child: Text(
-              'No students found for this parent',
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(0xFF6B7280),
-              ),
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardPurple,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.person_off_rounded,
+                    size: 40,
+                    color: AppColors.cardPurpleDark,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No students found',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
             ),
           );
         }
 
         return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
           itemCount: students.length,
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final student = students[index];
             final isSelected = _selectedStudentId == student.stuId;
-            return _buildStudentCard(student, isSelected);
+            return _buildStudentCard(student, isSelected, index);
           },
         );
       },
     );
   }
 
-  Widget _buildStudentCard(StudentModel student, bool isSelected) {
-    // TODO: Determine payment status from fee data - for now showing as Pending
-    final isPending = true;
+  Widget _buildStudentCard(StudentModel student, bool isSelected, int index) {
+    final cardColors = [
+      {'bg': AppColors.cardPurple, 'icon': AppColors.cardPurpleDark},
+      {'bg': AppColors.cardGreen, 'icon': AppColors.cardGreenDark},
+      {'bg': AppColors.cardBlue, 'icon': AppColors.cardBlueDark},
+      {'bg': AppColors.cardPink, 'icon': AppColors.cardPinkDark},
+    ];
+    final colorSet = cardColors[index % cardColors.length];
 
     return GestureDetector(
       onTap: () {
@@ -178,164 +301,114 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
         });
       },
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white : const Color(0xFFFAFAFA),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected
+              ? Border.all(color: AppColors.primary, width: 2)
               : null,
+          boxShadow: [
+            BoxShadow(
+              color: isSelected ? AppColors.shadowPurple : AppColors.shadowLight,
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Radio Button
+            // Avatar - Circular like home page
             Container(
-              margin: const EdgeInsets.only(top: 2),
-              child: isSelected
-                  ? Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.accent,
-                          width: 2,
-                        ),
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 12,
-                          height: 12,
-                          decoration: const BoxDecoration(
-                            color: AppColors.accent,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
-                    )
-                  : Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFF1F2933),
-                          width: 2,
-                        ),
-                      ),
-                    ),
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: colorSet['bg'],
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 2),
+              ),
+              child: Center(
+                child: Text(
+                  student.stuname.isNotEmpty ? student.stuname[0].toUpperCase() : 'S',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: colorSet['icon'],
+                  ),
+                ),
+              ),
             ),
-            const SizedBox(width: 12),
-            // Student Info
+            const SizedBox(width: 14),
+            // Student Info - Home page style
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Admission No.
-                  const Text(
-                    'Admission No.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.normal,
-                      color: Color(0xFF6B7280),
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
                   Text(
-                    student.stuadmno,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.normal,
-                      color: Color(0xFF1F2933),
-                      height: 1.47,
+                    student.stuname,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 4),
-                  // Name and Class Row
-                  Row(
-                    children: [
-                      const Text(
-                        'Name :',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.normal,
-                          color: Color(0xFF6B7280),
-                          height: 1.5,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          student.stuname,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.normal,
-                            color: Color(0xFF1F2933),
-                            height: 1.5,
+                  RichText(
+                    text: TextSpan(
+                      children: [
+                        const TextSpan(
+                          text: 'Adm No: ',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF6B7280),
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        '|',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF1F2933),
+                        TextSpan(
+                          text: student.stuadmno,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1F2937),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Class :',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.normal,
-                          color: Color(0xFF6B7280),
-                          height: 1.5,
+                        const TextSpan(
+                          text: ' | Class: ',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF6B7280),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        student.stuclass,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.normal,
-                          color: Color(0xFF1F2933),
-                          height: 1.5,
+                        TextSpan(
+                          text: student.stuclass,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1F2937),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            // Status Badge
+            // Selection indicator
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              width: 28,
+              height: 28,
               decoration: BoxDecoration(
-                color: isPending
-                    ? const Color(0xFFF59E0B)
-                    : const Color(0xFF2DBE60),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                isPending ? 'Pending' : 'Paid',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: AppSizes.fontSemibold,
-                  color: Colors.white,
-                  height: 1.5,
+                shape: BoxShape.circle,
+                color: isSelected ? AppColors.primary : Colors.transparent,
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : AppColors.border,
+                  width: 2,
                 ),
               ),
+              child: isSelected
+                  ? const Icon(Icons.check_rounded, size: 18, color: Colors.white)
+                  : null,
             ),
           ],
         ),
@@ -344,61 +417,60 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
   }
 
   Widget _buildContinueButton() {
+    final isEnabled = _selectedStudentId != null;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GestureDetector(
-        onTap: _selectedStudentId != null
+        onTap: isEnabled
             ? () async {
-                // Get the selected student and save to provider
                 final studentsAsync = ref.read(studentsByParentProvider);
                 studentsAsync.whenData((students) async {
                   final selectedStudent = students.firstWhere(
                     (s) => s.stuId == _selectedStudentId,
                   );
-                  // Use selectStudent method for persistence
                   await ref.read(selectedStudentProvider.notifier).selectStudent(selectedStudent);
                 });
-                // Navigate to home screen
                 context.go(Routes.home);
               }
             : null,
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: _selectedStudentId != null
-                ? AppColors.primary
-                : AppColors.primary.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF3D75FC).withValues(alpha: 0.24),
-                blurRadius: 1,
-                offset: Offset.zero,
-              ),
-              const BoxShadow(
-                color: Color(0xFFE5E7EB),
-                blurRadius: 4,
-                offset: Offset(0, 2),
-              ),
-            ],
+            gradient: isEnabled
+                ? const LinearGradient(
+                    colors: [AppColors.primary, AppColors.primary600],
+                  )
+                : null,
+            color: isEnabled ? null : AppColors.gray300,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: isEnabled
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.4),
+                      blurRadius: 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ]
+                : null,
           ),
-          child: const Row(
+          child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 'Continue',
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: AppSizes.fontSemibold,
-                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  color: isEnabled ? Colors.white : AppColors.textDisabled,
                 ),
               ),
-              SizedBox(width: 10),
+              const SizedBox(width: 8),
               Icon(
-                Icons.arrow_forward,
-                size: 24,
-                color: Colors.white,
+                Icons.arrow_forward_rounded,
+                size: 20,
+                color: isEnabled ? Colors.white : AppColors.textDisabled,
               ),
             ],
           ),

@@ -1,65 +1,164 @@
 import 'package:flutter/material.dart';
 
-/// App color palette
+/// App color palette - Modern, Colorful School Fees App Theme
 class AppColors {
   AppColors._();
 
-  // Primary Color - #005FCC
-  static const Color primary = Color(0xFF005FCC);
-  static const Color primary50 = Color(0xFFF1F6FD);
-  static const Color primary100 = Color(0xFFDBEAFE);
-  static const Color primary200 = Color(0xFFAAD4FD);
-  static const Color primary300 = Color(0xFF7ABFFC);
-  static const Color primary400 = Color(0xFF4AA9FB);
-  static const Color primary500 = Color(0xFF007DFC);
-  static const Color primary600 = Color(0xFF005FCC);
-  static const Color primary700 = Color(0xFF004A9E);
-  static const Color primary800 = Color(0xFF003670);
-  static const Color primary900 = Color(0xFF002142);
+  // Primary Color - Vibrant Green
+  static const Color primary = Color(0xFF22C55E);
+  static const Color primary50 = Color(0xFFF0FDF4);
+  static const Color primary100 = Color(0xFFDCFCE7);
+  static const Color primary200 = Color(0xFFBBF7D0);
+  static const Color primary300 = Color(0xFF86EFAC);
+  static const Color primary400 = Color(0xFF4ADE80);
+  static const Color primary500 = Color(0xFF22C55E);
+  static const Color primary600 = Color(0xFF16A34A);
+  static const Color primary700 = Color(0xFF15803D);
+  static const Color primary800 = Color(0xFF166534);
+  static const Color primary900 = Color(0xFF14532D);
 
-  // Accent Color - #007DFC
-  static const Color accent = Color(0xFF007DFC);
-  static const Color accent2 = Color(0xFFF1F6FD);
+  // Secondary Color - Soft Coral/Pink
+  static const Color secondary = Color(0xFFFF6B8A);
+  static const Color secondaryLight = Color(0xFFFFE5EB);
 
-  // Neutral/Gray Colors
-  static const Color gray50 = Color(0xFFFAFAFA);
-  static const Color gray100 = Color(0xFFF3F4F6);
-  static const Color gray200 = Color(0xFFE5E7EB);
-  static const Color gray300 = Color(0xFFD1D5DB);
-  static const Color gray400 = Color(0xFF9CA3AF);
-  static const Color gray500 = Color(0xFF6B7280);
-  static const Color gray600 = Color(0xFF4B5563);
-  static const Color gray700 = Color(0xFF374151);
-  static const Color gray800 = Color(0xFF1F2933);
-  static const Color gray900 = Color(0xFF111827);
+  // Accent Colors
+  static const Color accent = Color(0xFF22C55E);
+  static const Color accent2 = Color(0xFFDCFCE7);
 
-  // Status Colors
-  static const Color success = Color(0xFF2DBE60);
+  // Gradient Colors
+  static const Color gradientStart = Color(0xFFF0FDF4);
+  static const Color gradientMiddle = Color(0xFFECFDF5);
+  static const Color gradientEnd = Color(0xFFE6F9F0);
+
+  // Neutral/Gray Colors - Refined tones
+  static const Color gray50 = Color(0xFFFAFAFC);
+  static const Color gray100 = Color(0xFFF4F4F7);
+  static const Color gray200 = Color(0xFFE8E8ED);
+  static const Color gray300 = Color(0xFFD1D1DB);
+  static const Color gray400 = Color(0xFF9E9EAF);
+  static const Color gray500 = Color(0xFF6B6B80);
+  static const Color gray600 = Color(0xFF4A4A5E);
+  static const Color gray700 = Color(0xFF363649);
+  static const Color gray800 = Color(0xFF252536);
+  static const Color gray900 = Color(0xFF151523);
+
+  // Status Colors - Vibrant tones
+  static const Color success = Color(0xFF10B981);
+  static const Color successLight = Color(0xFFD1FAE5);
+  static const Color successDark = Color(0xFF059669);
+
   static const Color warning = Color(0xFFF59E0B);
-  static const Color error = Color(0xFFDC2626);
-  static const Color info = Color(0xFF007DFC);
+  static const Color warningLight = Color(0xFFFEF3C7);
+  static const Color warningDark = Color(0xFFD97706);
 
-  // Background Colors
-  static const Color background = Color(0xFFFAFAFA);
+  static const Color error = Color(0xFFEF4444);
+  static const Color errorLight = Color(0xFFFEE2E2);
+  static const Color errorDark = Color(0xFFDC2626);
+
+  static const Color info = Color(0xFF3B82F6);
+  static const Color infoLight = Color(0xFFDBEAFE);
+  static const Color infoDark = Color(0xFF2563EB);
+
+  // Background Colors - Soft gradients
+  static const Color background = Color(0xFFF8F9FE);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color bgPrimary = Color(0xFFFFFFFF);
-  static const Color bgSecondary = Color(0xFFFAFAFA);
-  static const Color bgTertiary = Color(0xFFF1F6FD);
+  static const Color bgSecondary = Color(0xFFF8F9FC);
+  static const Color bgTertiary = Color(0xFFF0EFFF);
 
   // Text Colors
-  static const Color textPrimary = Color(0xFF1F2933);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textTertiary = Color(0xFF9CA3AF);
+  static const Color textPrimary = Color(0xFF1F2937);
+  static const Color textSecondary = Color(0xFF4B5563);
+  static const Color textTertiary = Color(0xFF6B7280);
+  static const Color textHint = Color(0xFF9CA3AF);
+  static const Color textDisabled = Color(0xFFD1D5DB);
   static const Color textInverse = Color(0xFFFFFFFF);
+  static const Color textLink = Color(0xFF3B82F6); // Blue for text buttons/links
 
   // Border/Divider Colors
   static const Color border = Color(0xFFE5E7EB);
-  static const Color divider = Color(0xFFAAD4FD);
-  static const Color borderFocus = Color(0xFF005FCC);
+  static const Color borderLight = Color(0xFFF3F4F6);
+  static const Color divider = Color(0xFFE5E7EB);
+  static const Color borderFocus = Color(0xFF22C55E);
 
   // Semantic Fee Status Colors
-  static const Color feePaid = Color(0xFF2DBE60);
-  static const Color feePending = Color(0xFFF59E0B);
+  static const Color feePaid = Color(0xFF10B981);
+  static const Color feePaidBg = Color(0xFFD1FAE5);
+  static const Color feePending = Color(0xFFEF4444);
+  static const Color feePendingBg = Color(0xFFFEE2E2);
   static const Color feeOverdue = Color(0xFFDC2626);
-  static const Color feePartial = Color(0xFF007DFC);
+  static const Color feeOverdueBg = Color(0xFFFEE2E2);
+  static const Color feePartial = Color(0xFFF59E0B);
+  static const Color feePartialBg = Color(0xFFFEF3C7);
+
+  // Card Colors - Modern Pastel Palette
+  static const Color cardBlue = Color(0xFFE8F4FD);
+  static const Color cardBlueDark = Color(0xFF4A9FD4);
+
+  static const Color cardPurple = Color(0xFFF0EEFF);
+  static const Color cardPurpleDark = Color(0xFF8B5CF6);
+
+  static const Color cardPink = Color(0xFFFFE8EF);
+  static const Color cardPinkDark = Color(0xFFEC4899);
+
+  static const Color cardGreen = Color(0xFFE6F9F0);
+  static const Color cardGreenDark = Color(0xFF10B981);
+
+  static const Color cardOrange = Color(0xFFFFF4E6);
+  static const Color cardOrangeDark = Color(0xFFF97316);
+
+  static const Color cardYellow = Color(0xFFFFFBE6);
+  static const Color cardYellowDark = Color(0xFFEAB308);
+
+  static const Color cardCyan = Color(0xFFE6FFFE);
+  static const Color cardCyanDark = Color(0xFF06B6D4);
+
+  static const Color cardRose = Color(0xFFFFF1F2);
+  static const Color cardRoseDark = Color(0xFFFB7185);
+
+  // Card Icon Background Colors - Vibrant pastel tones
+  static const Color schoolFeesBg = Color(0xFFEDE9FE);
+  static const Color schoolFeesIcon = Color(0xFF8B5CF6);
+
+  static const Color transportBg = Color(0xFFD1FAE5);
+  static const Color transportIcon = Color(0xFF10B981);
+
+  static const Color hostelBg = Color(0xFFFFE4E6);
+  static const Color hostelIcon = Color(0xFFF43F5E);
+
+  static const Color examBg = Color(0xFFCFFAFE);
+  static const Color examIcon = Color(0xFF06B6D4);
+
+  static const Color historyBg = Color(0xFFFEF3C7);
+  static const Color historyIcon = Color(0xFFF59E0B);
+
+  static const Color supportBg = Color(0xFFE0E7FF);
+  static const Color supportIcon = Color(0xFF6366F1);
+
+  // Avatar Colors
+  static const Color avatarBg = Color(0xFF22C55E);
+  static const Color avatarText = Color(0xFFFFFFFF);
+
+  // Button Colors
+  static const Color buttonPrimary = Color(0xFF22C55E);
+  static const Color buttonPrimaryHover = Color(0xFF16A34A);
+  static const Color buttonSecondary = Color(0xFFFFFFFF);
+  static const Color buttonSecondaryBorder = Color(0xFFE5E7EB);
+  static const Color buttonDanger = Color(0xFFEF4444);
+  static const Color buttonDangerBg = Color(0xFFFEF2F2);
+
+  // Shadow Colors
+  static const Color shadowLight = Color(0x0D000000);
+  static const Color shadowMedium = Color(0x1A000000);
+  static const Color shadowDark = Color(0x26000000);
+
+  // Card shadow with color tint
+  static const Color shadowBlue = Color(0x1A22C55E);
+  static const Color shadowPurple = Color(0x1A22C55E);
+  static const Color shadowPink = Color(0x1AEC4899);
+  static const Color shadowGreen = Color(0x1A10B981);
+
+  // Glassmorphism effect colors
+  static const Color glassWhite = Color(0xCCFFFFFF);
+  static const Color glassBorder = Color(0x33FFFFFF);
 }

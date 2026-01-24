@@ -19,7 +19,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
     final selectedStudent = ref.watch(selectedStudentProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: SafeArea(
         child: paymentAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),

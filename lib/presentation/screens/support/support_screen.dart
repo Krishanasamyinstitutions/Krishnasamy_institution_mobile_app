@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_sizes.dart';
+import '../../providers/cart_provider.dart';
 
-class SupportScreen extends StatefulWidget {
+class SupportScreen extends ConsumerStatefulWidget {
   const SupportScreen({super.key});
 
   @override
-  State<SupportScreen> createState() => _SupportScreenState();
+  ConsumerState<SupportScreen> createState() => _SupportScreenState();
 }
 
-class _SupportScreenState extends State<SupportScreen> {
+class _SupportScreenState extends ConsumerState<SupportScreen> {
   int _openFaqIndex = 0;
 
   final List<Map<String, String>> _faqs = [
@@ -44,20 +46,35 @@ class _SupportScreenState extends State<SupportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: Column(
-        children: [
-          // Header with SafeArea
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                const SizedBox(height: 20),
-                _buildHeader(context),
-                const SizedBox(height: 16),
-              ],
+          children: [
+            // Header with white SafeArea and subtle shadow
+            Container(
+              color: Colors.white,
+              child: SafeArea(
+                bottom: false,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      _buildHeader(context),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
             // Scrollable Content
             Expanded(
               child: SingleChildScrollView(
@@ -66,15 +83,16 @@ class _SupportScreenState extends State<SupportScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const SizedBox(height: 24),
                       // Contact School Card
                       _buildContactCard(),
                       const SizedBox(height: 24),
                       // FAQ's Title
-                      const Text(
+                      Text(
                         "FAQ's",
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: AppSizes.fontSemibold,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary,
                         ),
                       ),
@@ -97,7 +115,7 @@ class _SupportScreenState extends State<SupportScreen> {
                           ),
                         );
                       }),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
@@ -109,50 +127,129 @@ class _SupportScreenState extends State<SupportScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final cartItemCount = ref.watch(cartItemCountProvider);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Back Button
+          // Back Button - Dark theme
           GestureDetector(
-            onTap: () => context.go(Routes.home),
+            onTap: () => context.pop(),
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+              ),
+              child: const Icon(
+                Icons.arrow_back_rounded,
+                size: 20,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Title & Subtitle
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Help & Support',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1F2937),
                   ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Get assistance',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Cart Icon - Dark theme
+          GestureDetector(
+            onTap: () => context.push(Routes.cart),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
+                shape: BoxShape.circle,
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/icons/Cart.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  if (cartItemCount > 0)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                        ),
+                        child: Text(
+                          cartItemCount > 9 ? '9+' : '$cartItemCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
                 ],
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 18,
-                  color: Color(0xFF1F2933),
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Notification Icon - Dark theme
+          GestureDetector(
+            onTap: () => context.go(Routes.notifications),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: SvgPicture.asset(
+                  'assets/images/notification.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
                 ),
               ),
             ),
           ),
-
-          // Title
-          const Text(
-            'Help & Support',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2933),
-            ),
-          ),
-
-          // Empty space for alignment
-          const SizedBox(width: 44, height: 44),
         ],
       ),
     );
@@ -161,96 +258,121 @@ class _SupportScreenState extends State<SupportScreen> {
   Widget _buildContactCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: AppColors.shadowPurple,
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title
-          const Text(
-            'Contact School',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimary,
-            ),
+          // Header with Icon
+          Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.cardBlue,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.support_agent_rounded,
+                  size: 26,
+                  color: AppColors.cardBlueDark,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Text(
+                'Contact School',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           // Divider
           Container(
             height: 1,
-            color: const Color(0xFFAAD4FD),
+            color: AppColors.borderLight,
           ),
           const SizedBox(height: 20),
           // Email Row
-          Row(
-            children: [
-              const SizedBox(
-                width: 60,
-                child: Padding(
-                  padding: EdgeInsets.only(left: 12),
-                  child: Text(
-                    'Email',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: AppSizes.fontNormal,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 20),
-              Text(
-                _schoolEmail,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: AppSizes.fontNormal,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
+          _buildContactRow(
+            icon: Icons.email_rounded,
+            iconBg: AppColors.cardPurple,
+            iconColor: AppColors.cardPurpleDark,
+            label: 'Email',
+            value: _schoolEmail,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           // Phone Row
-          Row(
-            children: [
-              const SizedBox(
-                width: 60,
-                child: Padding(
-                  padding: EdgeInsets.only(left: 9),
-                  child: Text(
-                    'Phone',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: AppSizes.fontNormal,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 20),
-              Text(
-                _schoolPhone,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: AppSizes.fontNormal,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
+          _buildContactRow(
+            icon: Icons.phone_rounded,
+            iconBg: AppColors.cardGreen,
+            iconColor: AppColors.cardGreenDark,
+            label: 'Phone',
+            value: _schoolPhone,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildContactRow({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: iconBg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 20, color: iconColor),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textTertiary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -265,92 +387,82 @@ class _SupportScreenState extends State<SupportScreen> {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isOpen
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFF808087).withValues(alpha: 0.08),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                  BoxShadow(
-                    color: const Color(0xFF0051C6).withValues(alpha: 0.5),
-                    blurRadius: 1,
-                    offset: Offset.zero,
-                  ),
-                ]
-              : [
-                  BoxShadow(
-                    color: const Color(0xFF005FCC).withValues(alpha: 0.12),
-                    blurRadius: 2,
-                    spreadRadius: 1,
-                    offset: Offset.zero,
-                  ),
-                ],
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: isOpen
+              ? Border.all(color: AppColors.primary, width: 2)
+              : null,
+          boxShadow: [
+            BoxShadow(
+              color: isOpen ? AppColors.shadowPurple : AppColors.shadowLight,
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 11),
+          padding: const EdgeInsets.all(16),
           child: Column(
             children: [
               // Question Row
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: isOpen ? AppColors.cardPurple : AppColors.cardCyan,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.help_outline_rounded,
+                      size: 20,
+                      color: isOpen ? AppColors.cardPurpleDark : AppColors.cardCyanDark,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 2, right: 16),
-                      child: Text(
-                        question,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: AppSizes.fontSemibold,
-                          color: AppColors.textPrimary,
-                        ),
+                    child: Text(
+                      question,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isOpen ? FontWeight.w600 : FontWeight.w500,
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),
-                  Transform.rotate(
-                    angle: isOpen ? 3.14159 : 0,
-                    child: const Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 24,
-                      color: Color(0xFF1F2933),
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: isOpen ? AppColors.primary : AppColors.bgSecondary,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      isOpen ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                      color: isOpen ? Colors.white : AppColors.textTertiary,
                     ),
                   ),
                 ],
               ),
               // Answer (shown when open)
               if (isOpen) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 14),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.bgSecondary,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0051C6).withValues(alpha: 0.35),
-                        blurRadius: 1,
-                        spreadRadius: 0,
-                        offset: Offset.zero,
-                      ),
-                      BoxShadow(
-                        color: const Color(0xFF0051C6).withValues(alpha: 0.2),
-                        blurRadius: 2,
-                        spreadRadius: 0,
-                        offset: Offset.zero,
-                      ),
-                    ],
+                    color: AppColors.cardPurple.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     answer,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: AppSizes.fontNormal,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
                       color: AppColors.textSecondary,
-                      height: 1.5,
+                      height: 1.6,
                     ),
                   ),
                 ),

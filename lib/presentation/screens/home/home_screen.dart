@@ -5,11 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../data/models/fee_model.dart' show FeeSummary;
+import '../../../data/models/fee_model.dart';
+import '../../../data/models/institution_model.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../widgets/student_avatar.dart';
+import '../../providers/institution_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -18,162 +19,196 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedStudent = ref.watch(selectedStudentProvider);
     final feeSummaryAsync = ref.watch(feeSummaryProvider);
-
-    // Use the new provider that fetches feegroup.fgdesc from database
     final feesByGroup = ref.watch(pendingFeesByGroupProvider);
+    final cartItemCount = ref.watch(cartItemCountProvider);
+    final overdueGroups = ref.watch(overdueByGroupProvider);
+    final dueSoonGroups = ref.watch(dueSoonByGroupProvider);
+    final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 20),
-
-                // Header with profile and notification
-                _buildHeader(context, ref, selectedStudent),
-
-                const SizedBox(height: 24),
-
-                // Balance/Outstanding Amount
-                _buildBalanceSection(feeSummaryAsync),
-
-                const SizedBox(height: 16),
-
-                // School name and location
-                _buildSchoolInfo(selectedStudent),
-
-                const SizedBox(height: 32),
-
-                // Action Cards Title
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Fees Due',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1F2933),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => context.push(Routes.payAllFees),
-                      child: const Text(
-                        'Pay All Fees',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF007DFC),
-                        ),
-                      ),
+      backgroundColor: const Color(0xFFF8F9FB),
+      body: Column(
+        children: [
+          // Fixed Header with white SafeArea and subtle shadow
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 16),
-
-                // Fee Cards Grid
-                _buildFeeCardsGrid(context, feesByGroup),
-
-                const SizedBox(height: 12),
-
-                // Info Note
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF0F9FF),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFBAE6FD), width: 1),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        size: 18,
-                        color: Color(0xFF0284C7),
-                      ),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Tap on fee cards for details or use "Pay All Fees" to pay everything at once',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: Color(0xFF0369A1),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: _buildHeader(context, selectedStudent, cartItemCount),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                 ),
-
-                const SizedBox(height: 20),
-              ],
+              ),
             ),
           ),
-        ),
+
+          // Scrollable content
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 28),
+
+                    // Balance Section
+                    _buildBalanceSection(feeSummaryAsync),
+
+                    const SizedBox(height: 20),
+
+                    // Action Buttons
+                    _buildActionButtons(context),
+
+                    const SizedBox(height: 20),
+
+                    // School Info Widget
+                    _buildSchoolInfoWidget(institutionAsync),
+
+                    const SizedBox(height: 28),
+
+                    // Spending/Fee Categories Section
+                    _buildSpendingSection(context, feesByGroup),
+
+                    const SizedBox(height: 28),
+
+                    // Activity Section - Overdue & Due Soon
+                    _buildActivitySection(context, overdueGroups, dueSoonGroups),
+
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, WidgetRef ref, dynamic selectedStudent) {
+  Widget _buildHeader(BuildContext context, dynamic selectedStudent, int cartItemCount) {
     final studentName = selectedStudent?.name ?? 'Student';
-    final admNo = selectedStudent?.admissionNumber ?? 'N/A';
     final className = selectedStudent?.className ?? 'N/A';
-    final cartItemCount = ref.watch(cartItemCountProvider);
+    final admissionNumber = selectedStudent?.admissionNumber ?? 'N/A';
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Profile Image with First Letter
-        StudentAvatar.medium(studentName: studentName),
+        // Profile Avatar
+        GestureDetector(
+          onTap: () => context.go(Routes.profile),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primary, AppColors.primary600],
+              ),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                _getInitials(studentName),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
         const SizedBox(width: 12),
-        // Student Details
+        // Student Info
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 studentName,
                 style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F2933),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Admn No: $admNo  |  Class: $className',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: Color(0xFF6B7280),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1F2937),
                 ),
                 overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  const Text(
+                    'Adm No: ',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                  Text(
+                    admissionNumber,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                  const Text(
+                    ' | Class: ',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF6B7280),
+                    ),
+                  ),
+                  Text(
+                    className,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
-        const SizedBox(width: 8),
-        // Cart Icon
+        // Cart Icon - Dark theme (same as View Details button)
         GestureDetector(
           onTap: () => context.push(Routes.cart),
           child: Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
+            decoration: const BoxDecoration(
+              color: Color(0xFF1F2937),
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: Stack(
               clipBehavior: Clip.none,
@@ -181,17 +216,17 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 SvgPicture.asset(
                   'assets/icons/Cart.svg',
-                  width: 24,
-                  height: 24,
+                  width: 20,
+                  height: 20,
                   colorFilter: const ColorFilter.mode(
-                    Color(0xFF1F2933),
+                    Colors.white,
                     BlendMode.srcIn,
                   ),
                 ),
                 if (cartItemCount > 0)
                   Positioned(
-                    top: -2,
-                    right: -2,
+                    top: -4,
+                    right: -4,
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       constraints: const BoxConstraints(
@@ -201,13 +236,13 @@ class HomeScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: AppColors.error,
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        border: Border.all(color: const Color(0xFF1F2937), width: 2),
                       ),
                       child: Text(
                         cartItemCount > 9 ? '9+' : '$cartItemCount',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 10,
+                          fontSize: 9,
                           fontWeight: FontWeight.bold,
                         ),
                         textAlign: TextAlign.center,
@@ -218,332 +253,653 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        // Notification Icon
+        const SizedBox(width: 10),
+        // Notification Icon - Dark theme (same as View Details button)
         GestureDetector(
           onTap: () => context.go(Routes.notifications),
           child: Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white,
+            decoration: const BoxDecoration(
+              color: Color(0xFF1F2937),
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SvgPicture.asset(
-                  'assets/images/notification.svg',
-                  width: 22,
-                  height: 22,
-                  colorFilter: const ColorFilter.mode(
-                    Color(0xFF1F2933),
-                    BlendMode.srcIn,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSchoolInfo(dynamic selectedStudent) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // School Logo/Icon
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFFEBF5FF),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(
-              child: Text(
-                'V',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF007DFC),
-                  fontStyle: FontStyle.italic,
+            child: Center(
+              child: SvgPicture.asset(
+                'assets/images/notification.svg',
+                width: 20,
+                height: 20,
+                colorFilter: const ColorFilter.mode(
+                  Colors.white,
+                  BlendMode.srcIn,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 12),
-          // School Name and Location
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'ABC Higher Secondary School',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1F2933),
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'No.12, Anna Nagar, 600118',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildBalanceSection(AsyncValue<FeeSummary> feeSummaryAsync) {
     final feeSummary = feeSummaryAsync.valueOrNull;
-    final totalOutstanding = feeSummary?.totalPending ?? 0;
+    final totalPending = feeSummary?.totalPending ?? 0;
+
+    // Get current academic year
+    final now = DateTime.now();
+    final academicYear = now.month >= 6
+        ? '${now.year}-${now.year + 1}'
+        : '${now.year - 1}-${now.year}';
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Amount
-        Text(
-          NumberFormat('#,##,###.00', 'en_IN').format(totalOutstanding),
-          style: const TextStyle(
-            fontSize: 42,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF1F2933),
-            height: 1.1,
+        const Text(
+          'Balance Fees Due',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF6B7280),
           ),
         ),
-
         const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              '₹${NumberFormat('#,##,###').format(totalPending)}',
+              style: const TextStyle(
+                fontSize: 40,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1F2937),
+                letterSpacing: -1,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              '/',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w400,
+                color: Color(0xFF9CA3AF),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              academicYear,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
-        // Currency indicator
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF007DFC),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Text(
-                    '₹',
+  Widget _buildActionButtons(BuildContext context) {
+    return Row(
+      children: [
+        // Pay Fees Button (Primary)
+        Expanded(
+          child: GestureDetector(
+            onTap: () => context.push(Routes.payAllFees),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Pay All Fees',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
                     ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_outward_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 6),
-              const Text(
-                'INR',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF1F2933),
-                ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Paid Fees Button (Secondary)
+        Expanded(
+          child: GestureDetector(
+            onTap: () => context.go('${Routes.paymentHistory}?tab=paid'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1F2937),
+                borderRadius: BorderRadius.circular(16),
               ),
-            ],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Paid Fees',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.check_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildFeeCardsGrid(BuildContext context, Map<String, double> feesByGroup) {
-    // Get fee group entries and sort them
-    final feeGroups = feesByGroup.entries.toList();
+  Widget _buildSchoolInfoWidget(AsyncValue<InstitutionModel?> institutionAsync) {
+    final institution = institutionAsync.valueOrNull;
+    final schoolName = institution?.name ?? 'School';
+    final schoolAddress = institution?.shortAddress ?? 'Address not available';
 
-    // Define styling for different fee groups
-    Map<String, dynamic> getGroupStyle(String groupName) {
-      final lower = groupName.toLowerCase();
-      if (lower.contains('bus') || lower.contains('transport') || lower.contains('van')) {
-        return {
-          'icon': Icons.directions_bus_outlined,
-          'backgroundColor': const Color(0xFFD4EDDA),
-          'iconColor': const Color(0xFF28A745),
-          'feeType': 'bus',
-        };
-      } else if (lower.contains('tuition') || lower.contains('term')) {
-        return {
-          'icon': Icons.school_outlined,
-          'backgroundColor': const Color(0xFFE8E4F3),
-          'iconColor': const Color(0xFF6B5B95),
-          'feeType': 'term',
-        };
-      } else if (lower.contains('hostel') || lower.contains('boarding')) {
-        return {
-          'icon': Icons.home_outlined,
-          'backgroundColor': const Color(0xFFFFE4E1),
-          'iconColor': const Color(0xFFDC143C),
-          'feeType': 'hostel',
-        };
-      } else if (lower.contains('exam') || lower.contains('lab')) {
-        return {
-          'icon': Icons.science_outlined,
-          'backgroundColor': const Color(0xFFE0F7FA),
-          'iconColor': const Color(0xFF00ACC1),
-          'feeType': 'exam',
-        };
-      } else {
-        // Default style for other fee groups
-        return {
-          'icon': Icons.school_outlined,
-          'backgroundColor': const Color(0xFFE8E4F3),
-          'iconColor': const Color(0xFF6B5B95),
-          'feeType': 'other',
-        };
-      }
-    }
-
-    // Build fee group cards dynamically
-    List<Widget> buildFeeGroupCards() {
-      final cards = <Widget>[];
-
-      for (int i = 0; i < feeGroups.length; i += 2) {
-        final firstGroup = feeGroups[i];
-        final firstStyle = getGroupStyle(firstGroup.key);
-
-        final row = Row(
-          children: [
-            Expanded(
-              child: _buildFeeCard(
-                icon: firstStyle['icon'] as IconData,
-                title: firstGroup.key,
-                amount: firstGroup.value,
-                backgroundColor: firstStyle['backgroundColor'] as Color,
-                iconColor: firstStyle['iconColor'] as Color,
-                statusTag: 'Pending',
-                onTap: () => context.push(Routes.pending, extra: {'feeType': firstStyle['feeType'], 'groupName': firstGroup.key}),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // School Logo
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.cardBlue,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.asset(
+                'assets/images/school_logo.png',
+                width: 56,
+                height: 56,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.school_rounded,
+                    size: 28,
+                    color: AppColors.cardBlueDark,
+                  );
+                },
               ),
             ),
-            const SizedBox(width: 12),
-            if (i + 1 < feeGroups.length)
-              Expanded(
-                child: Builder(builder: (context) {
-                  final secondGroup = feeGroups[i + 1];
-                  final secondStyle = getGroupStyle(secondGroup.key);
-                  return _buildFeeCard(
-                    icon: secondStyle['icon'] as IconData,
-                    title: secondGroup.key,
-                    amount: secondGroup.value,
-                    backgroundColor: secondStyle['backgroundColor'] as Color,
-                    iconColor: secondStyle['iconColor'] as Color,
-                    statusTag: 'Pending',
-                    onTap: () => context.push(Routes.pending, extra: {'feeType': secondStyle['feeType'], 'groupName': secondGroup.key}),
-                  );
-                }),
-              )
-            else
-              const Expanded(child: SizedBox()), // Empty placeholder for odd count
-          ],
-        );
+          ),
+          const SizedBox(width: 14),
+          // School Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  schoolName,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 14,
+                      color: Color(0xFF6B7280),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        schoolAddress,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF6B7280),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-        cards.add(row);
-        if (i + 2 < feeGroups.length) {
-          cards.add(const SizedBox(height: 12));
-        }
-      }
-
-      return cards;
-    }
+  Widget _buildSpendingSection(BuildContext context, Map<String, double> feesByGroup) {
+    final categories = [
+      {'name': 'School Fees', 'icon': Icons.school_rounded, 'color': const Color(0xFF22C55E), 'iconBgColor': const Color(0xFFDCFCE7)},
+      {'name': 'Van Fees', 'icon': Icons.directions_bus_rounded, 'color': const Color(0xFF3B82F6), 'iconBgColor': const Color(0xFFDBEAFE)},
+      {'name': 'Exam Fees', 'icon': Icons.menu_book_rounded, 'color': AppColors.cardOrange, 'iconBgColor': const Color(0xFFFEF3C7)},
+      {'name': 'Other', 'icon': Icons.more_horiz_rounded, 'color': AppColors.cardPurple, 'iconBgColor': const Color(0xFFF3E8FF)},
+    ];
 
     return Column(
       children: [
-        // Dynamic Fee Group Cards
-        ...buildFeeGroupCards(),
-
-        const SizedBox(height: 12),
-
-        // Bottom Row - History and Support
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: _buildFeeCard(
-                svgAsset: 'assets/nav bar icons/history stroke.svg',
-                title: 'History',
-                amount: 0,
-                backgroundColor: const Color(0xFFFFF3CD),
-                iconColor: const Color(0xFFD4A017),
-                onTap: () => context.go(Routes.paymentHistory),
-                isDummy: true,
+            const Text(
+              'Pending Dues',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1F2937),
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildFeeCard(
-                icon: Icons.support_agent_outlined,
-                title: 'Support',
-                amount: 0,
-                backgroundColor: const Color(0xFFE2E8F0),
-                iconColor: const Color(0xFF64748B),
-                onTap: () => context.push(Routes.support),
-                isDummy: true,
+            GestureDetector(
+              onTap: () => context.push(Routes.payAllFees),
+              child: Text(
+                'Show all',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textLink,
+                ),
               ),
             ),
           ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 150,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: feesByGroup.isEmpty ? categories.length : feesByGroup.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              if (feesByGroup.isEmpty) {
+                final cat = categories[index];
+                return _buildSpendingCard(
+                  context: context,
+                  icon: cat['icon'] as IconData,
+                  label: cat['name'] as String,
+                  groupName: cat['name'] as String,
+                  amount: 0,
+                  primaryColor: cat['color'] as Color,
+                  iconBgColor: cat['iconBgColor'] as Color,
+                  isFirst: index == 0,
+                );
+              }
+
+              final entry = feesByGroup.entries.elementAt(index);
+              final cat = categories[index % categories.length];
+              return _buildSpendingCard(
+                context: context,
+                icon: cat['icon'] as IconData,
+                label: _toTitleCase(entry.key),
+                groupName: entry.key,
+                amount: entry.value,
+                primaryColor: cat['color'] as Color,
+                iconBgColor: cat['iconBgColor'] as Color,
+                isFirst: index == 0,
+              );
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildFeeCard({
-    IconData? icon,
-    String? svgAsset,
-    required String title,
+  Widget _buildSpendingCard({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required String groupName,
     required double amount,
-    required Color backgroundColor,
-    required Color iconColor,
-    required VoidCallback onTap,
-    bool isDummy = false,
-    String? statusTag,
+    required Color primaryColor,
+    required Color iconBgColor,
+    required bool isFirst,
   }) {
+    // First card has colored background, others have white background
+    final bool hasColoredBg = isFirst && amount > 0;
+
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(groupName)}'),
       child: Container(
+        width: 160,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
+          color: hasColoredBg ? primaryColor : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: hasColoredBg
+                  ? primaryColor.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top row: Icon and Due badge
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Icon container
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: hasColoredBg
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : iconBgColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: hasColoredBg ? Colors.white : primaryColor,
+                  ),
+                ),
+                // Due badge
+                if (amount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: hasColoredBg
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Due',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: hasColoredBg
+                                ? Colors.white
+                                : const Color(0xFFF59E0B),
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        Icon(
+                          Icons.arrow_upward_rounded,
+                          size: 12,
+                          color: hasColoredBg
+                              ? Colors.white
+                              : const Color(0xFFF59E0B),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+            const Spacer(),
+            // Label
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: hasColoredBg
+                    ? Colors.white.withValues(alpha: 0.8)
+                    : const Color(0xFF6B7280),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 6),
+            // Amount and arrow row
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    NumberFormat('#,##,###').format(amount.toInt()),
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: hasColoredBg ? Colors.white : const Color(0xFF1F2937),
+                    ),
+                  ),
+                ),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: hasColoredBg
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : const Color(0xFFF3F4F6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 12,
+                    color: hasColoredBg ? Colors.white : const Color(0xFF6B7280),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivitySection(BuildContext context, List<FeeGroupSummary> overdueGroups, List<FeeGroupSummary> dueSoonGroups) {
+    final hasOverdue = overdueGroups.isNotEmpty;
+    final hasDueSoon = dueSoonGroups.isNotEmpty;
+    final hasAnyFees = hasOverdue || hasDueSoon;
+
+    // Calculate totals
+    final totalOverdue = overdueGroups.fold(0.0, (sum, g) => sum + g.totalAmount);
+    final totalDueSoon = dueSoonGroups.fold(0.0, (sum, g) => sum + g.totalAmount);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Fee Status',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => context.push(Routes.allPendingFees),
+              child: Text(
+                'View all',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textLink,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (!hasAnyFees)
+          _buildEmptyActivity()
+        else ...[
+          // Overdue Section
+          if (hasOverdue) ...[
+            _buildSectionTitle(
+              title: 'Overdue',
+              totalAmount: totalOverdue,
+              color: AppColors.error,
+              icon: Icons.warning_amber_rounded,
+            ),
+            const SizedBox(height: 12),
+            ...overdueGroups.map((group) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildFeeGroupCard(context, group, AppColors.error, filterStatus: 'overdue'),
+            )),
+          ],
+          if (hasOverdue && hasDueSoon)
+            const SizedBox(height: 16),
+          // Due Soon Section
+          if (hasDueSoon) ...[
+            _buildSectionTitle(
+              title: 'Upcoming Due',
+              totalAmount: totalDueSoon,
+              color: AppColors.warning,
+              icon: Icons.schedule_rounded,
+            ),
+            const SizedBox(height: 12),
+            ...dueSoonGroups.map((group) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _buildFeeGroupCard(context, group, AppColors.warning, filterStatus: 'dueSoon'),
+            )),
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle({
+    required String title,
+    required double totalAmount,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          '₹${NumberFormat('#,##,###').format(totalAmount.toInt())}',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeeGroupCard(BuildContext context, FeeGroupSummary group, Color statusColor, {required String filterStatus}) {
+    final isOverdue = group.isOverdue;
+    final now = DateTime.now();
+    String timeInfo = '';
+
+    if (group.nearestDueDate != null) {
+      if (isOverdue) {
+        final days = now.difference(group.nearestDueDate!).inDays;
+        timeInfo = '$days days overdue';
+      } else {
+        final days = group.nearestDueDate!.difference(now).inDays;
+        timeInfo = days == 0 ? 'Due today' : 'Due in $days days';
+      }
+    }
+
+    // Get icon based on group name
+    IconData groupIcon = Icons.receipt_rounded;
+    Color groupBg = AppColors.cardPurple;
+    Color groupIconColor = AppColors.cardPurpleDark;
+
+    final lowerName = group.groupName.toLowerCase();
+    if (lowerName.contains('school') || lowerName.contains('tuition')) {
+      groupIcon = Icons.school_rounded;
+      groupBg = AppColors.cardGreen;
+      groupIconColor = AppColors.cardGreenDark;
+    } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
+      groupIcon = Icons.directions_bus_rounded;
+      groupBg = AppColors.cardBlue;
+      groupIconColor = AppColors.cardBlueDark;
+    } else if (lowerName.contains('exam')) {
+      groupIcon = Icons.assignment_rounded;
+      groupBg = AppColors.cardOrange;
+      groupIconColor = AppColors.cardOrangeDark;
+    }
+
+    return GestureDetector(
+      onTap: () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(group.groupName)}&status=$filterStatus'),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: statusColor.withValues(alpha: 0.15),
+            width: 1,
+          ),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -552,93 +908,81 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            // Icon and Status Tag Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Icon with colored background
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: svgAsset != null
-                        ? SvgPicture.asset(
-                            svgAsset,
-                            width: 24,
-                            height: 24,
-                            colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
-                          )
-                        : Icon(
-                            icon,
-                            size: 24,
-                            color: iconColor,
-                          ),
-                  ),
-                ),
-                // Status Tag (top right)
-                if (statusTag != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDC2626).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      statusTag,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFFDC2626),
-                      ),
-                    ),
-                  ),
-              ],
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: groupBg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(groupIcon, size: 22, color: groupIconColor),
             ),
-            const SizedBox(height: 16),
-            // Title and Arrow Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // Title and Amount Column
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _toTitleCase(group.groupName),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
                     children: [
                       Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 15,
+                        '${group.itemCount} ${group.itemCount == 1 ? 'fee' : 'fees'}',
+                        style: TextStyle(
+                          fontSize: 12,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textTertiary,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      // Amount or placeholder text
-                      Text(
-                        isDummy ? 'View details' : '₹ ${NumberFormat('#,##,###').format(amount.toInt())}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF1F2933),
+                      if (timeInfo.isNotEmpty) ...[
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 6),
+                          width: 3,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: AppColors.textHint,
+                            shape: BoxShape.circle,
+                          ),
                         ),
-                      ),
+                        Text(
+                          timeInfo,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: statusColor,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '₹${NumberFormat('#,##,###').format(group.totalAmount.toInt())}',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1F2937),
+                  ),
                 ),
-                // Arrow Icon
+                const SizedBox(height: 4),
                 const Icon(
                   Icons.arrow_forward_ios_rounded,
-                  size: 16,
-                  color: Color(0xFF9CA3AF),
+                  size: 14,
+                  color: Color(0xFF1F2937),
                 ),
               ],
             ),
@@ -646,5 +990,72 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildEmptyActivity() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppColors.cardGreen,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.check_circle_rounded,
+              size: 32,
+              color: AppColors.cardGreenDark,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'All caught up!',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'No overdue or upcoming fees',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _toTitleCase(String text) {
+    return text.split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'S';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
   }
 }

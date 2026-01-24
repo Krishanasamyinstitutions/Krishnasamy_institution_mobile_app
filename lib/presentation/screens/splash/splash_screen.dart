@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_sizes.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart' show parentAuthStateProvider;
 import '../../providers/student_provider.dart';
@@ -84,7 +83,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       duration: const Duration(milliseconds: 1500),
     );
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(
         parent: _pulseController,
         curve: Curves.easeInOut,
@@ -148,251 +147,291 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppColors.primary,
-              AppColors.primary700,
-              Color(0xFF1E3A5F),
-            ],
-            stops: [0.0, 0.5, 1.0],
+      backgroundColor: const Color(0xFFF8F9FB),
+      body: Stack(
+        children: [
+          // Background decorative elements
+          Positioned(
+            top: -120,
+            right: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(alpha: 0.05),
+              ),
+            ),
           ),
-        ),
-        child: Stack(
-          children: [
-            // Background circles decoration
-            Positioned(
-              top: -100,
-              right: -100,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.05),
-                ),
+          Positioned(
+            bottom: -100,
+            left: -60,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(alpha: 0.05),
               ),
             ),
-            Positioned(
-              bottom: -150,
-              left: -100,
-              child: Container(
-                width: 400,
-                height: 400,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.05),
-                ),
+          ),
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.3,
+            left: -40,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.cardGreen.withValues(alpha: 0.3),
               ),
             ),
+          ),
 
-            // Main content
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Animated Logo
-                  AnimatedBuilder(
-                    animation: _logoController,
-                    builder: (context, child) {
-                      return Opacity(
-                        opacity: _logoOpacity.value,
-                        child: Transform.scale(
-                          scale: _logoScale.value,
-                          child: AnimatedBuilder(
-                            animation: _pulseController,
-                            builder: (context, child) {
-                              return Transform.scale(
-                                scale: _pulseAnimation.value,
-                                child: Container(
-                                  width: 140,
-                                  height: 140,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(35),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.2),
-                                        blurRadius: 30,
-                                        offset: const Offset(0, 15),
-                                        spreadRadius: 5,
+          // Main content
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Animated Logo
+                AnimatedBuilder(
+                  animation: _logoController,
+                  builder: (context, child) {
+                    return Opacity(
+                      opacity: _logoOpacity.value,
+                      child: Transform.scale(
+                        scale: _logoScale.value,
+                        child: AnimatedBuilder(
+                          animation: _pulseController,
+                          builder: (context, child) {
+                            return Transform.scale(
+                              scale: _pulseAnimation.value,
+                              child: Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(32),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.primary.withValues(alpha: 0.15),
+                                      blurRadius: 40,
+                                      offset: const Offset(0, 20),
+                                      spreadRadius: 0,
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.04),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // Graduation cap icon
+                                    Container(
+                                      width: 64,
+                                      height: 64,
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            AppColors.primary,
+                                            AppColors.primary600,
+                                          ],
+                                        ),
+                                        borderRadius: BorderRadius.circular(18),
                                       ),
-                                    ],
-                                  ),
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      // Graduation cap icon
-                                      const Icon(
+                                      child: const Icon(
                                         Icons.school_rounded,
-                                        size: 70,
-                                        color: AppColors.primary,
+                                        size: 36,
+                                        color: Colors.white,
                                       ),
-                                      // Small payment badge
-                                      Positioned(
-                                        right: 15,
-                                        bottom: 15,
-                                        child: Container(
-                                          width: 36,
-                                          height: 36,
-                                          decoration: BoxDecoration(
-                                            color: AppColors.success,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: Colors.white,
-                                              width: 3,
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: AppColors.success.withValues(alpha: 0.4),
-                                                blurRadius: 8,
-                                                offset: const Offset(0, 2),
-                                              ),
+                                    ),
+                                    // Small payment badge
+                                    Positioned(
+                                      right: 16,
+                                      bottom: 16,
+                                      child: Container(
+                                        width: 32,
+                                        height: 32,
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFF10B981),
+                                              Color(0xFF059669),
                                             ],
                                           ),
-                                          child: const Icon(
-                                            Icons.currency_rupee_rounded,
-                                            size: 18,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
                                             color: Colors.white,
+                                            width: 3,
                                           ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.currency_rupee_rounded,
+                                          size: 16,
+                                          color: Colors.white,
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                    ),
+                                  ],
                                 ),
-                              );
-                            },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 32),
+
+                // Animated text
+                SlideTransition(
+                  position: _textSlide,
+                  child: FadeTransition(
+                    opacity: _textOpacity,
+                    child: Column(
+                      children: [
+                        // App name
+                        const Text(
+                          'SchoolPay',
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1F2937),
+                            letterSpacing: 0.5,
                           ),
                         ),
-                      );
-                    },
-                  ),
 
-                  const SizedBox(height: AppSizes.s8),
+                        const SizedBox(height: 12),
 
-                  // Animated text
-                  SlideTransition(
-                    position: _textSlide,
-                    child: FadeTransition(
-                      opacity: _textOpacity,
-                      child: Column(
-                        children: [
-                          // App name
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Colors.white, Color(0xFFE0E7FF)],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ).createShader(bounds),
-                            child: const Text(
-                              'SchoolPay',
-                              style: TextStyle(
-                                fontSize: 42,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 1.5,
-                              ),
-                            ),
+                        // Tagline
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-
-                          const SizedBox(height: AppSizes.s3),
-
-                          // Tagline
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSizes.s4,
-                              vertical: AppSizes.s2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(AppSizes.roundedFull),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
+                          decoration: BoxDecoration(
+                            color: AppColors.cardGreen,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.cardGreenDark,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
                                   Icons.verified_rounded,
-                                  size: 16,
+                                  size: 12,
                                   color: Colors.white,
                                 ),
-                                SizedBox(width: AppSizes.s2),
-                                Text(
-                                  'Secure & Easy Fee Payments',
-                                  style: TextStyle(
-                                    fontSize: AppSizes.textSm,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w500,
-                                    letterSpacing: 0.5,
-                                  ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Text(
+                                'Secure & Easy Fee Payments',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.cardGreenDark,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.3,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Bottom loading indicator
+          Positioned(
+            bottom: 100,
+            left: 0,
+            right: 0,
+            child: FadeTransition(
+              opacity: _textOpacity,
+              child: Column(
+                children: [
+                  // Loading dots animation
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(3, (index) {
+                      return AnimatedBuilder(
+                        animation: _pulseController,
+                        builder: (context, child) {
+                          final delay = index * 0.2;
+                          final value = (_pulseController.value + delay) % 1.0;
+                          final opacity = 0.3 + (0.7 * (value < 0.5 ? value * 2 : (1 - value) * 2));
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: opacity),
+                              shape: BoxShape.circle,
+                            ),
+                          );
+                        },
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Loading...',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Color(0xFF6B7280),
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
               ),
             ),
+          ),
 
-            // Bottom loading indicator
-            Positioned(
-              bottom: 80,
-              left: 0,
-              right: 0,
-              child: FadeTransition(
-                opacity: _textOpacity,
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Colors.white.withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.s4),
-                    Text(
-                      'Loading...',
-                      style: TextStyle(
-                        fontSize: AppSizes.textSm,
-                        color: Colors.white.withValues(alpha: 0.7),
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
+          // Version at bottom
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: FadeTransition(
+              opacity: _textOpacity,
+              child: const Text(
+                'v1.0.0',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF9CA3AF),
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ),
-
-            // Version at bottom
-            Positioned(
-              bottom: 30,
-              left: 0,
-              right: 0,
-              child: FadeTransition(
-                opacity: _textOpacity,
-                child: Text(
-                  'v1.0.0',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: AppSizes.textXs,
-                    color: Colors.white.withValues(alpha: 0.5),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

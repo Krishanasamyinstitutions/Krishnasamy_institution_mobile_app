@@ -18,7 +18,7 @@ class FeeDetailsScreen extends ConsumerWidget {
     final feesAsync = ref.watch(feesProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
         title: const Text('Fee Details'),
       ),

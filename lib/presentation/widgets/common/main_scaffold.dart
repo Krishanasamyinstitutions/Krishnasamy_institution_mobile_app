@@ -4,16 +4,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../providers/drawer_provider.dart';
-import 'app_drawer.dart';
 
 class MainScaffold extends ConsumerWidget {
   final Widget child;
 
-  const MainScaffold({
-    super.key,
-    required this.child,
-  });
+  const MainScaffold({super.key, required this.child});
 
   int _calculateSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
@@ -27,27 +22,26 @@ class MainScaffold extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = _calculateSelectedIndex(context);
-    final scaffoldKey = ref.watch(mainScaffoldKeyProvider);
 
     return Scaffold(
-      key: scaffoldKey,
-      drawer: const AppDrawer(),
-      drawerEnableOpenDragGesture: true,
+      backgroundColor: const Color(0xFFF8F9FB),
       body: child,
+      extendBody: true,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
             ),
           ],
         ),
         child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Container(
+            height: 70,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -58,7 +52,7 @@ class MainScaffold extends ConsumerWidget {
                   label: 'Home',
                   strokeIcon: 'assets/nav bar icons/home stroke.svg',
                   filledIcon: 'assets/nav bar icons/home filled.svg',
-                  route: Routes.home,
+                  onTap: () => context.go(Routes.home),
                 ),
                 _buildNavItem(
                   context: context,
@@ -67,7 +61,7 @@ class MainScaffold extends ConsumerWidget {
                   label: 'History',
                   strokeIcon: 'assets/nav bar icons/history stroke.svg',
                   filledIcon: 'assets/nav bar icons/history filled.svg',
-                  route: Routes.paymentHistory,
+                  onTap: () => context.go(Routes.paymentHistory),
                 ),
                 _buildNavItem(
                   context: context,
@@ -76,7 +70,7 @@ class MainScaffold extends ConsumerWidget {
                   label: 'Alerts',
                   strokeIcon: 'assets/nav bar icons/alerts stroke.svg',
                   filledIcon: 'assets/nav bar icons/alerts filled.svg',
-                  route: Routes.notifications,
+                  onTap: () => context.go(Routes.notifications),
                 ),
                 _buildNavItem(
                   context: context,
@@ -85,7 +79,7 @@ class MainScaffold extends ConsumerWidget {
                   label: 'Profile',
                   strokeIcon: 'assets/nav bar icons/profile stroke.svg',
                   filledIcon: 'assets/nav bar icons/profile filled.svg',
-                  route: Routes.profile,
+                  onTap: () => context.go(Routes.profile),
                 ),
               ],
             ),
@@ -102,32 +96,34 @@ class MainScaffold extends ConsumerWidget {
     required String label,
     required String strokeIcon,
     required String filledIcon,
-    required String route,
+    required VoidCallback onTap,
   }) {
     final isSelected = index == selectedIndex;
-    final color = isSelected ? AppColors.primary : AppColors.textSecondary;
 
     return GestureDetector(
-      onTap: () => context.go(route),
+      onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: SizedBox(
+        width: 70,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SvgPicture.asset(
               isSelected ? filledIcon : strokeIcon,
               width: 24,
               height: 24,
-              colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+              colorFilter: ColorFilter.mode(
+                isSelected ? AppColors.primary : const Color(0xFF9CA3AF),
+                BlendMode.srcIn,
+              ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: color,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                color: isSelected ? AppColors.primary : const Color(0xFF9CA3AF),
               ),
             ),
           ],
@@ -135,5 +131,4 @@ class MainScaffold extends ConsumerWidget {
       ),
     );
   }
-
 }

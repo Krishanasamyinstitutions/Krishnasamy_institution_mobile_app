@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_sizes.dart';
 import '../../../config/routes.dart';
-import '../../widgets/common/app_button.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -11,111 +9,205 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF8F9FB),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              const Spacer(),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                const Spacer(),
 
-              SizedBox(
-                width: 200,
-                height: 200,
-                child: Image.asset(
-                  'assets/images/welcome.gif',
-                  fit: BoxFit.contain,
+                Container(
+                  width: 180,
+                  height: 180,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.shadowPurple,
+                        blurRadius: 40,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(
+                      'assets/images/welcome.gif',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: AppSizes.s6),
+                const SizedBox(height: 32),
 
-              const Text(
-                'SchoolPay',
-                style: TextStyle(
-                  fontSize: AppSizes.text3xl,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                Text(
+                  'SchoolPay',
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
-              ),
 
-              const SizedBox(height: AppSizes.s2),
+                const SizedBox(height: 8),
 
-              const Text(
-                'Pay school fees with ease',
-                style: TextStyle(
-                  fontSize: AppSizes.textBase,
-                  color: AppColors.textSecondary,
+                Text(
+                  'Pay school fees with ease',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: AppColors.textTertiary,
+                  ),
                 ),
-              ),
 
-              const Spacer(),
+                const Spacer(),
 
-              _buildFeatureItem(
-                icon: Icons.speed_rounded,
-                text: 'Quick & Easy Payments',
-              ),
-              const SizedBox(height: AppSizes.s3),
-              _buildFeatureItem(
-                icon: Icons.security_rounded,
-                text: '100% Secure Transactions',
-              ),
-              const SizedBox(height: AppSizes.s3),
-              _buildFeatureItem(
-                icon: Icons.receipt_long_rounded,
-                text: 'Instant Digital Receipts',
-              ),
+                _buildFeatureItem(
+                  icon: Icons.speed_rounded,
+                  text: 'Quick & Easy Payments',
+                  color: AppColors.cardPurple,
+                  iconColor: AppColors.cardPurpleDark,
+                ),
+                const SizedBox(height: 12),
+                _buildFeatureItem(
+                  icon: Icons.security_rounded,
+                  text: '100% Secure Transactions',
+                  color: AppColors.cardGreen,
+                  iconColor: AppColors.cardGreenDark,
+                ),
+                const SizedBox(height: 12),
+                _buildFeatureItem(
+                  icon: Icons.receipt_long_rounded,
+                  text: 'Instant Digital Receipts',
+                  color: AppColors.cardBlue,
+                  iconColor: AppColors.cardBlueDark,
+                ),
 
-              const Spacer(),
+                const Spacer(),
 
-              AppButton(
-                text: 'Sign In',
-                onPressed: () => context.push(Routes.signIn),
-                isFullWidth: true,
-              ),
+                GestureDetector(
+                  onTap: () => context.push(Routes.signIn),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.primary600],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.4),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Text(
+                        'Sign In',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
 
-              const SizedBox(height: AppSizes.s3),
+                const SizedBox(height: 12),
 
-              AppButton(
-                text: 'Create Account',
-                onPressed: () => context.push(Routes.signUp),
-                isFullWidth: true,
-                variant: AppButtonVariant.outlined,
-              ),
+                GestureDetector(
+                  onTap: () => context.push(Routes.signUp),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.primary, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.shadowLight,
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Create Account',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
 
-              const SizedBox(height: AppSizes.s4),
-            ],
+                const SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
-      ),
     );
   }
 
-  Widget _buildFeatureItem({required IconData icon, required String text}) {
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.accent2,
-            borderRadius: BorderRadius.circular(AppSizes.roundedLg),
+  Widget _buildFeatureItem({
+    required IconData icon,
+    required String text,
+    required Color color,
+    required Color iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.shadowLight,
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          child: Icon(
-            icon,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              size: 22,
+              color: iconColor,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+          Icon(
+            Icons.check_circle_rounded,
             size: 20,
-            color: AppColors.primary,
+            color: AppColors.success,
           ),
-        ),
-        const SizedBox(width: AppSizes.s3),
-        Text(
-          text,
-          style: const TextStyle(
-            fontSize: AppSizes.textSm,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
