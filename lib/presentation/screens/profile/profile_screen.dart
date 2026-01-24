@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/student_avatar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -214,6 +215,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Text(
                           cartItemCount > 9 ? '9+' : '$cartItemCount',
                           style: const TextStyle(
+                            fontFamily: 'Inter',
                             color: Colors.white,
                             fontSize: 9,
                             fontWeight: FontWeight.bold,
@@ -568,6 +570,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Text(
               'Sign Out',
               style: TextStyle(
+                fontFamily: 'Inter',
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
