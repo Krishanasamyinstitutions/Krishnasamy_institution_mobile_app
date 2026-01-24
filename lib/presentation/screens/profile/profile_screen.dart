@@ -5,6 +5,7 @@ import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/student_avatar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -131,26 +132,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       child: Row(
         children: [
           // Profile Image
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: Center(
-              child: Text(
-                studentData['name']!.isNotEmpty
-                    ? studentData['name']![0].toUpperCase()
-                    : 'S',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            ),
-          ),
+          StudentAvatar.medium(studentName: studentData['name']!),
           const SizedBox(width: 12),
           // Student Details
           Expanded(
@@ -160,6 +142,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Text(
                   studentData['name']!,
                   style: const TextStyle(
+                    fontFamily: 'Inter',
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF1F2933),
@@ -169,6 +152,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Text(
                   'Admn No: ${studentData['adminNo']}  |  ${studentData['class']}',
                   style: const TextStyle(
+                    fontFamily: 'Inter',
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
                     color: Color(0xFF6B7280),
@@ -223,6 +207,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Text(
                           cartItemCount > 9 ? '9+' : '$cartItemCount',
                           style: const TextStyle(
+                            fontFamily: 'Inter',
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -269,38 +254,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Column(
       children: [
         // Avatar
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xFFEDE9FE),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Center(
-            child: Text(
-              studentData['name']!.isNotEmpty
-                  ? studentData['name']![0].toUpperCase()
-                  : 'S',
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF8B5CF6),
-              ),
-            ),
-          ),
-        ),
+        StudentAvatar.large(studentName: studentData['name']!),
         const SizedBox(height: 12),
         // Student Name
         Text(
           studentData['name']!,
           style: const TextStyle(
+            fontFamily: 'Inter',
             fontSize: 22,
             fontWeight: FontWeight.w700,
             color: Color(0xFF1F2933),
@@ -383,6 +343,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Text(
               label,
               style: const TextStyle(
+                fontFamily: 'Inter',
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
                 color: Color(0xFF6B7280),
@@ -434,6 +395,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Text(
                   title,
                   style: const TextStyle(
+                    fontFamily: 'Inter',
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF1F2933),
@@ -480,6 +442,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               Text(
                                 item.label,
                                 style: const TextStyle(
+                                  fontFamily: 'Inter',
                                   fontSize: 12,
                                   fontWeight: FontWeight.w400,
                                   color: Color(0xFF9CA3AF),
@@ -489,6 +452,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                               Text(
                                 item.value,
                                 style: const TextStyle(
+                                  fontFamily: 'Inter',
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: Color(0xFF1F2933),
@@ -548,6 +512,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const Text(
               'Sign Out',
               style: TextStyle(
+                fontFamily: 'Inter',
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFFDC2626),

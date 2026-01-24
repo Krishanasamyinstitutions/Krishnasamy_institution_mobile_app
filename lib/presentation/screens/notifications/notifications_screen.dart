@@ -9,6 +9,7 @@ import '../../../data/models/notification_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/student_avatar.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -159,19 +160,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       child: Row(
         children: [
           // Profile Image
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: const Icon(
-              Icons.person,
-              size: 28,
-              color: Color(0xFF6B7280),
-            ),
-          ),
+          StudentAvatar.medium(studentName: studentName),
           const SizedBox(width: 12),
           // Student Details
           Expanded(

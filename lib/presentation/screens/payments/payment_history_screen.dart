@@ -10,6 +10,7 @@ import '../../../data/models/fee_model.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/student_avatar.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
   const PaymentHistoryScreen({super.key});
@@ -96,19 +97,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
       child: Row(
         children: [
           // Profile Image
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE5E7EB),
-              borderRadius: BorderRadius.circular(25),
-            ),
-            child: const Icon(
-              Icons.person,
-              size: 28,
-              color: Color(0xFF6B7280),
-            ),
-          ),
+          StudentAvatar.medium(studentName: studentName),
           const SizedBox(width: 12),
           // Student Details
           Expanded(

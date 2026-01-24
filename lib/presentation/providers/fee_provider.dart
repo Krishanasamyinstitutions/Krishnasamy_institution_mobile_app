@@ -393,8 +393,22 @@ final pendingFeesByGroupProvider = Provider<Map<String, double>>((ref) {
     grouped[groupName] = (grouped[groupName] ?? 0) + fee.balancedue;
   }
 
-  debugPrint('Pending Fees by Group: $grouped');
-  return grouped;
+  // Sort by group name - SCHOOL FEES first, then others alphabetically
+  final sortedKeys = grouped.keys.toList()
+    ..sort((a, b) {
+      // Prioritize SCHOOL FEES to appear first
+      if (a.toUpperCase().contains('SCHOOL')) return -1;
+      if (b.toUpperCase().contains('SCHOOL')) return 1;
+      return a.compareTo(b);
+    });
+
+  final sortedGrouped = <String, double>{};
+  for (final key in sortedKeys) {
+    sortedGrouped[key] = grouped[key]!;
+  }
+
+  debugPrint('Pending Fees by Group: $sortedGrouped');
+  return sortedGrouped;
 });
 
 /// Match fee type name to a feegroup.fgdesc using keyword matching

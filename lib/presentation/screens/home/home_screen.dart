@@ -9,6 +9,7 @@ import '../../../data/models/fee_model.dart' show FeeSummary;
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/student_avatar.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -95,20 +96,8 @@ class HomeScreen extends ConsumerWidget {
 
     return Row(
       children: [
-        // Profile Image
-        Container(
-          width: 50,
-          height: 50,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE5E7EB),
-            borderRadius: BorderRadius.circular(25),
-          ),
-          child: const Icon(
-            Icons.person,
-            size: 28,
-            color: Color(0xFF6B7280),
-          ),
-        ),
+        // Profile Image with First Letter
+        StudentAvatar.medium(studentName: studentName),
         const SizedBox(width: 12),
         // Student Details
         Expanded(
