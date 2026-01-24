@@ -27,7 +27,7 @@ class HomeScreen extends ConsumerWidget {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -78,6 +78,38 @@ class HomeScreen extends ConsumerWidget {
 
                 // Fee Cards Grid
                 _buildFeeCardsGrid(context, feesByGroup),
+
+                const SizedBox(height: 12),
+
+                // Info Note
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0F9FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBAE6FD), width: 1),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 18,
+                        color: Color(0xFF0284C7),
+                      ),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Tap on fee cards for details or use "Pay All Fees" to pay everything at once',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF0369A1),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
                 const SizedBox(height: 20),
               ],
@@ -147,10 +179,14 @@ class HomeScreen extends ConsumerWidget {
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
-                const Icon(
-                  Icons.shopping_cart_outlined,
-                  size: 24,
-                  color: Color(0xFF1F2933),
+                SvgPicture.asset(
+                  'assets/icons/Cart.svg',
+                  width: 24,
+                  height: 24,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF1F2933),
+                    BlendMode.srcIn,
+                  ),
                 ),
                 if (cartItemCount > 0)
                   Positioned(
@@ -210,19 +246,6 @@ class HomeScreen extends ConsumerWidget {
                   colorFilter: const ColorFilter.mode(
                     Color(0xFF1F2933),
                     BlendMode.srcIn,
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
                   ),
                 ),
               ],
@@ -359,12 +382,6 @@ class HomeScreen extends ConsumerWidget {
                   color: Color(0xFF1F2933),
                 ),
               ),
-              const SizedBox(width: 4),
-              const Icon(
-                Icons.keyboard_arrow_down,
-                size: 18,
-                color: Color(0xFF6B7280),
-              ),
             ],
           ),
         ),
@@ -482,7 +499,7 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: _buildFeeCard(
-                icon: Icons.history_outlined,
+                svgAsset: 'assets/nav bar icons/history stroke.svg',
                 title: 'History',
                 amount: 0,
                 backgroundColor: const Color(0xFFFFF3CD),
@@ -510,7 +527,8 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildFeeCard({
-    required IconData icon,
+    IconData? icon,
+    String? svgAsset,
     required String title,
     required double amount,
     required Color backgroundColor,
@@ -550,10 +568,19 @@ class HomeScreen extends ConsumerWidget {
                     color: backgroundColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 24,
-                    color: iconColor,
+                  child: Center(
+                    child: svgAsset != null
+                        ? SvgPicture.asset(
+                            svgAsset,
+                            width: 24,
+                            height: 24,
+                            colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+                          )
+                        : Icon(
+                            icon,
+                            size: 24,
+                            color: iconColor,
+                          ),
                   ),
                 ),
                 // Status Tag (top right)
@@ -567,7 +594,7 @@ class HomeScreen extends ConsumerWidget {
                     child: Text(
                       statusTag,
                       style: const TextStyle(
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFFDC2626),
                       ),
@@ -590,7 +617,7 @@ class HomeScreen extends ConsumerWidget {
                         title,
                         style: const TextStyle(
                           fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w400,
                           color: Color(0xFF6B7280),
                         ),
                       ),
