@@ -25,6 +25,7 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
   bool _isLoading = false;
   int _resendTimer = 30;
   Timer? _timer;
+  bool _isOtpExpired = false; // Track if OTP has expired
 
   @override
   void initState() {
@@ -34,12 +35,18 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
 
   void _startResendTimer() {
     _resendTimer = 30;
+    _isOtpExpired = false; // Reset expiry flag when new OTP is sent
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendTimer > 0) {
         setState(() => _resendTimer--);
       } else {
         timer.cancel();
+        // OTP has expired - clear the input and mark as expired
+        setState(() {
+          _isOtpExpired = true;
+          _otpController.clear();
+        });
       }
     });
   }
@@ -52,6 +59,17 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
   }
 
   Future<void> _handleVerifyOtp() async {
+    // Check if OTP has expired
+    if (_isOtpExpired) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('OTP has expired. Please request a new OTP'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     if (_otpController.text.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -65,7 +83,8 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
     setState(() => _isLoading = true);
 
     try {
-      await ref.read(authProvider.notifier).verifyOtp(
+      // Use password reset OTP verification
+      await ref.read(authProvider.notifier).verifyPasswordResetOtp(
         mobile: widget.mobile,
         otp: _otpController.text,
       );
@@ -76,9 +95,13 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.substring(11);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(errorMessage),
             backgroundColor: AppColors.error,
           ),
         );
@@ -94,7 +117,8 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
     if (_resendTimer > 0) return;
 
     try {
-      await ref.read(authProvider.notifier).requestOtp(
+      // Use password reset OTP request
+      await ref.read(authProvider.notifier).requestPasswordResetOtp(
         mobile: widget.mobile,
       );
       _startResendTimer();
@@ -109,9 +133,13 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.substring(11);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(errorMessage),
             backgroundColor: AppColors.error,
           ),
         );
@@ -149,6 +177,37 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
                         _buildOtpInput(),
 
                         const SizedBox(height: 24),
+
+                        // OTP Expired Warning
+                        if (_isOtpExpired)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.error.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.timer_off_outlined,
+                                  size: 18,
+                                  color: AppColors.error,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'OTP has expired. Please request a new one.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
 
                         // Resend Timer
                         _buildResendTimer(),

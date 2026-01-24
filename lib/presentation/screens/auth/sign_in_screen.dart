@@ -139,6 +139,47 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  /// Cross-check if the entered number looks like it belongs to a different country
+  /// Returns an error message if mismatch detected, null otherwise
+  String? _crossCheckCountryNumber(String number, int selectedIndex) {
+    final selectedCountry = _countryCodes[selectedIndex];
+
+    // Check against other countries with same phone length
+    for (int i = 0; i < _countryCodes.length; i++) {
+      if (i == selectedIndex) continue;
+
+      final otherCountry = _countryCodes[i];
+
+      // Only cross-check countries with the same phone length
+      if (otherCountry.phoneLength != number.length) continue;
+
+      final otherRegex = RegExp(otherCountry.pattern);
+      if (otherRegex.hasMatch(number)) {
+        // Special case: Indian numbers are very distinctive (start with 6-9)
+        // If user selected non-India but number matches Indian pattern
+        if (otherCountry.code == '+91' && selectedCountry.code != '+91') {
+          return 'This looks like an Indian number. Please select India (+91) as your country';
+        }
+
+        // Special case: UAE/Saudi numbers both start with 5
+        // Don't warn between these two as they're similar
+        if ((selectedCountry.code == '+971' && otherCountry.code == '+966') ||
+            (selectedCountry.code == '+966' && otherCountry.code == '+971')) {
+          continue;
+        }
+
+        // For other mismatches where the number clearly matches another country's pattern
+        // but doesn't match selected country's pattern well
+        final selectedRegex = RegExp(selectedCountry.pattern);
+        if (!selectedRegex.hasMatch(number) && otherRegex.hasMatch(number)) {
+          return 'This number appears to be from ${otherCountry.country}. Please select the correct country';
+        }
+      }
+    }
+
+    return null;
+  }
+
   void _showCountryPicker() {
     showModalBottomSheet(
       context: context,
@@ -455,6 +496,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             final regex = RegExp(selectedCountry.pattern);
             if (!regex.hasMatch(value)) {
               return 'Please enter a valid ${selectedCountry.country} mobile number';
+            }
+
+            // Cross-country validation: Check if number looks like it belongs to another country
+            final crossCheckResult = _crossCheckCountryNumber(value, _selectedCountryIndex);
+            if (crossCheckResult != null) {
+              return crossCheckResult;
             }
 
             return null;

@@ -214,7 +214,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.allPendingFees,
         builder: (context, state) {
           final feeGroup = state.uri.queryParameters['group'];
-          return AllPendingFeesScreen(filterGroup: feeGroup);
+          final filterStatus = state.uri.queryParameters['status'];
+          return AllPendingFeesScreen(filterGroup: feeGroup, filterStatus: filterStatus);
         },
       ),
 
@@ -264,9 +265,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: Routes.paymentHistory,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: PaymentHistoryScreen(),
-            ),
+            pageBuilder: (context, state) {
+              final initialTab = state.uri.queryParameters['tab'];
+              return NoTransitionPage(
+                child: PaymentHistoryScreen(initialTab: initialTab),
+              );
+            },
             routes: [
               GoRoute(
                 path: ':paymentId',

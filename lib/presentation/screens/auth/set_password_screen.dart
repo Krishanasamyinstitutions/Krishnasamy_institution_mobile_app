@@ -269,12 +269,22 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
               ),
             ),
           ),
+          onChanged: (_) => setState(() {}), // Trigger rebuild for requirements
           validator: (value) {
             if (value == null || value.isEmpty) {
               return 'Please enter a password';
             }
             if (value.length < 8) {
               return 'Password must be at least 8 characters';
+            }
+            if (!RegExp(r'[A-Z]').hasMatch(value)) {
+              return 'Password must include at least one uppercase letter';
+            }
+            if (!RegExp(r'[a-z]').hasMatch(value)) {
+              return 'Password must include at least one lowercase letter';
+            }
+            if (!RegExp(r'[0-9]').hasMatch(value)) {
+              return 'Password must include at least one number';
             }
             return null;
           },
@@ -363,6 +373,12 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
   }
 
   Widget _buildPasswordRequirements() {
+    final password = _passwordController.text;
+    final hasMinLength = password.length >= 8;
+    final hasUppercase = RegExp(r'[A-Z]').hasMatch(password);
+    final hasLowercase = RegExp(r'[a-z]').hasMatch(password);
+    final hasNumber = RegExp(r'[0-9]').hasMatch(password);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -381,30 +397,30 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          _buildRequirement('Be at least 8 characters'),
-          _buildRequirement('Include uppercase & lowercase letters'),
-          _buildRequirement('Include at least one number'),
+          _buildRequirement('Be at least 8 characters', hasMinLength),
+          _buildRequirement('Include uppercase & lowercase letters', hasUppercase && hasLowercase),
+          _buildRequirement('Include at least one number', hasNumber),
         ],
       ),
     );
   }
 
-  Widget _buildRequirement(String text) {
+  Widget _buildRequirement(String text, bool isSatisfied) {
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Row(
         children: [
           Icon(
-            Icons.check_circle_outline_rounded,
+            isSatisfied ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
             size: 16,
-            color: AppColors.cardPurpleDark,
+            color: isSatisfied ? AppColors.success : AppColors.cardPurpleDark,
           ),
           const SizedBox(width: 8),
           Text(
             text,
             style: TextStyle(
               fontSize: 13,
-              color: AppColors.textSecondary,
+              color: isSatisfied ? AppColors.success : AppColors.textSecondary,
             ),
           ),
         ],

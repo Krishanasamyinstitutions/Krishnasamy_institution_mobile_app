@@ -11,7 +11,9 @@ import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
-  const PaymentHistoryScreen({super.key});
+  final String? initialTab;
+
+  const PaymentHistoryScreen({super.key, this.initialTab});
 
   @override
   ConsumerState<PaymentHistoryScreen> createState() =>
@@ -19,7 +21,21 @@ class PaymentHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
-  String _activeFilter = 'All';
+  late String _activeFilter;
+
+  @override
+  void initState() {
+    super.initState();
+    // Set initial tab based on parameter, default to 'All'
+    final tab = widget.initialTab?.toLowerCase();
+    if (tab == 'paid') {
+      _activeFilter = 'Paid';
+    } else if (tab == 'failed') {
+      _activeFilter = 'Failed';
+    } else {
+      _activeFilter = 'All';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,15 +116,17 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
                   'Payment History',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1F2937),
                   ),
@@ -117,7 +135,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                 const Text(
                   'Track all your fee payments',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF6B7280),
                   ),
@@ -274,7 +292,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: isPaid ? AppColors.shadowGreen : AppColors.shadowPink,
@@ -421,7 +439,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
       height: 48,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(iconData, size: 24, color: iconColor),
     );

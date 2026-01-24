@@ -6,9 +6,11 @@ import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/fee_model.dart';
+import '../../../data/models/institution_model.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/institution_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -21,6 +23,7 @@ class HomeScreen extends ConsumerWidget {
     final cartItemCount = ref.watch(cartItemCountProvider);
     final overdueGroups = ref.watch(overdueByGroupProvider);
     final dueSoonGroups = ref.watch(dueSoonByGroupProvider);
+    final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
@@ -77,7 +80,7 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: 20),
 
                     // School Info Widget
-                    _buildSchoolInfoWidget(),
+                    _buildSchoolInfoWidget(institutionAsync),
 
                     const SizedBox(height: 28),
 
@@ -106,6 +109,7 @@ class HomeScreen extends ConsumerWidget {
     final admissionNumber = selectedStudent?.admissionNumber ?? 'N/A';
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Profile Avatar
         GestureDetector(
@@ -145,6 +149,7 @@ class HomeScreen extends ConsumerWidget {
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 studentName,
@@ -389,7 +394,7 @@ class HomeScreen extends ConsumerWidget {
         // Paid Fees Button (Secondary)
         Expanded(
           child: GestureDetector(
-            onTap: () => context.go(Routes.paymentHistory),
+            onTap: () => context.go('${Routes.paymentHistory}?tab=paid'),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
@@ -429,7 +434,11 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSchoolInfoWidget() {
+  Widget _buildSchoolInfoWidget(AsyncValue<InstitutionModel?> institutionAsync) {
+    final institution = institutionAsync.valueOrNull;
+    final schoolName = institution?.name ?? 'School';
+    final schoolAddress = institution?.shortAddress ?? 'Address not available';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -451,10 +460,10 @@ class HomeScreen extends ConsumerWidget {
             height: 56,
             decoration: BoxDecoration(
               color: AppColors.cardBlue,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
               child: Image.asset(
                 'assets/images/school_logo.png',
                 width: 56,
@@ -472,31 +481,31 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(width: 14),
           // School Info
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'TBS School',
-                  style: TextStyle(
+                  schoolName,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1F2937),
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.location_on_outlined,
                       size: 14,
                       color: Color(0xFF6B7280),
                     ),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     Expanded(
                       child: Text(
-                        'Chennai, Tamil Nadu',
-                        style: TextStyle(
+                        schoolAddress,
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                           color: Color(0xFF6B7280),
@@ -516,10 +525,10 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildSpendingSection(BuildContext context, Map<String, double> feesByGroup) {
     final categories = [
-      {'name': 'School Fees', 'icon': Icons.school_rounded, 'color': AppColors.cardGreen, 'iconColor': AppColors.cardGreenDark},
-      {'name': 'Van Fees', 'icon': Icons.directions_bus_rounded, 'color': AppColors.cardBlue, 'iconColor': AppColors.cardBlueDark},
-      {'name': 'Exam Fees', 'icon': Icons.menu_book_rounded, 'color': AppColors.cardOrange, 'iconColor': AppColors.cardOrangeDark},
-      {'name': 'Other', 'icon': Icons.more_horiz_rounded, 'color': AppColors.cardPurple, 'iconColor': AppColors.cardPurpleDark},
+      {'name': 'School Fees', 'icon': Icons.school_rounded, 'color': const Color(0xFF22C55E), 'iconBgColor': const Color(0xFFDCFCE7)},
+      {'name': 'Van Fees', 'icon': Icons.directions_bus_rounded, 'color': const Color(0xFF3B82F6), 'iconBgColor': const Color(0xFFDBEAFE)},
+      {'name': 'Exam Fees', 'icon': Icons.menu_book_rounded, 'color': AppColors.cardOrange, 'iconBgColor': const Color(0xFFFEF3C7)},
+      {'name': 'Other', 'icon': Icons.more_horiz_rounded, 'color': AppColors.cardPurple, 'iconBgColor': const Color(0xFFF3E8FF)},
     ];
 
     return Column(
@@ -550,7 +559,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 140,
+          height: 150,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: feesByGroup.isEmpty ? categories.length : feesByGroup.length,
@@ -564,8 +573,9 @@ class HomeScreen extends ConsumerWidget {
                   label: cat['name'] as String,
                   groupName: cat['name'] as String,
                   amount: 0,
-                  bgColor: cat['color'] as Color,
-                  iconColor: cat['iconColor'] as Color,
+                  primaryColor: cat['color'] as Color,
+                  iconBgColor: cat['iconBgColor'] as Color,
+                  isFirst: index == 0,
                 );
               }
 
@@ -577,8 +587,9 @@ class HomeScreen extends ConsumerWidget {
                 label: _toTitleCase(entry.key),
                 groupName: entry.key,
                 amount: entry.value,
-                bgColor: cat['color'] as Color,
-                iconColor: cat['iconColor'] as Color,
+                primaryColor: cat['color'] as Color,
+                iconBgColor: cat['iconBgColor'] as Color,
+                isFirst: index == 0,
               );
             },
           ),
@@ -593,20 +604,26 @@ class HomeScreen extends ConsumerWidget {
     required String label,
     required String groupName,
     required double amount,
-    required Color bgColor,
-    required Color iconColor,
+    required Color primaryColor,
+    required Color iconBgColor,
+    required bool isFirst,
   }) {
+    // First card has colored background, others have white background
+    final bool hasColoredBg = isFirst && amount > 0;
+
     return GestureDetector(
       onTap: () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(groupName)}'),
       child: Container(
-        width: 140,
+        width: 160,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          color: hasColoredBg ? primaryColor : Colors.white,
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: hasColoredBg
+                  ? primaryColor.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.04),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -615,24 +632,35 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Top row: Icon and Due badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Icon container
                 Container(
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: bgColor,
+                    color: hasColoredBg
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : iconBgColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, size: 22, color: iconColor),
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: hasColoredBg ? Colors.white : primaryColor,
+                  ),
                 ),
+                // Due badge
                 if (amount > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.warning.withValues(alpha: 0.1),
+                      color: hasColoredBg
+                          ? Colors.white.withValues(alpha: 0.2)
+                          : const Color(0xFFFEF3C7),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -643,50 +671,66 @@ class HomeScreen extends ConsumerWidget {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.warning,
+                            color: hasColoredBg
+                                ? Colors.white
+                                : const Color(0xFFF59E0B),
                           ),
                         ),
                         const SizedBox(width: 2),
                         Icon(
                           Icons.arrow_upward_rounded,
                           size: 12,
-                          color: AppColors.warning,
+                          color: hasColoredBg
+                              ? Colors.white
+                              : const Color(0xFFF59E0B),
                         ),
                       ],
                     ),
-                  )
-                else
-                  const SizedBox(width: 1),
+                  ),
               ],
             ),
             const Spacer(),
+            // Label
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textTertiary,
+                color: hasColoredBg
+                    ? Colors.white.withValues(alpha: 0.8)
+                    : const Color(0xFF6B7280),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
+            // Amount and arrow row
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    '${NumberFormat('#,##,###').format(amount.toInt())}',
-                    style: const TextStyle(
-                      fontSize: 16,
+                    NumberFormat('#,##,###').format(amount.toInt()),
+                    style: TextStyle(
+                      fontSize: 22,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF1F2937),
+                      color: hasColoredBg ? Colors.white : const Color(0xFF1F2937),
                     ),
                   ),
                 ),
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: Color(0xFF1F2937),
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: hasColoredBg
+                        ? Colors.white.withValues(alpha: 0.2)
+                        : const Color(0xFFF3F4F6),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 12,
+                    color: hasColoredBg ? Colors.white : const Color(0xFF6B7280),
+                  ),
                 ),
               ],
             ),
@@ -846,12 +890,12 @@ class HomeScreen extends ConsumerWidget {
     }
 
     return GestureDetector(
-      onTap: () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(group.groupName)}'),
+      onTap: () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(group.groupName)}&status=$filterStatus'),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: statusColor.withValues(alpha: 0.15),
             width: 1,

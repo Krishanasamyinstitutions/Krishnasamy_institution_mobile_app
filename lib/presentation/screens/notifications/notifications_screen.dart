@@ -114,15 +114,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Notifications',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1F2937),
                   ),
@@ -131,7 +133,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 Text(
                   'Stay updated with alerts',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF6B7280),
                   ),
@@ -227,7 +229,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: isUnread ? AppColors.shadowPurple : AppColors.shadowLight,
@@ -358,7 +360,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       height: 48,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(icon, size: 24, color: iconColor),
     );

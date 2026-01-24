@@ -17,6 +17,7 @@ class StudentSelectionScreen extends ConsumerStatefulWidget {
 class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen> {
   int? _selectedStudentId;
   bool _hasAutoSelected = false;
+  bool _isCheckingStudents = true; // Show loading while checking
 
   @override
   void initState() {
@@ -31,34 +32,82 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
     if (_hasAutoSelected) return;
 
     final studentsAsync = ref.read(studentsByParentProvider);
-    studentsAsync.whenData((students) async {
-      if (students.length == 1 && mounted) {
-        _hasAutoSelected = true;
-        // Auto-select the only student and navigate to home
-        final student = students.first;
-        await ref.read(selectedStudentProvider.notifier).selectStudent(student);
+    studentsAsync.when(
+      loading: () {
+        // Still loading, keep showing loader
+      },
+      error: (_, __) {
+        // Error occurred, show the screen
         if (mounted) {
-          context.go(Routes.home);
+          setState(() => _isCheckingStudents = false);
         }
-      }
-    });
+      },
+      data: (students) async {
+        if (students.length == 1 && mounted) {
+          _hasAutoSelected = true;
+          // Auto-select the only student and navigate to home
+          final student = students.first;
+          await ref.read(selectedStudentProvider.notifier).selectStudent(student);
+          if (mounted) {
+            context.go(Routes.home);
+          }
+        } else if (mounted) {
+          // Multiple students or no students - show selection screen
+          setState(() => _isCheckingStudents = false);
+        }
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     // Listen for students loading and auto-select if single student
     ref.listen<AsyncValue<List<StudentModel>>>(studentsByParentProvider, (previous, next) {
-      next.whenData((students) async {
-        if (students.length == 1 && !_hasAutoSelected && mounted) {
-          _hasAutoSelected = true;
-          final student = students.first;
-          await ref.read(selectedStudentProvider.notifier).selectStudent(student);
-          if (mounted) {
-            context.go(Routes.home);
+      next.when(
+        loading: () {},
+        error: (_, __) {
+          if (mounted && _isCheckingStudents) {
+            setState(() => _isCheckingStudents = false);
           }
-        }
-      });
+        },
+        data: (students) async {
+          if (students.length == 1 && !_hasAutoSelected && mounted) {
+            _hasAutoSelected = true;
+            final student = students.first;
+            await ref.read(selectedStudentProvider.notifier).selectStudent(student);
+            if (mounted) {
+              context.go(Routes.home);
+            }
+          } else if (mounted && _isCheckingStudents) {
+            // Multiple students - show selection screen
+            setState(() => _isCheckingStudents = false);
+          }
+        },
+      );
     });
+
+    // Show loading screen while checking for single student
+    if (_isCheckingStudents) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8F9FB),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text(
+                'Loading...',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF9CA3AF),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       body: Column(

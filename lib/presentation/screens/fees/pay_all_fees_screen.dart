@@ -299,8 +299,15 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     List<FeeModel> busFees,
     CartState cartState,
   ) {
-    // Sort terms
-    final sortedTerms = feesByTerm.keys.toList()..sort((a, b) => a.compareTo(b));
+    // Sort terms by first fee's due date
+    final sortedTerms = feesByTerm.keys.toList()
+      ..sort((a, b) {
+        final aFees = feesByTerm[a]!;
+        final bFees = feesByTerm[b]!;
+        final aDate = aFees.first.duedate ?? aFees.first.createdat;
+        final bDate = bFees.first.duedate ?? bFees.first.createdat;
+        return aDate.compareTo(bDate);
+      });
 
     return Stack(
       children: [
@@ -320,18 +327,13 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               _buildFeeGroupFilter(feeGroupOptions, filteredFees),
               const SizedBox(height: 16),
 
-              // Term fee cards
-              for (int i = 0; i < sortedTerms.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildTermCard(
-                    sortedTerms[i],
-                    feesByTerm[sortedTerms[i]]!,
-                    cartState,
-                  ),
-                ),
+              // Term Fee Cards (separate cards for each term)
+              ...sortedTerms.map((term) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildTermCard(term, feesByTerm[term]!, cartState),
+              )),
 
-              // Bus fees card (grouped by term if showing all)
+              // Bus fees card (all bus fees in one card)
               if (busFees.isNotEmpty)
                 _buildBusFeesCard(busFees, cartState),
             ],
@@ -355,7 +357,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -460,7 +462,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE5E7EB)),
         boxShadow: [
           BoxShadow(
@@ -500,7 +502,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                           bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
                         ),
                   borderRadius: isFirst && isLast
-                      ? BorderRadius.circular(11)
+                      ? BorderRadius.circular(15)
                       : isFirst
                           ? const BorderRadius.only(
                               topLeft: Radius.circular(11),
@@ -543,94 +545,122 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
   Widget _buildTermCard(String term, List<FeeModel> fees, CartState cartState) {
     final academicYear = fees.isNotEmpty ? fees.first.demfeeyear : '2025-2026';
-    final monthRange = _getTermMonthRange(term, academicYear);
     final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
     final allSelected = fees.every((f) => cartState.containsFee(f.id));
+    final monthRange = _getTermMonthRange(fees);
 
-    return GestureDetector(
-      onTap: () {
-        final cartNotifier = ref.read(cartProvider.notifier);
-        if (allSelected) {
-          for (final fee in fees) {
-            cartNotifier.removeFee(fee.id);
-          }
-        } else {
-          for (final fee in fees) {
-            if (!cartState.containsFee(fee.id)) {
-              cartNotifier.addFee(fee);
-            }
-          }
+    // Calculate fee status for badge color
+    final now = DateTime.now();
+    final hasOverdue = fees.any((f) => f.dueDate.isBefore(now));
+    final hasDueSoon = fees.any((f) {
+      final daysUntilDue = f.dueDate.difference(now).inDays;
+      return daysUntilDue >= 0 && daysUntilDue <= 7;
+    });
+    final badgeColor = hasOverdue ? AppColors.error : (hasDueSoon ? AppColors.warning : AppColors.primary);
+
+    // Sort fees by due date
+    final sortedFees = List<FeeModel>.from(fees)
+      ..sort((a, b) {
+        if (a.duedate != null && b.duedate != null) {
+          return a.duedate!.compareTo(b.duedate!);
         }
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: Fee Breakdown + Term Badge + Checkbox
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Fee Breakdown',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1F2933),
-                          ),
+        return a.createdat.compareTo(b.createdat);
+      });
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        term,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2933),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          monthRange,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: Color(0xFF6B7280),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Term Badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSizes.s3,
-                      vertical: AppSizes.s1 + 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.success,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '$term ($academicYear)',
-                      style: const TextStyle(
-                        fontSize: AppSizes.textXs,
-                        fontWeight: AppSizes.fontSemibold,
-                        color: AppColors.textInverse,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      const SizedBox(height: 4),
+                      Text(
+                        monthRange,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  // Checkbox
-                  Container(
+                ),
+                const SizedBox(width: 8),
+                // School Badge - color based on fee status
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSizes.s3,
+                    vertical: AppSizes.s1 + 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.school,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        academicYear,
+                        style: const TextStyle(
+                          fontSize: AppSizes.textXs,
+                          fontWeight: AppSizes.fontSemibold,
+                          color: AppColors.textInverse,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Select All Checkbox
+                GestureDetector(
+                  onTap: () {
+                    final cartNotifier = ref.read(cartProvider.notifier);
+                    if (allSelected) {
+                      for (final fee in fees) {
+                        cartNotifier.removeFee(fee.id);
+                      }
+                    } else {
+                      for (final fee in fees) {
+                        if (!cartState.containsFee(fee.id)) {
+                          cartNotifier.addFee(fee);
+                        }
+                      }
+                    }
+                  },
+                  child: Container(
                     width: 22,
                     height: 22,
                     decoration: BoxDecoration(
@@ -645,78 +675,104 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                         ? const Icon(Icons.check, size: 16, color: Colors.white)
                         : null,
                   ),
-                ],
-              ),
+                ),
+              ],
+            ),
 
-              const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-              // Table Header
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSizes.s2),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Particular',
-                        style: TextStyle(
-                          fontSize: AppSizes.textBase,
-                          fontWeight: AppSizes.fontSemibold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      'Amount',
+            // Table Header
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSizes.s2),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Month',
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontSemibold,
                         color: AppColors.textPrimary,
                       ),
                     ),
-                  ],
-                ),
-              ),
-
-              // Divider
-              Container(height: 1, color: const Color(0xFFE5E7EB)),
-
-              // Fee Items
-              ...fees.map((fee) => _buildFeeRow(fee)),
-
-              // Total Row
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'TOTAL',
-                        style: TextStyle(
-                          fontSize: AppSizes.textBase,
-                          fontWeight: AppSizes.fontBold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
+                  ),
+                  Text(
+                    'Amount',
+                    style: TextStyle(
+                      fontSize: AppSizes.textBase,
+                      fontWeight: AppSizes.fontSemibold,
+                      color: AppColors.textPrimary,
                     ),
-                    Text(
-                      '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                      style: const TextStyle(
-                        fontSize: AppSizes.textLg,
+                  ),
+                ],
+              ),
+            ),
+
+            // Divider
+            Container(height: 1, color: const Color(0xFFE5E7EB)),
+
+            // Fee Items with individual checkboxes
+            ...sortedFees.map((fee) => _buildFeeRow(fee, cartState)),
+
+            // Total Row
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'TOTAL',
+                      style: TextStyle(
+                        fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontBold,
                         color: AppColors.textPrimary,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                  Text(
+                    '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
+                    style: const TextStyle(
+                      fontSize: AppSizes.textLg,
+                      fontWeight: AppSizes.fontBold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildFeeRow(FeeModel fee) {
+  String _getTermMonthRange(List<FeeModel> fees) {
+    if (fees.isEmpty) return '';
+
+    final sortedFees = List<FeeModel>.from(fees)
+      ..sort((a, b) {
+        final aDate = a.duedate ?? a.createdat;
+        final bDate = b.duedate ?? b.createdat;
+        return aDate.compareTo(bDate);
+      });
+
+    final firstDate = sortedFees.first.duedate ?? sortedFees.first.createdat;
+    final lastDate = sortedFees.last.duedate ?? sortedFees.last.createdat;
+
+    final firstMonth = DateFormat('MMM').format(firstDate);
+    final lastMonth = DateFormat('MMM').format(lastDate);
+
+    if (firstMonth == lastMonth) {
+      return firstMonth;
+    }
+    return '$firstMonth - $lastMonth';
+  }
+
+  Widget _buildFeeRow(FeeModel fee, CartState cartState) {
+    final feeName = fee.feeTypeName; // Use actual fee type name
+    final dueDate = fee.dueDate;
+    final isOverdue = dueDate.isBefore(DateTime.now());
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: const BoxDecoration(
@@ -726,15 +782,78 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       ),
       child: Row(
         children: [
+          // Fee Name with icon
           Expanded(
-            child: Text(
-              fee.demfeetype.toUpperCase(),
-              style: const TextStyle(
-                fontSize: AppSizes.bodyText,
-                fontWeight: AppSizes.fontNormal,
-                color: AppColors.textSecondary,
-                height: 1.47,
-              ),
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(
+                    Icons.receipt_outlined,
+                    size: 16,
+                    color: AppColors.success,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        feeName,
+                        style: const TextStyle(
+                          fontSize: AppSizes.bodyText,
+                          fontWeight: AppSizes.fontMedium,
+                          color: AppColors.textPrimary,
+                          height: 1.47,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 12,
+                            color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Due: ${DateFormat('dd MMM yyyy').format(dueDate)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            ),
+                          ),
+                          if (isOverdue) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'Overdue',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.error,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
           Text(
@@ -756,6 +875,15 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     final allSelected = fees.every((f) => cartState.containsFee(f.id));
     final sortedFees = _getSortedBusFees(fees);
 
+    // Calculate fee status for badge color
+    final now = DateTime.now();
+    final hasOverdue = fees.any((f) => f.dueDate.isBefore(now));
+    final hasDueSoon = fees.any((f) {
+      final daysUntilDue = f.dueDate.difference(now).inDays;
+      return daysUntilDue >= 0 && daysUntilDue <= 7;
+    });
+    final badgeColor = hasOverdue ? AppColors.error : (hasDueSoon ? AppColors.warning : AppColors.primary);
+
     return GestureDetector(
       onTap: () {
         final cartNotifier = ref.read(cartProvider.notifier);
@@ -774,7 +902,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -817,14 +945,14 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Bus Badge
+                  // Bus Badge - color based on fee status
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSizes.s3,
                       vertical: AppSizes.s1 + 2,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B),
+                      color: badgeColor,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Row(
@@ -936,154 +1064,186 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
   }
 
   Widget _buildBusFeeRow(FeeModel fee, CartState cartState) {
-    final monthName = _extractMonthFromDate(fee);
-    final isSelected = cartState.containsFee(fee.id);
+    final feeName = fee.feeTypeName; // Use actual fee type name
+    final dueDate = fee.dueDate;
+    final isOverdue = dueDate.isBefore(DateTime.now());
 
-    return GestureDetector(
-      onTap: () {
-        if (isSelected) {
-          ref.read(cartProvider.notifier).removeFee(fee.id);
-        } else {
-          ref.read(cartProvider.notifier).addFee(fee);
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
         ),
-        child: Row(
-          children: [
-            // Month Name with bus icon
-            Expanded(
-              child: Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(
-                      Icons.directions_bus_outlined,
-                      size: 16,
-                      color: Color(0xFFF59E0B),
-                    ),
+      ),
+      child: Row(
+        children: [
+          // Fee Name with bus icon
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      monthName,
-                      style: const TextStyle(
-                        fontSize: AppSizes.bodyText,
-                        fontWeight: AppSizes.fontMedium,
-                        color: AppColors.textPrimary,
-                        height: 1.47,
-                      ),
-                    ),
+                  child: const Icon(
+                    Icons.directions_bus_outlined,
+                    size: 16,
+                    color: Color(0xFFF59E0B),
                   ),
-                ],
-              ),
-            ),
-            Text(
-              '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-              style: const TextStyle(
-                fontSize: AppSizes.textBase,
-                fontWeight: AppSizes.fontSemibold,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Individual month checkbox
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.white,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFD1D5DB),
-                  width: 1.5,
                 ),
-              ),
-              child: isSelected
-                  ? const Icon(Icons.check, size: 14, color: Colors.white)
-                  : null,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        feeName,
+                        style: const TextStyle(
+                          fontSize: AppSizes.bodyText,
+                          fontWeight: AppSizes.fontMedium,
+                          color: AppColors.textPrimary,
+                          height: 1.47,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 12,
+                            color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Due: ${DateFormat('dd MMM yyyy').format(dueDate)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            ),
+                          ),
+                          if (isOverdue) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'Overdue',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.error,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Text(
+            '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
+            style: const TextStyle(
+              fontSize: AppSizes.textBase,
+              fontWeight: AppSizes.fontSemibold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildBottomBar(BuildContext context, int selectedCount, double selectedAmount) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, -8),
           ),
         ],
       ),
       child: SafeArea(
         top: false,
         child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '$selectedCount fee${selectedCount > 1 ? 's' : ''} selected',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
-                    ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$selectedCount fee${selectedCount > 1 ? 's' : ''} selected',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '₹ ${NumberFormat('#,##,###').format(selectedAmount.toInt())}',
-                    style: const TextStyle(
-                      fontSize: AppSizes.text2xl,
-                      fontWeight: AppSizes.fontBold,
-                      color: AppColors.accent,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ElevatedButton(
-              onPressed: selectedAmount > 0 ? () => context.go(Routes.cart) : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
                 ),
-              ),
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Proceed to Pay',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+                const SizedBox(height: 4),
+                Text(
+                  '₹ ${NumberFormat('#,##,###').format(selectedAmount.toInt())}',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
                   ),
-                  SizedBox(width: 8),
-                  Icon(Icons.arrow_forward_rounded, size: 20),
-                ],
+                ),
+              ],
+            ),
+            GestureDetector(
+              onTap: selectedAmount > 0 ? () => context.go(Routes.cart) : null,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: selectedAmount > 0
+                        ? [AppColors.primary, AppColors.primary600]
+                        : [AppColors.primary.withValues(alpha: 0.5), AppColors.primary600.withValues(alpha: 0.5)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: selectedAmount > 0
+                      ? [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.4),
+                            blurRadius: 16,
+                            offset: const Offset(0, 6),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Proceed to Pay',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    SizedBox(width: 8),
+                    Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+                  ],
+                ),
               ),
             ),
           ],
@@ -1137,22 +1297,6 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
   }
 
   // Helper methods
-  String _getTermMonthRange(String term, String academicYear) {
-    final lowerTerm = term.toLowerCase();
-    final years = academicYear.split('-');
-    final startYear = years.isNotEmpty ? years[0].trim() : '2025';
-    final endYear = years.length > 1 ? years[1].trim() : '2026';
-
-    if (lowerTerm.contains('iii term') || lowerTerm.contains('term 3') || lowerTerm.contains('3rd') || lowerTerm == 'term3') {
-      return 'December $startYear - March $endYear';
-    } else if (lowerTerm.contains('ii term') || lowerTerm.contains('term 2') || lowerTerm.contains('2nd') || lowerTerm == 'term2') {
-      return 'August - November $startYear';
-    } else if (lowerTerm.contains('i term') || lowerTerm.contains('term 1') || lowerTerm.contains('1st') || lowerTerm == 'term1') {
-      return 'April - July $startYear';
-    }
-    return 'Academic Year $academicYear';
-  }
-
   List<FeeModel> _getSortedBusFees(List<FeeModel> fees) {
     return List<FeeModel>.from(fees)..sort((a, b) {
       if (a.duedate != null && b.duedate != null) {
@@ -1160,10 +1304,5 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       }
       return a.createdat.compareTo(b.createdat);
     });
-  }
-
-  String _extractMonthFromDate(FeeModel fee) {
-    final date = fee.duedate ?? fee.createdat;
-    return DateFormat('MMMM yyyy').format(date);
   }
 }

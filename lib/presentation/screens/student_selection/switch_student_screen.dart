@@ -68,8 +68,6 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 24),
-                  _buildTitle(),
-                  const SizedBox(height: 24),
                   Expanded(
                     child: studentsAsync.when(
                       loading: () => const Center(child: CircularProgressIndicator()),
@@ -119,7 +117,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 Text(
                   'Switch Student',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1F2937),
                   ),
@@ -128,56 +126,8 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 Text(
                   'Select a different student',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF6B7280),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTitle() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppColors.cardBlue,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(
-              Icons.people_rounded,
-              size: 24,
-              color: AppColors.cardBlueDark,
-            ),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your Children',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Tap to select, then confirm below',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
                     color: Color(0xFF6B7280),
                   ),
                 ),

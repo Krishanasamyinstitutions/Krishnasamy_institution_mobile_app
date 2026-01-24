@@ -35,10 +35,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             'gender': selectedStudent.gender,
             'dob': _formatDate(selectedStudent.dateOfBirth),
             'blood': selectedStudent.stubloodgrp ?? 'N/A',
-            'mobile': selectedStudent.mobile,
+            'mobile': currentParent?.payinchargemob ?? 'N/A',
             'email': currentParent?.paremail ?? 'N/A',
             'address': selectedStudent.fullAddress.isNotEmpty ? selectedStudent.fullAddress : 'N/A',
-            'parentName': currentParent?.displayName ?? 'N/A',
+            'parentName': currentParent?.payincharge ?? 'N/A',
           }
         : {
             'name': 'Student',
@@ -121,8 +121,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _buildSectionTitle('Contact Information'),
                     const SizedBox(height: 12),
                     _buildInfoCard([
-                      _InfoItem(icon: Icons.person_outline_rounded, label: 'Parent Name', value: studentData['parentName']!),
-                      _InfoItem(icon: Icons.phone_outlined, label: 'Phone', value: studentData['mobile']!, isNotProvided: studentData['mobile'] == 'N/A'),
+                      _InfoItem(icon: Icons.person_outline_rounded, label: 'Student In-Charge', value: studentData['parentName']!),
+                      _InfoItem(icon: Icons.phone_outlined, label: 'Mobile', value: studentData['mobile']!, isNotProvided: studentData['mobile'] == 'N/A'),
                       _InfoItem(icon: Icons.email_outlined, label: 'Email', value: studentData['email']!),
                       _InfoItem(icon: Icons.location_on_outlined, label: 'Address', value: studentData['address']!, isNotProvided: studentData['address'] == 'N/A'),
                     ]),
@@ -149,15 +149,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'Profile',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1F2937),
                   ),
@@ -166,7 +168,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 Text(
                   'Manage your account',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF6B7280),
                   ),
@@ -258,7 +260,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),

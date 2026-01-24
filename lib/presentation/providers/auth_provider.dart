@@ -372,7 +372,114 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     await _client.auth.signOut();
   }
 
-/// Reset password for existing parent
+/// Request OTP for password reset (forgot password flow)
+  /// This is different from requestOtp - it checks if account EXISTS
+  Future<void> requestPasswordResetOtp({
+    required String mobile,
+    String countryCode = '+91',
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
+
+      // Convert to int for numeric column comparison
+      final mobileNumber = int.tryParse(cleanMobile);
+      if (mobileNumber == null) {
+        throw Exception('Invalid mobile number format');
+      }
+
+      // Check if account exists with password set
+      final response = await _client
+          .from('parents')
+          .select()
+          .eq('payinchargemob', mobileNumber)
+          .maybeSingle();
+
+      if (response == null) {
+        throw Exception('Mobile number not registered. Please sign up first.');
+      }
+
+      final parent = ParentModel.fromJson(response);
+
+      // Check if account is active
+      if (parent.activestatus != 1) {
+        if (parent.activestatus == 2) {
+          throw Exception('Account suspended. Contact school admin.');
+        } else if (parent.activestatus == 9) {
+          throw Exception('Account terminated. Contact school admin.');
+        }
+        throw Exception('Account inactive. Contact school admin.');
+      }
+
+      // Check if account has password (must exist for reset)
+      if (parent.parpassword == null || parent.parpassword!.isEmpty) {
+        throw Exception('Account setup incomplete. Please complete sign up first.');
+      }
+
+      // Generate secure 6-digit OTP
+      final otp = _generateSecureOtp();
+
+      // Store OTP in parent record
+      await _client.from('parents').update({
+        'parmobotp': int.parse(otp),
+        'parotpstatus': 0, // Reset to pending
+      }).eq('par_id', parent.parId);
+
+      // Send OTP via SMS
+      final smsSent = await SmsService.sendOtp(
+        phoneNumber: cleanMobile,
+        otp: otp,
+        countryCode: countryCode,
+      );
+
+      if (!smsSent) {
+        throw Exception('Failed to send OTP. Please try again.');
+      }
+
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  /// Verify OTP for password reset
+  Future<void> verifyPasswordResetOtp({
+    required String mobile,
+    required String otp,
+  }) async {
+    state = const AsyncValue.loading();
+    try {
+      final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
+
+      // Query parent record with matching mobile and OTP
+      final response = await _client
+          .from('parents')
+          .select()
+          .eq('payinchargemob', cleanMobile)
+          .eq('parmobotp', int.parse(otp))
+          .eq('parotpstatus', 0) // Not yet verified
+          .eq('activestatus', 1)
+          .maybeSingle();
+
+      if (response == null) {
+        throw Exception('Invalid or expired OTP');
+      }
+
+      // Mark OTP as verified
+      await _client
+          .from('parents')
+          .update({'parotpstatus': 1})
+          .eq('par_id', response['par_id']);
+
+      state = const AsyncValue.data(null);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+      rethrow;
+    }
+  }
+
+  /// Reset password for existing parent
   Future<void> resetPassword({
     required String mobile,
     required String newPassword,
@@ -382,17 +489,33 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       // Clean mobile number
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
+      // Verify OTP was verified for this mobile
+      final verifyResponse = await _client
+          .from('parents')
+          .select()
+          .eq('payinchargemob', cleanMobile)
+          .eq('parotpstatus', 1) // Must be verified
+          .eq('activestatus', 1)
+          .maybeSingle();
+
+      if (verifyResponse == null) {
+        throw Exception('Please verify OTP first');
+      }
+
       // Update password in parents table
       final response = await _client
           .from('parents')
-          .update({'parpassword': newPassword})
+          .update({
+            'parpassword': newPassword,
+            'parmobotp': null, // Clear OTP after password reset
+          })
           .eq('payinchargemob', cleanMobile)
           .eq('activestatus', 1)
           .select()
           .maybeSingle();
 
       if (response == null) {
-        throw Exception('Mobile number not found');
+        throw Exception('Failed to reset password');
       }
 
       state = const AsyncValue.data(null);

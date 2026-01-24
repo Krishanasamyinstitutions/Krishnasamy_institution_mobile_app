@@ -135,7 +135,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
         children: [
           // Back Button - Dark theme
           GestureDetector(
-            onTap: () => context.go(Routes.home),
+            onTap: () => context.pop(),
             child: Container(
               width: 44,
               height: 44,
@@ -159,7 +159,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 Text(
                   'Help & Support',
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: Color(0xFF1F2937),
                   ),
@@ -168,7 +168,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 Text(
                   'Get assistance',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF6B7280),
                   ),
@@ -261,7 +261,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: AppColors.shadowPurple,
@@ -281,7 +281,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 height: 48,
                 decoration: BoxDecoration(
                   color: AppColors.cardBlue,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.support_agent_rounded,
