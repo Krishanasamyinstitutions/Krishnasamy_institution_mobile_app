@@ -11,6 +11,7 @@ import '../presentation/screens/auth/set_password_screen.dart';
 import '../presentation/screens/auth/forgot_password_screen.dart';
 import '../presentation/screens/auth/forgot_password_otp_screen.dart';
 import '../presentation/screens/student_selection/student_selection_screen.dart';
+import '../presentation/screens/student_selection/switch_student_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
 import '../presentation/screens/home/home_screen_copy.dart';
 import '../presentation/screens/fees/fees_screen.dart';
@@ -22,8 +23,6 @@ import '../presentation/screens/notifications/notification_detail_screen.dart';
 import '../data/models/notification_model.dart';
 import '../presentation/screens/profile/profile_screen.dart';
 import '../presentation/screens/support/support_screen.dart';
-import '../presentation/screens/paid/paid_screen.dart';
-import '../presentation/screens/pending/pending_screen.dart';
 import '../presentation/screens/cart/cart_screen.dart';
 import '../presentation/screens/fees/all_pending_fees_screen.dart';
 import '../presentation/screens/fees/pay_all_fees_screen.dart';
@@ -44,6 +43,7 @@ class Routes {
   static const forgotPasswordOtp = '/forgot-password-otp';
   static const resetPassword = '/reset-password';
   static const studentSelection = '/student-selection';
+  static const switchStudent = '/switch-student';
   static const home = '/home';
   static const fees = '/fees';
   static const feeDetails = '/fees/:feeId';
@@ -52,8 +52,6 @@ class Routes {
   static const notifications = '/notifications';
   static const profile = '/profile';
   static const support = '/support';
-  static const paid = '/paid';
-  static const pending = '/pending';
   static const cart = '/cart';
   static const cartStandalone = '/cart-standalone';
   static const allPendingFees = '/all-pending-fees';
@@ -193,27 +191,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const StudentSelectionScreen(),
       ),
 
+      // Switch Student (for profile page)
+      GoRoute(
+        path: Routes.switchStudent,
+        builder: (context, state) => const SwitchStudentScreen(),
+      ),
+
       // Support Screen (standalone without bottom nav)
       GoRoute(
         path: Routes.support,
         builder: (context, state) => const SupportScreen(),
-      ),
-
-      // Paid Screen (standalone without bottom nav)
-      GoRoute(
-        path: Routes.paid,
-        builder: (context, state) => const PaidScreen(),
-      ),
-
-      // Pending Screen (standalone without bottom nav)
-      GoRoute(
-        path: Routes.pending,
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>?;
-          final feeType = extra?['feeType'] as String?;
-          final groupName = extra?['groupName'] as String?;
-          return PendingScreen(feeType: feeType, groupName: groupName);
-        },
       ),
 
       // Standalone Cart Screen (without bottom nav, with back button)
@@ -225,7 +212,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // All Pending Fees Screen (accordion view)
       GoRoute(
         path: Routes.allPendingFees,
-        builder: (context, state) => const AllPendingFeesScreen(),
+        builder: (context, state) {
+          final feeGroup = state.uri.queryParameters['group'];
+          final filterStatus = state.uri.queryParameters['status'];
+          return AllPendingFeesScreen(filterGroup: feeGroup, filterStatus: filterStatus);
+        },
       ),
 
       // Pay All Fees Screen (all fees pre-selected)
@@ -274,9 +265,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: Routes.paymentHistory,
-            pageBuilder: (context, state) => const NoTransitionPage(
-              child: PaymentHistoryScreen(),
-            ),
+            pageBuilder: (context, state) {
+              final initialTab = state.uri.queryParameters['tab'];
+              return NoTransitionPage(
+                child: PaymentHistoryScreen(initialTab: initialTab),
+              );
+            },
             routes: [
               GoRoute(
                 path: ':paymentId',

@@ -42,7 +42,7 @@ class _NotificationDetailScreenState
 
     if (notification == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF5F7FA),
+        backgroundColor: const Color(0xFFF8F9FB),
         appBar: _buildAppBar(context),
         body: const Center(
           child: Text('Notification not found'),
@@ -51,152 +51,157 @@ class _NotificationDetailScreenState
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom Header
-            _buildHeader(context),
-
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 24),
-
-                      // Type Badge
-                      _buildTypeBadge(notification.type),
-                      const SizedBox(height: 16),
-
-                      // Title
-                      Text(
-                        notification.title,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
-                          height: 1.3,
-                        ),
+      backgroundColor: const Color(0xFFF8F9FB),
+      body: Column(
+        children: [
+          // Header with white SafeArea and subtle shadow
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildHeader(context),
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Content
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 24),
+                    // Type Badge
+                    _buildTypeBadge(notification.type),
+                    const SizedBox(height: 16),
+                    // Title
+                    Text(
+                      notification.title,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                        height: 1.3,
                       ),
-                      const SizedBox(height: 12),
-
-                      // Date & Time
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.schedule_rounded,
-                            size: 16,
-                            color: AppColors.textSecondary.withValues(alpha: 0.7),
+                    ),
+                    const SizedBox(height: 12),
+                    // Date & Time
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 16,
+                          color: AppColors.textSecondary.withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _formatDateTime(notification.createdAt),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.textSecondary.withValues(alpha: 0.8),
                           ),
-                          const SizedBox(width: 6),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    // Message Card
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Icon
+                          _buildNotificationIcon(notification.type),
+                          const SizedBox(height: 20),
+                          // Message
                           Text(
-                            _formatDateTime(notification.createdAt),
-                            style: TextStyle(
-                              fontSize: 14,
+                            notification.body,
+                            style: const TextStyle(
+                              fontSize: 15,
                               fontWeight: FontWeight.w400,
-                              color: AppColors.textSecondary.withValues(alpha: 0.8),
+                              color: AppColors.textPrimary,
+                              height: 1.7,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 32),
-
-                      // Message Card
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.04),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Icon
-                            _buildNotificationIcon(notification.type),
-                            const SizedBox(height: 20),
-
-                            // Message
-                            Text(
-                              notification.body,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w400,
-                                color: AppColors.textPrimary,
-                                height: 1.7,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      // Action Button (if applicable)
-                      if (_hasAction(notification.type))
-                        _buildActionButton(notification),
-
-                      const SizedBox(height: 24),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 32),
+                    // Action Button (if applicable)
+                    if (_hasAction(notification.type))
+                      _buildActionButton(notification),
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Back Button
+          // Back Button - Dark theme
           GestureDetector(
             onTap: () => context.pop(),
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: const Icon(
                 Icons.arrow_back_ios_new_rounded,
                 size: 18,
-                color: AppColors.textPrimary,
+                color: Colors.white,
               ),
             ),
           ),
-          const Expanded(
-            child: Center(
-              child: Text(
-                'Notification',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
+          // Title
+          const Text(
+            'Notification',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
             ),
           ),
           // Placeholder for symmetry
@@ -208,7 +213,7 @@ class _NotificationDetailScreenState
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF8F9FB),
       elevation: 0,
       leading: IconButton(
         onPressed: () => context.pop(),

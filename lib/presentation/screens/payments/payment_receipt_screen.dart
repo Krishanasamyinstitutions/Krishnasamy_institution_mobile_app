@@ -20,7 +20,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
     final selectedStudent = ref.watch(selectedStudentProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: const Color(0xFFF8F9FB),
       appBar: AppBar(
         title: const Text('Payment Receipt'),
         actions: [

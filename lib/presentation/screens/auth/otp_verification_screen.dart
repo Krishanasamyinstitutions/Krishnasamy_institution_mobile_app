@@ -4,10 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_sizes.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/common/app_button.dart';
 
 class OtpVerificationScreen extends ConsumerStatefulWidget {
   final String mobile;
@@ -27,6 +25,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   bool _isLoading = false;
   int _resendTimer = 30;
   Timer? _timer;
+  bool _isOtpExpired = false; // Track if OTP has expired
 
   @override
   void initState() {
@@ -36,12 +35,18 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
 
   void _startResendTimer() {
     _resendTimer = 30;
+    _isOtpExpired = false; // Reset expiry flag when new OTP is sent
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendTimer > 0) {
         setState(() => _resendTimer--);
       } else {
         timer.cancel();
+        // OTP has expired - clear the input and mark as expired
+        setState(() {
+          _isOtpExpired = true;
+          _otpController.clear();
+        });
       }
     });
   }
@@ -54,6 +59,17 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   }
 
   Future<void> _handleVerifyOtp() async {
+    // Check if OTP has expired
+    if (_isOtpExpired) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('OTP has expired. Please request a new OTP'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     if (_otpController.text.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -123,99 +139,294 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final defaultPinTheme = PinTheme(
-      width: 56,
+      width: 50,
       height: 56,
       textStyle: const TextStyle(
-        fontSize: AppSizes.textXl,
+        fontSize: 20,
         fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
+        color: Color(0xFF1F2933),
       ),
       decoration: BoxDecoration(
-        color: AppColors.gray100,
-        borderRadius: BorderRadius.circular(AppSizes.roundedLg),
-        border: Border.all(color: AppColors.border),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+    );
+
+    final focusedPinTheme = defaultPinTheme.copyWith(
+      decoration: defaultPinTheme.decoration!.copyWith(
+        border: Border.all(color: AppColors.primary, width: 2),
+      ),
+    );
+
+    final submittedPinTheme = defaultPinTheme.copyWith(
+      decoration: defaultPinTheme.decoration!.copyWith(
+        color: AppColors.cardPurple,
+        border: Border.all(color: AppColors.primary),
       ),
     );
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Verify OTP',
-                style: TextStyle(
-                  fontSize: AppSizes.text2xl,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: AppSizes.s2),
-              Text(
-                'Enter the 6-digit code sent to +91 ${widget.mobile}',
-                style: const TextStyle(
-                  fontSize: AppSizes.textBase,
-                  color: AppColors.textSecondary,
-                ),
-              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
 
-              const SizedBox(height: AppSizes.s10),
+                        // Back Button
+                        _buildBackButton(),
 
-              Center(
-                child: Pinput(
-                  controller: _otpController,
-                  length: 6,
-                  defaultPinTheme: defaultPinTheme,
-                  focusedPinTheme: defaultPinTheme.copyWith(
-                    decoration: defaultPinTheme.decoration!.copyWith(
-                      border: Border.all(color: AppColors.primary, width: 2),
-                    ),
-                  ),
-                  submittedPinTheme: defaultPinTheme.copyWith(
-                    decoration: defaultPinTheme.decoration!.copyWith(
-                      color: AppColors.primary50,
-                      border: Border.all(color: AppColors.primary),
-                    ),
-                  ),
-                  onCompleted: (_) => _handleVerifyOtp(),
-                ),
-              ),
+                        const SizedBox(height: 24),
 
-              const SizedBox(height: AppSizes.s8),
+                        // Header
+                        _buildHeader(),
 
-              Center(
-                child: _resendTimer > 0
-                    ? Text(
-                        'Resend OTP in ${_resendTimer}s',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
+                        const SizedBox(height: 32),
+
+                        // OTP Input
+                        Center(
+                          child: Pinput(
+                            controller: _otpController,
+                            length: 6,
+                            defaultPinTheme: defaultPinTheme,
+                            focusedPinTheme: focusedPinTheme,
+                            submittedPinTheme: submittedPinTheme,
+                            onCompleted: (_) => _handleVerifyOtp(),
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          ),
                         ),
-                      )
-                    : TextButton(
-                        onPressed: _handleResendOtp,
-                        child: const Text('Resend OTP'),
-                      ),
+
+                        const SizedBox(height: 24),
+
+                        // OTP Expired Warning
+                        if (_isOtpExpired)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.error.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.timer_off_outlined,
+                                  size: 18,
+                                  color: AppColors.error,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'OTP has expired. Please request a new one.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                        // Resend Timer
+                        Center(
+                          child: _resendTimer > 0
+                              ? RichText(
+                                  text: TextSpan(
+                                    text: 'Resend OTP in ',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: AppColors.textTertiary,
+                                    ),
+                                    children: [
+                                      TextSpan(
+                                        text: '${_resendTimer}s',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : GestureDetector(
+                                  onTap: _handleResendOtp,
+                                  child: Text(
+                                    'Resend OTP',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Verify Button
+                        _buildVerifyButton(),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-
-              const SizedBox(height: AppSizes.s8),
-
-              AppButton(
-                text: 'Verify OTP',
-                onPressed: _handleVerifyOtp,
-                isLoading: _isLoading,
-                isFullWidth: true,
+              // Sign In Link at bottom
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: _buildSignInLink(),
               ),
             ],
           ),
         ),
+    );
+  }
+
+  Widget _buildBackButton() {
+    return GestureDetector(
+      onTap: () => context.pop(),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: const BoxDecoration(
+          color: Color(0xFF1F2937),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.arrow_back_rounded,
+          size: 20,
+          color: Colors.white,
+        ),
       ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Verify OTP',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Enter the 6-digit code sent to\n+91 ${widget.mobile}',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.textTertiary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          width: 120,
+          height: 120,
+          child: Image.asset(
+            'assets/Authendication gif/Sign up.gif',
+            fit: BoxFit.contain,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVerifyButton() {
+    return GestureDetector(
+      onTap: _isLoading ? null : _handleVerifyOtp,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, AppColors.primary600],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (_isLoading)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            else ...[
+              const Text(
+                'Verify OTP',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Icon(
+                Icons.check_circle_outline,
+                size: 22,
+                color: Colors.white,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignInLink() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'Already have an Account ?',
+          style: TextStyle(
+            fontSize: 15,
+            color: AppColors.textTertiary,
+          ),
+        ),
+        const SizedBox(width: 4),
+        GestureDetector(
+          onTap: () => context.go(Routes.signIn),
+          child: Text(
+            'Sign In',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

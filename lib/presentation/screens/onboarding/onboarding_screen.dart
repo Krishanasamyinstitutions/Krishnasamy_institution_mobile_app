@@ -151,7 +151,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final isLastPage = _currentPage == _pages.length - 1;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: SafeArea(
         child: Column(
           children: [
@@ -227,26 +227,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: Container(
         width: 44,
         height: 44,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFAFAFA),
-          borderRadius: BorderRadius.circular(50),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              blurRadius: 1,
-              offset: Offset.zero,
-            ),
-            BoxShadow(
-              color: const Color(0xFFE5E7EB).withValues(alpha: 0.8),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+        decoration: const BoxDecoration(
+          color: Color(0xFF1F2937),
+          shape: BoxShape.circle,
         ),
         child: const Icon(
           Icons.arrow_back_rounded,
           size: 20,
-          color: Color(0xFF1F2933),
+          color: Colors.white,
         ),
       ),
     );

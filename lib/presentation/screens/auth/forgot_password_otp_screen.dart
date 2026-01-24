@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pinput/pinput.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_sizes.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
 
@@ -26,6 +25,7 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
   bool _isLoading = false;
   int _resendTimer = 30;
   Timer? _timer;
+  bool _isOtpExpired = false; // Track if OTP has expired
 
   @override
   void initState() {
@@ -35,12 +35,18 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
 
   void _startResendTimer() {
     _resendTimer = 30;
+    _isOtpExpired = false; // Reset expiry flag when new OTP is sent
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendTimer > 0) {
         setState(() => _resendTimer--);
       } else {
         timer.cancel();
+        // OTP has expired - clear the input and mark as expired
+        setState(() {
+          _isOtpExpired = true;
+          _otpController.clear();
+        });
       }
     });
   }
@@ -53,6 +59,17 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
   }
 
   Future<void> _handleVerifyOtp() async {
+    // Check if OTP has expired
+    if (_isOtpExpired) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('OTP has expired. Please request a new OTP'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     if (_otpController.text.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -66,7 +83,8 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
     setState(() => _isLoading = true);
 
     try {
-      await ref.read(authProvider.notifier).verifyOtp(
+      // Use password reset OTP verification
+      await ref.read(authProvider.notifier).verifyPasswordResetOtp(
         mobile: widget.mobile,
         otp: _otpController.text,
       );
@@ -77,9 +95,13 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.substring(11);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(errorMessage),
             backgroundColor: AppColors.error,
           ),
         );
@@ -95,7 +117,8 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
     if (_resendTimer > 0) return;
 
     try {
-      await ref.read(authProvider.notifier).requestOtp(
+      // Use password reset OTP request
+      await ref.read(authProvider.notifier).requestPasswordResetOtp(
         mobile: widget.mobile,
       );
       _startResendTimer();
@@ -110,9 +133,13 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.substring(11);
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text(errorMessage),
             backgroundColor: AppColors.error,
           ),
         );
@@ -123,54 +150,85 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFAFAFA),
+      backgroundColor: const Color(0xFFF8F9FB),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: AppSizes.s2),
+          child: Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
 
-                      // Back Button
-                      _buildBackButton(),
+                        // Back Button
+                        _buildBackButton(),
 
-                      const SizedBox(height: AppSizes.s6),
+                        const SizedBox(height: 24),
 
-                      // Header with title and illustration
-                      _buildHeader(),
+                        // Header with title and illustration
+                        _buildHeader(),
 
-                      const SizedBox(height: AppSizes.s10),
+                        const SizedBox(height: 32),
 
-                      // OTP Input
-                      _buildOtpInput(),
+                        // OTP Input
+                        _buildOtpInput(),
 
-                      const SizedBox(height: AppSizes.s6),
+                        const SizedBox(height: 24),
 
-                      // Resend Timer
-                      _buildResendTimer(),
+                        // OTP Expired Warning
+                        if (_isOtpExpired)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: AppColors.error.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.timer_off_outlined,
+                                  size: 18,
+                                  color: AppColors.error,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'OTP has expired. Please request a new one.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
 
-                      const SizedBox(height: AppSizes.s8),
+                        // Resend Timer
+                        _buildResendTimer(),
 
-                      // Verify Button
-                      _buildVerifyButton(),
-                    ],
+                        const SizedBox(height: 32),
+
+                        // Verify Button
+                        _buildVerifyButton(),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            // Back to Sign In Link at bottom
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSizes.s6),
-              child: _buildSignInLink(),
-            ),
-          ],
+              // Back to Sign In Link at bottom
+              Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: _buildSignInLink(),
+              ),
+            ],
+          ),
         ),
-      ),
     );
   }
 
@@ -180,26 +238,14 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
       child: Container(
         width: 44,
         height: 44,
-        decoration: BoxDecoration(
-          color: Colors.white,
+        decoration: const BoxDecoration(
+          color: Color(0xFF1F2937),
           shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              blurRadius: 1,
-              offset: Offset.zero,
-            ),
-            BoxShadow(
-              color: const Color(0xFFE5E7EB).withValues(alpha: 0.8),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: const Icon(
           Icons.arrow_back_rounded,
           size: 20,
-          color: Color(0xFF1F2933),
+          color: Colors.white,
         ),
       ),
     );
@@ -214,23 +260,21 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 'Verify OTP',
                 style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F2933),
-                  height: 1.27,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: AppSizes.s2),
+              const SizedBox(height: 8),
               Text(
                 'Enter the 6-digit code sent to\n+91 ${widget.mobile}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w400,
-                  color: Color(0xFF6B7280),
-                  height: 1.47,
+                  color: AppColors.textTertiary,
                 ),
               ),
             ],
@@ -267,14 +311,14 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
 
     final focusedPinTheme = defaultPinTheme.copyWith(
       decoration: defaultPinTheme.decoration!.copyWith(
-        border: Border.all(color: AppColors.accent, width: 2),
+        border: Border.all(color: AppColors.primary, width: 2),
       ),
     );
 
     final submittedPinTheme = defaultPinTheme.copyWith(
       decoration: defaultPinTheme.decoration!.copyWith(
-        color: const Color(0xFFF1F6FD),
-        border: Border.all(color: AppColors.accent),
+        color: AppColors.cardPurple,
+        border: Border.all(color: AppColors.primary),
       ),
     );
 
@@ -297,17 +341,17 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
           ? RichText(
               text: TextSpan(
                 text: 'Resend OTP in ',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: Color(0xFF6B7280),
+                  color: AppColors.textTertiary,
                 ),
                 children: [
                   TextSpan(
                     text: '${_resendTimer}s',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.accent,
+                      color: AppColors.primary,
                     ),
                   ),
                 ],
@@ -315,12 +359,12 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
             )
           : GestureDetector(
               onTap: _handleResendOtp,
-              child: const Text(
+              child: Text(
                 'Resend OTP',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.accent,
+                  color: AppColors.primary,
                 ),
               ),
             ),
@@ -332,20 +376,17 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
       onTap: _isLoading ? null : _handleVerifyOtp,
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.accent,
-          borderRadius: BorderRadius.circular(12),
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, AppColors.primary600],
+          ),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF3D75FC).withValues(alpha: 0.24),
-              blurRadius: 1,
-              offset: Offset.zero,
-            ),
-            const BoxShadow(
-              color: Color(0xFFE5E7EB),
-              blurRadius: 4,
-              offset: Offset(0, 2),
+              color: AppColors.primary.withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -373,7 +414,7 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
               const SizedBox(width: 10),
               const Icon(
                 Icons.check_circle_outline,
-                size: 24,
+                size: 22,
                 color: Colors.white,
               ),
             ],
@@ -387,21 +428,22 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
+        Text(
           'Remember your password ?',
           style: TextStyle(
             fontSize: 15,
-            color: Color(0xFF6B7280),
+            color: AppColors.textTertiary,
           ),
         ),
         const SizedBox(width: 4),
         GestureDetector(
           onTap: () => context.go(Routes.signIn),
-          child: const Text(
+          child: Text(
             'Sign In',
             style: TextStyle(
               fontSize: 15,
-              color: AppColors.accent,
+              fontWeight: FontWeight.w600,
+              color: AppColors.primary,
             ),
           ),
         ),
