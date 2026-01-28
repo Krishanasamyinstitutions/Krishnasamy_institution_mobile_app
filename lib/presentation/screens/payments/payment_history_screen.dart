@@ -9,6 +9,7 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/student_avatar.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
   final String? initialTab;

@@ -11,9 +11,7 @@ class StudentModel {
   final DateTime studob;
   final String stumobile;
   final String? stuemail;
-  final String? stuaddress1;
-  final String? stuaddress2;
-  final String? stuaddress3;
+  final String? stuaddress;
   final String? stucity;
   final String? stustate;
   final String? stucountry;
@@ -38,9 +36,7 @@ class StudentModel {
     required this.studob,
     required this.stumobile,
     this.stuemail,
-    this.stuaddress1,
-    this.stuaddress2,
-    this.stuaddress3,
+    this.stuaddress,
     this.stucity,
     this.stustate,
     this.stucountry,
@@ -72,9 +68,7 @@ class StudentModel {
           : DateTime.now(),
       stumobile: json['stumobile'] ?? '',
       stuemail: json['stuemail'],
-      stuaddress1: json['stuaddress1'],
-      stuaddress2: json['stuaddress2'],
-      stuaddress3: json['stuaddress3'],
+      stuaddress: json['stuaddress'],
       stucity: json['stucity'],
       stustate: json['stustate'],
       stucountry: json['stucountry'],
@@ -105,9 +99,7 @@ class StudentModel {
       'studob': studob.toIso8601String().split('T')[0],
       'stumobile': stumobile,
       'stuemail': stuemail,
-      'stuaddress1': stuaddress1,
-      'stuaddress2': stuaddress2,
-      'stuaddress3': stuaddress3,
+      'stuaddress': stuaddress,
       'stucity': stucity,
       'stustate': stustate,
       'stucountry': stucountry,
@@ -135,7 +127,7 @@ class StudentModel {
   DateTime get dateOfBirth => studob;
 
   String get fullAddress {
-    final parts = [stuaddress1, stuaddress2, stuaddress3, stucity, stustate, stucountry, stupin]
+    final parts = [stuaddress, stucity, stustate, stucountry, stupin]
         .where((p) => p != null && p.isNotEmpty)
         .toList();
     return parts.join(', ');
@@ -152,9 +144,7 @@ class StudentModel {
     DateTime? studob,
     String? stumobile,
     String? stuemail,
-    String? stuaddress1,
-    String? stuaddress2,
-    String? stuaddress3,
+    String? stuaddress,
     String? stucity,
     String? stustate,
     String? stucountry,
@@ -179,9 +169,7 @@ class StudentModel {
       studob: studob ?? this.studob,
       stumobile: stumobile ?? this.stumobile,
       stuemail: stuemail ?? this.stuemail,
-      stuaddress1: stuaddress1 ?? this.stuaddress1,
-      stuaddress2: stuaddress2 ?? this.stuaddress2,
-      stuaddress3: stuaddress3 ?? this.stuaddress3,
+      stuaddress: stuaddress ?? this.stuaddress,
       stucity: stucity ?? this.stucity,
       stustate: stustate ?? this.stustate,
       stucountry: stucountry ?? this.stucountry,
