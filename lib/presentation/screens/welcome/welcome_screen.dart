@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
@@ -103,15 +104,28 @@ class WelcomeScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    child: const Center(
-                      child: Text(
-                        'Sign In',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Sign In',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 10),
+                        SvgPicture.asset(
+                          'assets/school Icons/login.svg',
+                          width: 20,
+                          height: 20,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -127,23 +141,29 @@ class WelcomeScreen extends StatelessWidget {
                       color: AppColors.surface,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.primary, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.shadowLight,
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Create Account',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        SvgPicture.asset(
+                          'assets/school Icons/create account.svg',
+                          width: 20,
+                          height: 20,
+                          colorFilter: ColorFilter.mode(
+                            AppColors.primary,
+                            BlendMode.srcIn,
+                          ),
                         ),
                       ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Create Account',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                        ),
-                      ),
                     ),
                   ),
                 ),

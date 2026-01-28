@@ -109,11 +109,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _buildSectionTitle('Personal Information'),
                     const SizedBox(height: 12),
                     _buildInfoCard([
-                      _InfoItem(icon: Icons.badge_outlined, label: 'Admission No', value: studentData['adminNo']!),
-                      _InfoItem(icon: Icons.class_outlined, label: 'Class', value: studentData['class']!),
-                      _InfoItem(icon: Icons.wc_outlined, label: 'Gender', value: studentData['gender']!),
-                      _InfoItem(icon: Icons.cake_outlined, label: 'Date of Birth', value: studentData['dob']!),
-                      _InfoItem(icon: Icons.bloodtype_outlined, label: 'Blood Group', value: studentData['blood']!),
+                      _InfoItem(svgPath: 'assets/school Icons/personalcard.svg', label: 'Admission No', value: studentData['adminNo']!),
+                      _InfoItem(svgPath: 'assets/school Icons/star.svg', label: 'Class', value: studentData['class']!),
+                      _InfoItem(svgPath: 'assets/school Icons/gender-male-female-variant.svg', label: 'Gender', value: studentData['gender']!),
+                      _InfoItem(svgPath: 'assets/school Icons/cake.svg', label: 'Date of Birth', value: studentData['dob']!),
+                      _InfoItem(svgPath: 'assets/school Icons/blood.svg', label: 'Blood Group', value: studentData['blood']!),
                     ]),
 
                     const SizedBox(height: 20),
@@ -122,10 +122,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _buildSectionTitle('Contact Information'),
                     const SizedBox(height: 12),
                     _buildInfoCard([
-                      _InfoItem(icon: Icons.person_outline_rounded, label: 'Student In-Charge', value: studentData['parentName']!),
-                      _InfoItem(icon: Icons.phone_outlined, label: 'Mobile', value: studentData['mobile']!, isNotProvided: studentData['mobile'] == 'N/A'),
-                      _InfoItem(icon: Icons.email_outlined, label: 'Email', value: studentData['email']!),
-                      _InfoItem(icon: Icons.location_on_outlined, label: 'Address', value: studentData['address']!, isNotProvided: studentData['address'] == 'N/A'),
+                      _InfoItem(svgPath: 'assets/school Icons/user.svg', label: 'Student In-Charge', value: studentData['parentName']!),
+                      _InfoItem(svgPath: 'assets/school Icons/mobile.svg', label: 'Mobile', value: studentData['mobile']!, isNotProvided: studentData['mobile'] == 'N/A'),
+                      _InfoItem(svgPath: 'assets/school Icons/sms.svg', label: 'Email', value: studentData['email']!),
+                      _InfoItem(svgPath: 'assets/school Icons/location.svg', label: 'Address', value: studentData['address']!, isNotProvided: studentData['address'] == 'N/A'),
                     ]),
 
                     const SizedBox(height: 24),
@@ -367,7 +367,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             if (hasMultipleStudents) ...[
               Expanded(
                 child: _buildActionCard(
-                  icon: Icons.swap_horiz_rounded,
+                  svgPath: 'assets/school Icons/arrow-swap-horizontal.svg',
                   label: 'Switch Student',
                   bgColor: AppColors.cardBlue,
                   iconColor: AppColors.cardBlueDark,
@@ -393,7 +393,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildActionCard({
-    required IconData icon,
+    IconData? icon,
+    String? svgPath,
     required String label,
     required Color bgColor,
     required Color iconColor,
@@ -423,7 +424,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 color: bgColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, size: 22, color: iconColor),
+              child: Center(
+                child: svgPath != null
+                    ? SvgPicture.asset(
+                        svgPath,
+                        width: 22,
+                        height: 22,
+                        colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+                      )
+                    : Icon(icon, size: 22, color: iconColor),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -507,10 +517,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             color: AppColors.bgSecondary,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            item.icon,
-            size: 20,
-            color: AppColors.textTertiary,
+          child: Center(
+            child: item.svgPath != null
+                ? SvgPicture.asset(
+                    item.svgPath!,
+                    width: 20,
+                    height: 20,
+                    colorFilter: ColorFilter.mode(
+                      AppColors.textTertiary,
+                      BlendMode.srcIn,
+                    ),
+                  )
+                : Icon(
+                    item.icon,
+                    size: 20,
+                    color: AppColors.textTertiary,
+                  ),
           ),
         ),
         const SizedBox(width: 12),
@@ -564,10 +586,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ],
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
+            const Text(
               'Sign Out',
               style: TextStyle(
                 fontFamily: 'Inter',
@@ -576,11 +598,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 color: Colors.white,
               ),
             ),
-            SizedBox(width: 10),
-            Icon(
-              Icons.logout_rounded,
-              size: 22,
-              color: Colors.white,
+            const SizedBox(width: 10),
+            SvgPicture.asset(
+              'assets/school Icons/logout.svg',
+              width: 22,
+              height: 22,
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
             ),
           ],
         ),
@@ -633,15 +659,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 }
 
 class _InfoItem {
-  final IconData icon;
+  final IconData? icon;
+  final String? svgPath;
   final String label;
   final String value;
   final bool isNotProvided;
 
   _InfoItem({
-    required this.icon,
+    this.icon,
+    this.svgPath,
     required this.label,
     required this.value,
     this.isNotProvided = false,
-  });
+  }) : assert(icon != null || svgPath != null, 'Either icon or svgPath must be provided');
 }
