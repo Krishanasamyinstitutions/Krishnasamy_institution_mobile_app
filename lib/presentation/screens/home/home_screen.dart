@@ -580,15 +580,15 @@ class HomeScreen extends ConsumerWidget {
               }
 
               final entry = feesByGroup.entries.elementAt(index);
-              final cat = categories[index % categories.length];
+              final iconData = _getIconForFeeGroup(entry.key);
               return _buildSpendingCard(
                 context: context,
-                icon: cat['icon'] as IconData,
+                icon: iconData['icon'] as IconData,
                 label: _toTitleCase(entry.key),
                 groupName: entry.key,
                 amount: entry.value,
-                primaryColor: cat['color'] as Color,
-                iconBgColor: cat['iconBgColor'] as Color,
+                primaryColor: iconData['color'] as Color,
+                iconBgColor: iconData['iconBgColor'] as Color,
                 isFirst: index == 0,
               );
             },
@@ -881,6 +881,10 @@ class HomeScreen extends ConsumerWidget {
       groupIconColor = AppColors.cardGreenDark;
     } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
       groupIcon = Icons.directions_bus_rounded;
+      groupBg = AppColors.cardOrange;
+      groupIconColor = AppColors.cardOrangeDark;
+    } else if (lowerName.contains('hostel')) {
+      groupIcon = Icons.hotel_rounded;
       groupBg = AppColors.cardBlue;
       groupIconColor = AppColors.cardBlueDark;
     } else if (lowerName.contains('exam')) {
@@ -1048,6 +1052,42 @@ class HomeScreen extends ConsumerWidget {
       if (word.isEmpty) return word;
       return word[0].toUpperCase() + word.substring(1).toLowerCase();
     }).join(' ');
+  }
+
+  Map<String, dynamic> _getIconForFeeGroup(String groupName) {
+    final lowerName = groupName.toLowerCase();
+
+    if (lowerName.contains('school') || lowerName.contains('tuition')) {
+      return {
+        'icon': Icons.school_rounded,
+        'color': const Color(0xFF22C55E),
+        'iconBgColor': const Color(0xFFDCFCE7),
+      };
+    } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
+      return {
+        'icon': Icons.directions_bus_rounded,
+        'color': const Color(0xFFF59E0B),
+        'iconBgColor': const Color(0xFFFEF3C7),
+      };
+    } else if (lowerName.contains('hostel')) {
+      return {
+        'icon': Icons.hotel_rounded,
+        'color': const Color(0xFF3B82F6),
+        'iconBgColor': const Color(0xFFDBEAFE),
+      };
+    } else if (lowerName.contains('exam') || lowerName.contains('test')) {
+      return {
+        'icon': Icons.assignment_rounded,
+        'color': AppColors.cardOrange,
+        'iconBgColor': const Color(0xFFFEF3C7),
+      };
+    } else {
+      return {
+        'icon': Icons.receipt_rounded,
+        'color': AppColors.cardPurple,
+        'iconBgColor': const Color(0xFFF3E8FF),
+      };
+    }
   }
 
   String _getInitials(String name) {

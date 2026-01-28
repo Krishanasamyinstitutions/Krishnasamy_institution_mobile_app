@@ -259,22 +259,37 @@ class CartScreen extends ConsumerWidget {
   }
 
   Widget _buildCartContent(BuildContext context, WidgetRef ref, CartState cartState) {
-    // Group fees by term
+    // Group fees by category type
     final Map<String, List<FeeModel>> feesByCategory = {};
 
     for (final fee in cartState.items) {
-      final category = _isBusFee(fee.demfeetype)
-          ? 'Bus Fees'
-          : '${fee.demfeeterm} (${fee.demfeeyear})';
+      String category;
+      if (_isBusFee(fee.demfeetype)) {
+        category = 'Bus Fees';
+      } else if (_isTuitionFee(fee.demfeetype)) {
+        category = 'Tuition Fees';
+      } else if (_isHostelFee(fee.demfeetype)) {
+        category = 'Hostel Fees';
+      } else {
+        category = '${fee.demfeeterm} (${fee.demfeeyear})';
+      }
       feesByCategory.putIfAbsent(category, () => []);
       feesByCategory[category]!.add(fee);
     }
 
-    // Sort categories
+    // Sort categories: Term fees first, then Tuition, Hostel, Bus
     final sortedCategories = feesByCategory.keys.toList()
       ..sort((a, b) {
-        if (a == 'Bus Fees') return 1;
-        if (b == 'Bus Fees') return -1;
+        // Define category order: regular terms first, then special categories
+        int getCategoryOrder(String cat) {
+          if (cat == 'Tuition Fees') return 100;
+          if (cat == 'Hostel Fees') return 101;
+          if (cat == 'Bus Fees') return 102;
+          return 0; // Term fees first
+        }
+        final orderA = getCategoryOrder(a);
+        final orderB = getCategoryOrder(b);
+        if (orderA != orderB) return orderA.compareTo(orderB);
         return a.compareTo(b);
       });
 
@@ -284,10 +299,9 @@ class CartScreen extends ConsumerWidget {
         // Fee Category Cards
         ...sortedCategories.map((category) {
           final fees = feesByCategory[category]!;
-          final isBus = category == 'Bus Fees';
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: _buildCategoryCard(context, ref, category, fees, isBus),
+            child: _buildCategoryCard(context, ref, category, fees),
           );
         }),
 
@@ -301,8 +315,47 @@ class CartScreen extends ConsumerWidget {
     return lowerType.contains('bus') || lowerType.contains('transport') || lowerType.contains('van');
   }
 
-  Widget _buildCategoryCard(BuildContext context, WidgetRef ref, String category, List<FeeModel> fees, bool isBus) {
+  bool _isTuitionFee(String feeType) {
+    final lowerType = feeType.toLowerCase();
+    return lowerType.contains('tuition');
+  }
+
+  bool _isHostelFee(String feeType) {
+    final lowerType = feeType.toLowerCase();
+    return lowerType.contains('hostel');
+  }
+
+  Map<String, dynamic> _getCategoryStyle(String category) {
+    if (category == 'Bus Fees') {
+      return {
+        'color': const Color(0xFFF59E0B),
+        'icon': Icons.directions_bus,
+        'showMonth': true,
+      };
+    } else if (category == 'Tuition Fees') {
+      return {
+        'color': const Color(0xFF8B5CF6),
+        'icon': Icons.menu_book_rounded,
+        'showMonth': true,
+      };
+    } else if (category == 'Hostel Fees') {
+      return {
+        'color': const Color(0xFF3B82F6),
+        'icon': Icons.hotel_rounded,
+        'showMonth': true,
+      };
+    } else {
+      return {
+        'color': AppColors.success,
+        'icon': Icons.school_rounded,
+        'showMonth': false,
+      };
+    }
+  }
+
+  Widget _buildCategoryCard(BuildContext context, WidgetRef ref, String category, List<FeeModel> fees) {
     final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
+    final categoryStyle = _getCategoryStyle(category);
 
     return Container(
       decoration: BoxDecoration(
@@ -327,24 +380,17 @@ class CartScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isBus ? const Color(0xFFF59E0B) : AppColors.success,
+                    color: categoryStyle['color'] as Color,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isBus)
-                        const Icon(
-                          Icons.directions_bus,
-                          size: 14,
-                          color: Colors.white,
-                        )
-                      else
-                        const Icon(
-                          Icons.school_rounded,
-                          size: 14,
-                          color: Colors.white,
-                        ),
+                      Icon(
+                        categoryStyle['icon'] as IconData,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         category,
@@ -421,7 +467,7 @@ class CartScreen extends ConsumerWidget {
           Container(height: 1, color: const Color(0xFFE5E7EB)),
 
           // Fee Items
-          ...fees.map((fee) => _buildFeeItem(fee, isBus)),
+          ...fees.map((fee) => _buildFeeItem(fee, categoryStyle['showMonth'] as bool)),
 
           // Total Row
           Container(
@@ -496,7 +542,7 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeeItem(FeeModel fee, bool isBus) {
+  Widget _buildFeeItem(FeeModel fee, bool showMonth) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: const BoxDecoration(
@@ -519,7 +565,7 @@ class CartScreen extends ConsumerWidget {
                     height: 1.4,
                   ),
                 ),
-                if (isBus) ...[
+                if (showMonth) ...[
                   const SizedBox(height: 2),
                   Text(
                     _extractMonthFromDate(fee),

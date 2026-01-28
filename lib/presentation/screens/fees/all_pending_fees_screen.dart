@@ -27,23 +27,28 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
     return lowerType.contains('bus') || lowerType.contains('transport') || lowerType.contains('van');
   }
 
+  /// Check if a fee is a tuition fee
+  bool _isTuitionFee(String feeType) {
+    final lowerType = feeType.toLowerCase();
+    return lowerType.contains('tuition');
+  }
+
+  /// Check if a fee is a hostel fee
+  bool _isHostelFee(String feeType) {
+    final lowerType = feeType.toLowerCase();
+    return lowerType.contains('hostel');
+  }
+
   @override
   Widget build(BuildContext context) {
     final allPendingFees = ref.watch(pendingFeesProvider);
     final cartState = ref.watch(cartProvider);
 
-    // Apply filter based on filterGroup parameter
-    final filter = widget.filterGroup?.toLowerCase();
-    final bool showOnlyBusFees = filter != null &&
-        (filter.contains('van') || filter.contains('bus') || filter.contains('transport'));
-    final bool showOnlySchoolFees = filter != null && filter.contains('school');
-
-    // Filter fees based on the selected group
+    // Apply filter based on filterGroup parameter using fee group from joined/mapped data
     List<FeeModel> filteredFees;
-    if (showOnlyBusFees) {
-      filteredFees = allPendingFees.where((f) => _isBusFee(f.demfeetype)).toList();
-    } else if (showOnlySchoolFees) {
-      filteredFees = allPendingFees.where((f) => !_isBusFee(f.demfeetype)).toList();
+    if (widget.filterGroup != null && widget.filterGroup!.isNotEmpty) {
+      // Use the pendingFeesByGroupNameProvider which handles mapping correctly
+      filteredFees = ref.watch(pendingFeesByGroupNameProvider(widget.filterGroup!));
     } else {
       filteredFees = allPendingFees;
     }
@@ -61,8 +66,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
     }
 
     // Separate fees by category (from filtered fees)
-    final termFees = filteredFees.where((f) => !_isBusFee(f.demfeetype)).toList();
+    final termFees = filteredFees.where((f) => !_isBusFee(f.demfeetype) && !_isTuitionFee(f.demfeetype) && !_isHostelFee(f.demfeetype)).toList();
     final busFees = filteredFees.where((f) => _isBusFee(f.demfeetype)).toList();
+    final tuitionFees = filteredFees.where((f) => _isTuitionFee(f.demfeetype)).toList();
+    final hostelFees = filteredFees.where((f) => _isHostelFee(f.demfeetype)).toList();
 
     // Group term fees by term
     final Map<String, List<FeeModel>> feesByTerm = {};
@@ -112,7 +119,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               Expanded(
                 child: filteredFees.isEmpty
                     ? _buildEmptyState()
-                    : _buildAccordionList(context, feesByTerm, busFees, cartState),
+                    : _buildAccordionList(context, feesByTerm, busFees, tuitionFees, hostelFees, cartState),
               ),
               // Bottom Bar
               if (selectedAmount > 0)
@@ -195,10 +202,29 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
     BuildContext context,
     Map<String, List<FeeModel>> feesByTerm,
     List<FeeModel> busFees,
+    List<FeeModel> tuitionFees,
+    List<FeeModel> hostelFees,
     CartState cartState,
   ) {
-    // Sort terms
-    final sortedTerms = feesByTerm.keys.toList()..sort((a, b) => a.compareTo(b));
+    // Sort terms: Term fees first (I TERM, II TERM, etc.), then monthly fees by date
+    final sortedTerms = feesByTerm.keys.toList()
+      ..sort((a, b) {
+        final aFees = feesByTerm[a]!;
+        final bFees = feesByTerm[b]!;
+
+        // Check if term name contains "TERM" (prioritize term fees)
+        final aIsTerm = a.toUpperCase().contains('TERM');
+        final bIsTerm = b.toUpperCase().contains('TERM');
+
+        // Term fees come first
+        if (aIsTerm && !bIsTerm) return -1;
+        if (!aIsTerm && bIsTerm) return 1;
+
+        // If both are terms or both are months, sort by due date
+        final aDate = aFees.first.duedate ?? aFees.first.createdat;
+        final bDate = bFees.first.duedate ?? bFees.first.createdat;
+        return aDate.compareTo(bDate);
+      });
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -214,6 +240,20 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               cartState,
               'term${i + 1}',
             ),
+          ),
+
+        // Tuition fees card (grouped together)
+        if (tuitionFees.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildTuitionFeesCard(context, tuitionFees, cartState),
+          ),
+
+        // Hostel fees card (grouped together like van fees)
+        if (hostelFees.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildHostelFeesCard(context, hostelFees, cartState),
           ),
 
         // Bus fees card
@@ -535,6 +575,651 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTuitionFeesCard(BuildContext context, List<FeeModel> fees, CartState cartState) {
+    final academicYear = fees.isNotEmpty ? fees.first.demfeeyear : '2025-2026';
+    final monthRange = _getTuitionFeesMonthRange(fees);
+    final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
+    final allSelected = fees.every((f) => cartState.containsFee(f.id));
+
+    // Calculate fee status for badge color
+    final now = DateTime.now();
+    final hasOverdue = fees.any((f) => f.dueDate.isBefore(now));
+    final hasDueSoon = fees.any((f) {
+      final daysUntilDue = f.dueDate.difference(now).inDays;
+      return daysUntilDue >= 0 && daysUntilDue <= 7;
+    });
+    final badgeColor = hasOverdue ? AppColors.error : (hasDueSoon ? AppColors.warning : AppColors.primary);
+
+    // Sort fees by due date
+    final sortedFees = List<FeeModel>.from(fees)
+      ..sort((a, b) {
+        if (a.duedate != null && b.duedate != null) {
+          return a.duedate!.compareTo(b.duedate!);
+        }
+        return a.createdat.compareTo(b.createdat);
+      });
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'TUITION FEES',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2933),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        monthRange,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Academic Year Badge with school icon - color based on fee status
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.menu_book_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        academicYear,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Checkbox for all tuition fees
+                GestureDetector(
+                  onTap: () => _toggleAllFees(fees, allSelected),
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: allSelected ? AppColors.primary : Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: allSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: allSelected
+                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Table Header
+            const Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Month',
+                    style: TextStyle(
+                      fontSize: AppSizes.textBase,
+                      fontWeight: AppSizes.fontSemibold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                Text(
+                  'Amount',
+                  style: TextStyle(
+                    fontSize: AppSizes.textBase,
+                    fontWeight: AppSizes.fontSemibold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+
+            // Divider
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              height: 1,
+              color: const Color(0xFFE5E7EB),
+            ),
+
+            // Fee Items
+            ...sortedFees.map((fee) => _buildTuitionFeeRow(fee)),
+
+            // Total Row
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'TOTAL',
+                      style: TextStyle(
+                        fontSize: AppSizes.textBase,
+                        fontWeight: AppSizes.fontBold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
+                    style: const TextStyle(
+                      fontSize: AppSizes.textLg,
+                      fontWeight: AppSizes.fontBold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getTuitionFeesMonthRange(List<FeeModel> fees) {
+    if (fees.isEmpty) return '';
+
+    final sortedFees = List<FeeModel>.from(fees)
+      ..sort((a, b) {
+        final aDate = a.duedate ?? a.createdat;
+        final bDate = b.duedate ?? b.createdat;
+        return aDate.compareTo(bDate);
+      });
+
+    final firstDate = sortedFees.first.duedate ?? sortedFees.first.createdat;
+    final lastDate = sortedFees.last.duedate ?? sortedFees.last.createdat;
+
+    final firstMonth = DateFormat('MMM').format(firstDate);
+    final lastMonth = DateFormat('MMM').format(lastDate);
+
+    if (firstMonth == lastMonth) {
+      return firstMonth;
+    }
+    return '$firstMonth - $lastMonth';
+  }
+
+  Widget _buildTuitionFeeRow(FeeModel fee) {
+    final monthName = _extractMonthFromDate(fee);
+    final dueDate = fee.dueDate;
+    final isOverdue = dueDate.isBefore(DateTime.now());
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Month Name with book icon
+          Expanded(
+            child: Row(
+              children: [
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: AppColors.info.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(
+                    Icons.menu_book_outlined,
+                    size: 16,
+                    color: AppColors.info,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        monthName.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: AppSizes.bodyText,
+                          fontWeight: AppSizes.fontMedium,
+                          color: AppColors.textPrimary,
+                          height: 1.47,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 12,
+                            color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Due: ${DateFormat('dd MMM yyyy').format(dueDate)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            ),
+                          ),
+                          if (isOverdue) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'Overdue',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.error,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
+            style: const TextStyle(
+              fontSize: AppSizes.textBase,
+              fontWeight: AppSizes.fontSemibold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHostelFeesCard(BuildContext context, List<FeeModel> fees, CartState cartState) {
+    final academicYear = fees.isNotEmpty ? fees.first.demfeeyear : '2025-2026';
+    final monthRange = _getHostelFeesMonthRange(fees);
+    final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
+    final allSelected = fees.every((f) => cartState.containsFee(f.id));
+
+    // Calculate fee status for badge color
+    final now = DateTime.now();
+    final hasOverdue = fees.any((f) => f.dueDate.isBefore(now));
+    final hasDueSoon = fees.any((f) {
+      final daysUntilDue = f.dueDate.difference(now).inDays;
+      return daysUntilDue >= 0 && daysUntilDue <= 7;
+    });
+    final badgeColor = hasOverdue ? AppColors.error : (hasDueSoon ? AppColors.warning : AppColors.primary);
+
+    // Sort fees by due date
+    final sortedFees = List<FeeModel>.from(fees)
+      ..sort((a, b) {
+        if (a.duedate != null && b.duedate != null) {
+          return a.duedate!.compareTo(b.duedate!);
+        }
+        return a.createdat.compareTo(b.createdat);
+      });
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'HOSTEL FEES',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1F2933),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        monthRange,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w400,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Academic Year Badge with hotel icon - color based on fee status
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.hotel_rounded,
+                        size: 14,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        academicYear,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Checkbox for all hostel fees
+                GestureDetector(
+                  onTap: () => _toggleAllFees(fees, allSelected),
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: allSelected ? AppColors.primary : Colors.white,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: allSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: allSelected
+                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        : null,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Table Header
+            const Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Month',
+                    style: TextStyle(
+                      fontSize: AppSizes.textBase,
+                      fontWeight: AppSizes.fontSemibold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                Text(
+                  'Amount',
+                  style: TextStyle(
+                    fontSize: AppSizes.textBase,
+                    fontWeight: AppSizes.fontSemibold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                SizedBox(width: 36), // Space for checkbox
+              ],
+            ),
+
+            // Divider
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              height: 1,
+              color: const Color(0xFFE5E7EB),
+            ),
+
+            // Fee Items with individual checkboxes
+            ...sortedFees.map((fee) => _buildHostelFeeRow(fee, cartState)),
+
+            // Total Row
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'TOTAL',
+                      style: TextStyle(
+                        fontSize: AppSizes.textBase,
+                        fontWeight: AppSizes.fontBold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
+                    style: const TextStyle(
+                      fontSize: AppSizes.textLg,
+                      fontWeight: AppSizes.fontBold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(width: 36), // Space for checkbox alignment
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getHostelFeesMonthRange(List<FeeModel> fees) {
+    if (fees.isEmpty) return '';
+
+    final sortedFees = List<FeeModel>.from(fees)
+      ..sort((a, b) {
+        final aDate = a.duedate ?? a.createdat;
+        final bDate = b.duedate ?? b.createdat;
+        return aDate.compareTo(bDate);
+      });
+
+    final firstDate = sortedFees.first.duedate ?? sortedFees.first.createdat;
+    final lastDate = sortedFees.last.duedate ?? sortedFees.last.createdat;
+
+    final firstMonth = DateFormat('MMM').format(firstDate);
+    final lastMonth = DateFormat('MMM').format(lastDate);
+
+    if (firstMonth == lastMonth) {
+      return firstMonth;
+    }
+    return '$firstMonth - $lastMonth';
+  }
+
+  Widget _buildHostelFeeRow(FeeModel fee, CartState cartState) {
+    final monthName = _extractMonthFromDate(fee);
+    final dueDate = fee.dueDate;
+    final isOverdue = dueDate.isBefore(DateTime.now());
+    final isSelected = cartState.containsFee(fee.id);
+
+    return GestureDetector(
+      onTap: () => _toggleSingleFee(fee, isSelected),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Month Name with hotel icon
+            Expanded(
+              child: Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Icon(
+                      Icons.hotel_outlined,
+                      size: 16,
+                      color: Color(0xFF3B82F6),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          monthName.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: AppSizes.bodyText,
+                            fontWeight: AppSizes.fontMedium,
+                            color: AppColors.textPrimary,
+                            height: 1.47,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_outlined,
+                              size: 12,
+                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Due: ${DateFormat('dd MMM yyyy').format(dueDate)}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                              ),
+                            ),
+                            if (isOverdue) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'Overdue',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.error,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
+              style: const TextStyle(
+                fontSize: AppSizes.textBase,
+                fontWeight: AppSizes.fontSemibold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Individual checkbox
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primary : Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: isSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                  width: 1.5,
+                ),
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : null,
+            ),
+          ],
+        ),
       ),
     );
   }
