@@ -373,17 +373,10 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(
-                      Icons.arrow_outward_rounded,
-                      size: 16,
-                      color: Colors.white,
-                    ),
+                  const Icon(
+                    Icons.arrow_outward_rounded,
+                    size: 18,
+                    color: Colors.white,
                   ),
                 ],
               ),
@@ -413,17 +406,10 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(
-                      Icons.check_rounded,
-                      size: 16,
-                      color: Colors.white,
-                    ),
+                  const Icon(
+                    Icons.check_rounded,
+                    size: 18,
+                    color: Colors.white,
                   ),
                 ],
               ),
@@ -525,9 +511,9 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildSpendingSection(BuildContext context, Map<String, double> feesByGroup) {
     final categories = [
-      {'name': 'School Fees', 'icon': Icons.school_rounded, 'color': const Color(0xFF22C55E), 'iconBgColor': const Color(0xFFDCFCE7)},
-      {'name': 'Van Fees', 'icon': Icons.directions_bus_rounded, 'color': const Color(0xFF3B82F6), 'iconBgColor': const Color(0xFFDBEAFE)},
-      {'name': 'Exam Fees', 'icon': Icons.menu_book_rounded, 'color': AppColors.cardOrange, 'iconBgColor': const Color(0xFFFEF3C7)},
+      {'name': 'School Fees', 'svgPath': 'assets/school Icons/book.svg', 'color': const Color(0xFF22C55E), 'iconBgColor': const Color(0xFFDCFCE7)},
+      {'name': 'Van Fees', 'svgPath': 'assets/icons/bus-solid.svg', 'color': const Color(0xFF3B82F6), 'iconBgColor': const Color(0xFFDBEAFE)},
+      {'name': 'Exam Fees', 'svgPath': 'assets/school Icons/book.svg', 'color': AppColors.cardOrange, 'iconBgColor': const Color(0xFFFEF3C7)},
       {'name': 'Other', 'icon': Icons.more_horiz_rounded, 'color': AppColors.cardPurple, 'iconBgColor': const Color(0xFFF3E8FF)},
     ];
 
@@ -569,7 +555,8 @@ class HomeScreen extends ConsumerWidget {
                 final cat = categories[index];
                 return _buildSpendingCard(
                   context: context,
-                  icon: cat['icon'] as IconData,
+                  icon: cat['icon'] as IconData?,
+                  svgPath: cat['svgPath'] as String?,
                   label: cat['name'] as String,
                   groupName: cat['name'] as String,
                   amount: 0,
@@ -583,7 +570,8 @@ class HomeScreen extends ConsumerWidget {
               final iconData = _getIconForFeeGroup(entry.key);
               return _buildSpendingCard(
                 context: context,
-                icon: iconData['icon'] as IconData,
+                icon: cat['icon'] as IconData?,
+                svgPath: cat['svgPath'] as String?,
                 label: _toTitleCase(entry.key),
                 groupName: entry.key,
                 amount: entry.value,
@@ -600,7 +588,8 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildSpendingCard({
     required BuildContext context,
-    required IconData icon,
+    IconData? icon,
+    String? svgPath,
     required String label,
     required String groupName,
     required double amount,
@@ -647,10 +636,22 @@ class HomeScreen extends ConsumerWidget {
                         : iconBgColor,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 22,
-                    color: hasColoredBg ? Colors.white : primaryColor,
+                  child: Center(
+                    child: svgPath != null
+                        ? SvgPicture.asset(
+                            svgPath,
+                            width: 22,
+                            height: 22,
+                            colorFilter: ColorFilter.mode(
+                              hasColoredBg ? Colors.white : primaryColor,
+                              BlendMode.srcIn,
+                            ),
+                          )
+                        : Icon(
+                            icon,
+                            size: 22,
+                            color: hasColoredBg ? Colors.white : primaryColor,
+                          ),
                   ),
                 ),
                 // Due badge
@@ -717,20 +718,10 @@ class HomeScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: hasColoredBg
-                        ? Colors.white.withValues(alpha: 0.2)
-                        : const Color(0xFFF3F4F6),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 12,
-                    color: hasColoredBg ? Colors.white : const Color(0xFF6B7280),
-                  ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 14,
+                  color: hasColoredBg ? Colors.white : const Color(0xFF6B7280),
                 ),
               ],
             ),
@@ -786,7 +777,7 @@ class HomeScreen extends ConsumerWidget {
               title: 'Overdue',
               totalAmount: totalOverdue,
               color: AppColors.error,
-              icon: Icons.warning_amber_rounded,
+              svgPath: 'assets/school Icons/danger.svg',
             ),
             const SizedBox(height: 12),
             ...overdueGroups.map((group) => Padding(
@@ -802,7 +793,7 @@ class HomeScreen extends ConsumerWidget {
               title: 'Upcoming Due',
               totalAmount: totalDueSoon,
               color: AppColors.warning,
-              icon: Icons.schedule_rounded,
+              svgPath: 'assets/school Icons/clock.svg',
             ),
             const SizedBox(height: 12),
             ...dueSoonGroups.map((group) => Padding(
@@ -819,7 +810,8 @@ class HomeScreen extends ConsumerWidget {
     required String title,
     required double totalAmount,
     required Color color,
-    required IconData icon,
+    IconData? icon,
+    String? svgPath,
   }) {
     return Row(
       children: [
@@ -830,7 +822,16 @@ class HomeScreen extends ConsumerWidget {
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 16, color: color),
+          child: Center(
+            child: svgPath != null
+                ? SvgPicture.asset(
+                    svgPath,
+                    width: 16,
+                    height: 16,
+                    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                  )
+                : Icon(icon, size: 16, color: color),
+          ),
         ),
         const SizedBox(width: 10),
         Text(
@@ -870,27 +871,26 @@ class HomeScreen extends ConsumerWidget {
     }
 
     // Get icon based on group name
-    IconData groupIcon = Icons.receipt_rounded;
+    String? groupSvgPath;
+    IconData? groupIcon;
     Color groupBg = AppColors.cardPurple;
     Color groupIconColor = AppColors.cardPurpleDark;
 
     final lowerName = group.groupName.toLowerCase();
     if (lowerName.contains('school') || lowerName.contains('tuition')) {
-      groupIcon = Icons.school_rounded;
+      groupSvgPath = 'assets/school Icons/book.svg';
       groupBg = AppColors.cardGreen;
       groupIconColor = AppColors.cardGreenDark;
     } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
-      groupIcon = Icons.directions_bus_rounded;
-      groupBg = AppColors.cardOrange;
-      groupIconColor = AppColors.cardOrangeDark;
-    } else if (lowerName.contains('hostel')) {
-      groupIcon = Icons.hotel_rounded;
+      groupSvgPath = 'assets/icons/bus-solid.svg';
       groupBg = AppColors.cardBlue;
       groupIconColor = AppColors.cardBlueDark;
     } else if (lowerName.contains('exam')) {
-      groupIcon = Icons.assignment_rounded;
+      groupSvgPath = 'assets/school Icons/book.svg';
       groupBg = AppColors.cardOrange;
       groupIconColor = AppColors.cardOrangeDark;
+    } else {
+      groupIcon = Icons.receipt_rounded;
     }
 
     return GestureDetector(
@@ -921,7 +921,16 @@ class HomeScreen extends ConsumerWidget {
                 color: groupBg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(groupIcon, size: 22, color: groupIconColor),
+              child: Center(
+                child: groupSvgPath != null
+                    ? SvgPicture.asset(
+                        groupSvgPath,
+                        width: 22,
+                        height: 22,
+                        colorFilter: ColorFilter.mode(groupIconColor, BlendMode.srcIn),
+                      )
+                    : Icon(groupIcon, size: 22, color: groupIconColor),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(

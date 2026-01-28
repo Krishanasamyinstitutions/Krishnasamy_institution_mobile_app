@@ -411,8 +411,9 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     final lowerType = feeType.toLowerCase();
     Color bgColor;
     Color iconColor;
-    IconData iconData;
+    IconData? iconData;
 
+    String? svgPath;
     if (!isPaid) {
       bgColor = AppColors.cardRose;
       iconColor = AppColors.cardRoseDark;
@@ -420,15 +421,15 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     } else if (lowerType.contains('bus') || lowerType.contains('transport')) {
       bgColor = AppColors.cardGreen;
       iconColor = AppColors.cardGreenDark;
-      iconData = Icons.directions_bus_rounded;
-    } else if (lowerType.contains('tuition') || lowerType.contains('term')) {
+      svgPath = 'assets/icons/bus-solid.svg';
+    } else if (lowerType.contains('tuition') || lowerType.contains('term') || lowerType.contains('school')) {
       bgColor = AppColors.cardPurple;
       iconColor = AppColors.cardPurpleDark;
-      iconData = Icons.school_rounded;
+      svgPath = 'assets/school Icons/book.svg';
     } else if (lowerType.contains('exam')) {
       bgColor = AppColors.cardCyan;
       iconColor = AppColors.cardCyanDark;
-      iconData = Icons.assignment_rounded;
+      svgPath = 'assets/school Icons/book.svg';
     } else {
       bgColor = AppColors.cardBlue;
       iconColor = AppColors.cardBlueDark;
@@ -442,7 +443,16 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
         color: bgColor,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(iconData, size: 24, color: iconColor),
+      child: Center(
+        child: svgPath != null
+            ? SvgPicture.asset(
+                svgPath,
+                width: 24,
+                height: 24,
+                colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
+              )
+            : Icon(iconData!, size: 24, color: iconColor),
+      ),
     );
   }
 

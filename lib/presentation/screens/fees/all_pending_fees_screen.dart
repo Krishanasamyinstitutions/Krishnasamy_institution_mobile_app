@@ -348,10 +348,14 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.school_rounded,
-                        size: 14,
-                        color: Colors.white,
+                      SvgPicture.asset(
+                        'assets/school Icons/book.svg',
+                        width: 14,
+                        height: 14,
+                        colorFilter: const ColorFilter.mode(
+                          Colors.white,
+                          BlendMode.srcIn,
+                        ),
                       ),
                       const SizedBox(width: 4),
                       Text(

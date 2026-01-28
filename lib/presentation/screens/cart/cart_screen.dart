@@ -386,11 +386,26 @@ class CartScreen extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        categoryStyle['icon'] as IconData,
-                        size: 14,
-                        color: Colors.white,
-                      ),
+                      if (isBus)
+                        SvgPicture.asset(
+                          'assets/icons/bus-solid.svg',
+                          width: 14,
+                          height: 14,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        )
+                      else
+                        SvgPicture.asset(
+                          'assets/school Icons/book.svg',
+                          width: 14,
+                          height: 14,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        ),
                       const SizedBox(width: 6),
                       Text(
                         category,
