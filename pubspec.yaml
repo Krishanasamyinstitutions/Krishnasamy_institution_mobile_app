@@ -71,6 +71,7 @@ flutter:
     - assets/Onboard and Welcome Screen Gif/
     - assets/Authendication gif/
     - assets/nav bar icons/
+    - assets/school Icons/
 
   fonts:
     - family: Inter
