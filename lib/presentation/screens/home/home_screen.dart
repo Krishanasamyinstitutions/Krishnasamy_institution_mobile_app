@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/fee_model.dart';
@@ -11,6 +12,8 @@ import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/institution_provider.dart';
+import '../../providers/payment_provider.dart';
+import '../../providers/notification_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -18,9 +21,11 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedStudent = ref.watch(selectedStudentProvider);
+    ref.watch(cartRestorerProvider); // Restore cart from DB on startup
     final feeSummaryAsync = ref.watch(feeSummaryProvider);
     final feesByGroup = ref.watch(pendingFeesByGroupProvider);
     final cartItemCount = ref.watch(cartItemCountProvider);
+    final notificationCount = ref.watch(notificationCountProvider);
     final overdueGroups = ref.watch(overdueByGroupProvider);
     final dueSoonGroups = ref.watch(dueSoonByGroupProvider);
     final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
@@ -50,7 +55,7 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _buildHeader(context, selectedStudent, cartItemCount),
+                      child: _buildHeader(context, selectedStudent, cartItemCount, notificationCount),
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -103,7 +108,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, dynamic selectedStudent, int cartItemCount) {
+  Widget _buildHeader(BuildContext context, dynamic selectedStudent, int cartItemCount, int notificationCount) {
     final studentName = selectedStudent?.name ?? 'Student';
     final className = selectedStudent?.className ?? 'N/A';
     final admissionNumber = selectedStudent?.admissionNumber ?? 'N/A';
@@ -117,31 +122,42 @@ class HomeScreen extends ConsumerWidget {
           child: Container(
             width: 44,
             height: 44,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [AppColors.primary, AppColors.primary600],
               ),
               shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
-            child: Center(
-              child: Text(
-                _getInitials(studentName),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+            clipBehavior: Clip.antiAlias,
+            child: (selectedStudent?.photoUrl != null && selectedStudent!.photoUrl!.trim().isNotEmpty)
+                ? CachedNetworkImage(
+                    imageUrl: selectedStudent.photoUrl!,
+                    fit: BoxFit.cover,
+                    width: 44,
+                    height: 44,
+                    errorWidget: (context, url, error) => Center(
+                      child: Text(
+                        _getInitials(studentName),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  )
+                : Center(
+                    child: Text(
+                      _getInitials(studentName),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
           ),
         ),
         const SizedBox(width: 12),
@@ -254,7 +270,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: 10),
-        // Notification Icon - Dark theme (same as View Details button)
+        // Notification Icon - Dark theme with badge
         GestureDetector(
           onTap: () => context.go(Routes.notifications),
           child: Container(
@@ -264,16 +280,43 @@ class HomeScreen extends ConsumerWidget {
               color: Color(0xFF1F2937),
               shape: BoxShape.circle,
             ),
-            child: Center(
-              child: SvgPicture.asset(
-                'assets/images/notification.svg',
-                width: 20,
-                height: 20,
-                colorFilter: const ColorFilter.mode(
-                  Colors.white,
-                  BlendMode.srcIn,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                SvgPicture.asset(
+                  'assets/images/notification.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
                 ),
-              ),
+                if (notificationCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                      ),
+                      child: Text(
+                        notificationCount > 9 ? '9+' : '$notificationCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),

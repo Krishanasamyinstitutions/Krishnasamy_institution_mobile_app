@@ -73,6 +73,12 @@ class CartNotifier extends StateNotifier<CartState> {
     }
   }
 
+  /// Restore cart from database (on app restart or student switch)
+  void restoreCart(List<FeeModel> items, int studentId) {
+    if (items.isEmpty) return;
+    state = CartState(items: items, studentId: studentId);
+  }
+
   /// Clear all items from cart
   void clearCart() {
     state = const CartState();

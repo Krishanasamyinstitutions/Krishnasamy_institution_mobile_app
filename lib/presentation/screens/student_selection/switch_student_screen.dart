@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/student_model.dart';
@@ -185,19 +186,43 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
               width: 52,
               height: 52,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : AppColors.cardGreen,
+                gradient: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
+                    ? null
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColors.primary, AppColors.primary600],
+                      ),
                 shape: BoxShape.circle,
               ),
-              child: Center(
-                child: Text(
-                  _getInitials(student.name),
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: isSelected ? AppColors.primary : AppColors.cardGreenDark,
-                  ),
-                ),
-              ),
+              clipBehavior: Clip.antiAlias,
+              child: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
+                  ? CachedNetworkImage(
+                      imageUrl: student.photoUrl!,
+                      fit: BoxFit.cover,
+                      width: 52,
+                      height: 52,
+                      errorWidget: (context, url, error) => Center(
+                        child: Text(
+                          _getInitials(student.name),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        _getInitials(student.name),
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
             ),
             const SizedBox(width: 14),
             // Student Info

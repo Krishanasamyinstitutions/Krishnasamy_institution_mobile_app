@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/student_model.dart';
 import '../../data/models/institution_model.dart';
 import 'auth_provider.dart' show supabaseClientProvider, parentAuthStateProvider;
+import 'cart_provider.dart';
 
 /// Set to false to use Supabase data, true for dummy data
 const bool useDummyData = false;
@@ -63,6 +64,13 @@ class SelectedStudentNotifier extends StateNotifier<StudentModel?> {
 
   /// Select a student
   Future<void> selectStudent(StudentModel student) async {
+    // Clear cart when switching students
+    final currentStudentId = state?.stuId;
+    if (currentStudentId != null && currentStudentId != student.stuId) {
+      _ref.read(cartProvider.notifier).clearCart();
+      debugPrint('Cart cleared for student switch');
+    }
+
     state = student;
     await _saveStudent(student.stuId);
     debugPrint('Selected student: ${student.name}');
