@@ -7,6 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/payment_provider.dart';
 
 class CartScreen extends ConsumerWidget {
   final bool isStandalone;
@@ -15,7 +16,10 @@ class CartScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final cartRestorerState = ref.watch(cartRestorerProvider);
     final cartState = ref.watch(cartProvider);
+    // Show loading only while restoring from DB and cart is still empty
+    final isRestoring = cartRestorerState.isLoading && cartState.isEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
@@ -49,9 +53,11 @@ class CartScreen extends ConsumerWidget {
             ),
             // Content
             Expanded(
-              child: cartState.isEmpty
-                  ? _buildEmptyState(context)
-                  : _buildCartContent(context, ref, cartState),
+              child: isRestoring
+                  ? const Center(child: CircularProgressIndicator())
+                  : cartState.isEmpty
+                      ? _buildEmptyState(context)
+                      : _buildCartContent(context, ref, cartState),
             ),
             // Bottom payment bar
             if (cartState.isNotEmpty)
@@ -147,6 +153,7 @@ class CartScreen extends ConsumerWidget {
   }
 
   void _showClearCartDialog(BuildContext context, WidgetRef ref) {
+    final cartState = ref.read(cartProvider);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -159,9 +166,15 @@ class CartScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              ref.read(cartProvider.notifier).clearCart();
+            onPressed: () async {
               Navigator.pop(context);
+              // Clear from database
+              await clearCartFromDatabase(
+                ref: ref,
+                studentId: cartState.studentId,
+              );
+              // Clear in-memory cart
+              ref.read(cartProvider.notifier).clearCart();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
@@ -270,6 +283,8 @@ class CartScreen extends ConsumerWidget {
         category = 'Tuition Fees';
       } else if (_isHostelFee(fee.demfeetype)) {
         category = 'Hostel Fees';
+      } else if (_isExamFee(fee.demfeetype)) {
+        category = 'Exam Fees';
       } else {
         category = '${fee.demfeeterm} (${fee.demfeeyear})';
       }
@@ -277,20 +292,13 @@ class CartScreen extends ConsumerWidget {
       feesByCategory[category]!.add(fee);
     }
 
-    // Sort categories: Term fees first, then Tuition, Hostel, Bus
+    // Preserve selection order: categories appear in the order their first fee was added to cart
     final sortedCategories = feesByCategory.keys.toList()
       ..sort((a, b) {
-        // Define category order: regular terms first, then special categories
-        int getCategoryOrder(String cat) {
-          if (cat == 'Tuition Fees') return 100;
-          if (cat == 'Hostel Fees') return 101;
-          if (cat == 'Bus Fees') return 102;
-          return 0; // Term fees first
-        }
-        final orderA = getCategoryOrder(a);
-        final orderB = getCategoryOrder(b);
-        if (orderA != orderB) return orderA.compareTo(orderB);
-        return a.compareTo(b);
+        // Find the earliest cart index for each category
+        final aFirstIndex = cartState.items.indexWhere((f) => feesByCategory[a]!.contains(f));
+        final bFirstIndex = cartState.items.indexWhere((f) => feesByCategory[b]!.contains(f));
+        return aFirstIndex.compareTo(bFirstIndex);
       });
 
     return ListView(
@@ -325,6 +333,11 @@ class CartScreen extends ConsumerWidget {
     return lowerType.contains('hostel');
   }
 
+  bool _isExamFee(String feeType) {
+    final lowerType = feeType.toLowerCase();
+    return lowerType.contains('exam');
+  }
+
   Map<String, dynamic> _getCategoryStyle(String category) {
     if (category == 'Bus Fees') {
       return {
@@ -342,6 +355,12 @@ class CartScreen extends ConsumerWidget {
       return {
         'color': const Color(0xFF3B82F6),
         'icon': Icons.hotel_rounded,
+        'showMonth': true,
+      };
+    } else if (category == 'Exam Fees') {
+      return {
+        'color': const Color(0xFFEF4444),
+        'icon': Icons.assignment_rounded,
         'showMonth': true,
       };
     } else {
@@ -386,26 +405,11 @@ class CartScreen extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isBus)
-                        SvgPicture.asset(
-                          'assets/icons/bus-solid.svg',
-                          width: 14,
-                          height: 14,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
-                            BlendMode.srcIn,
-                          ),
-                        )
-                      else
-                        SvgPicture.asset(
-                          'assets/school Icons/book.svg',
-                          width: 14,
-                          height: 14,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
-                            BlendMode.srcIn,
-                          ),
-                        ),
+                      Icon(
+                        categoryStyle['icon'] as IconData,
+                        size: 14,
+                        color: Colors.white,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         category,
@@ -534,17 +538,39 @@ class CartScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
+              final cartState = ref.read(cartProvider);
+              // Remove from in-memory cart
               for (final fee in fees) {
                 ref.read(cartProvider.notifier).removeFee(fee.id);
               }
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('$category removed'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+
+              // Sync with database
+              final remainingItems = ref.read(cartProvider).items;
+              if (remainingItems.isEmpty) {
+                // All items removed - delete cart from DB
+                await clearCartFromDatabase(
+                  ref: ref,
+                  studentId: cartState.studentId,
+                );
+              } else {
+                // Still has items - re-save with remaining items
+                await saveCartToDatabase(
+                  ref: ref,
+                  items: remainingItems,
+                  studentId: cartState.studentId,
+                );
+              }
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('$category removed'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
@@ -695,12 +721,151 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  void _handleProceedToPayment(BuildContext context, WidgetRef ref) {
-    // TODO: Integrate with payment gateway
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Payment gateway integration coming soon!'),
-        behavior: SnackBarBehavior.floating,
+  Future<void> _handleProceedToPayment(BuildContext context, WidgetRef ref) async {
+    final cartState = ref.read(cartProvider);
+    if (cartState.isEmpty) return;
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    // Step 1-2: Save cart to database
+    final carId = await saveCartToDatabase(
+      ref: ref,
+      items: cartState.items,
+      studentId: cartState.studentId,
+    );
+
+    if (carId == null) {
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save cart: ${lastCartSaveError ?? "Unknown error"}'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Step 3: Initiate payment (pass cart data directly to avoid re-fetching)
+    final payId = await initiatePayment(
+      ref: ref,
+      carId: carId,
+      cartItems: cartState.items,
+      cartTotal: cartState.totalAmount,
+    );
+
+    if (payId == null) {
+      if (!context.mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to initiate payment: ${lastPaymentError ?? "Unknown error"}'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+    Navigator.pop(context); // dismiss loading
+
+    // TODO: Replace with actual payment gateway integration
+    // For now, simulate successful payment
+    _showPaymentSimulationDialog(context, ref, payId, carId, cartState.items);
+  }
+
+  /// Temporary: Simulate payment gateway response for testing
+  void _showPaymentSimulationDialog(BuildContext context, WidgetRef ref, int payId, int carId, List<FeeModel> items) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Payment Gateway'),
+        content: Text('Payment initiated (ID: $payId)\n\nSimulate payment result:'),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              // Show loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator()),
+              );
+
+              await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
+
+              if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Payment failed. Cart is still available.'),
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            },
+            child: const Text('Fail', style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              // Show loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(child: CircularProgressIndicator()),
+              );
+
+              final success = await handlePaymentSuccess(
+                ref: ref,
+                payId: payId,
+                carId: carId,
+                paymethod: 'UPI',
+                payreference: 'SIM${DateTime.now().millisecondsSinceEpoch}',
+                items: items,
+              );
+
+              if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
+
+              if (success) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Payment successful! Fees updated.'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                // Navigate back to home
+                if (context.mounted) {
+                  context.go(Routes.home);
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Payment processing error.'),
+                    behavior: SnackBarBehavior.floating,
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Success'),
+          ),
+        ],
       ),
     );
   }

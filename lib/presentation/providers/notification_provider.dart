@@ -1,105 +1,138 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 import '../../data/models/notification_model.dart';
 import 'auth_provider.dart';
 import 'student_provider.dart';
 
-/// Mock notifications state provider for development/testing
-/// This persists the read state during the app session
-class MockNotificationsNotifier extends StateNotifier<List<NotificationModel>> {
-  MockNotificationsNotifier() : super(_initialMockNotifications);
+const _readNotificationsKey = 'read_notification_ids';
 
-  static List<NotificationModel> get _initialMockNotifications => [
-    NotificationModel(
-      id: '1',
-      schoolId: 'school-1',
-      parentId: 'parent-1',
-      title: 'Upcoming Fee Due',
-      message: 'Term 2 tuition fee of ₹12,000 is due by 20 July 2025. Avoid late charges by paying on time.',
-      type: NotificationType.feeReminder,
-      isRead: true,
-      createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-    ),
-    NotificationModel(
-      id: '2',
-      schoolId: 'school-1',
-      parentId: 'parent-1',
-      title: 'Payment Successful',
-      message: 'Your payment of ₹4,500 for Term 1 was received on 10 July 2025. Receipt is now available to download.',
-      type: NotificationType.paymentSuccess,
-      isRead: true,
-      createdAt: DateTime.now().subtract(const Duration(hours: 10)),
-    ),
-    NotificationModel(
-      id: '3',
-      schoolId: 'school-1',
-      parentId: 'parent-1',
-      title: 'Late Fee Applied',
-      message: 'A late fee of ₹200 has been added to your Transport Fee for Term 1. Please clear dues to avoid further penalties.',
-      type: NotificationType.alert,
-      isRead: false,
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-    ),
-    NotificationModel(
-      id: '4',
-      schoolId: 'school-1',
-      parentId: 'parent-1',
-      title: 'Parent-Teacher Meeting',
-      message: 'PTM for Class 6 will be held on 25 July 2025 at 10:00 AM in the school auditorium. Attendance is encouraged.',
-      type: NotificationType.announcement,
-      isRead: false,
-      createdAt: DateTime(2025, 7, 7, 18, 0),
-    ),
-  ];
-
-  void markAsRead(String notificationId) {
-    state = [
-      for (final notification in state)
-        if (notification.id == notificationId)
-          notification.copyWith(isRead: true)
-        else
-          notification
-    ];
+/// Tracks which notification IDs have been read (persisted locally)
+class ReadNotificationsNotifier extends StateNotifier<Set<String>> {
+  ReadNotificationsNotifier() : super({}) {
+    _load();
   }
 
-  void markAllAsRead() {
-    state = [
-      for (final notification in state)
-        notification.copyWith(isRead: true)
-    ];
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList(_readNotificationsKey) ?? [];
+    state = ids.toSet();
+  }
+
+  Future<void> _save() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_readNotificationsKey, state.toList());
+  }
+
+  Future<void> markAsRead(String id) async {
+    state = {...state, id};
+    await _save();
+  }
+
+  Future<void> markAllAsRead(List<String> ids) async {
+    state = {...state, ...ids};
+    await _save();
   }
 }
 
-final mockNotificationsProvider =
-    StateNotifierProvider<MockNotificationsNotifier, List<NotificationModel>>(
-        (ref) => MockNotificationsNotifier());
+final readNotificationsProvider =
+    StateNotifierProvider<ReadNotificationsNotifier, Set<String>>(
+        (ref) => ReadNotificationsNotifier());
+
+/// Converts a payment record from Supabase into a NotificationModel
+NotificationModel _paymentToNotification(
+    Map<String, dynamic> payment, Set<String> readIds) {
+  final payId = payment['pay_id'].toString();
+  final notificationId = 'pay_$payId';
+  final amount = (payment['transtotalamount'] as num?)?.toDouble() ?? 0;
+  final status = payment['paystatus'] as String?;
+  final paydate = payment['paydate'] != null
+      ? DateTime.parse(payment['paydate'])
+      : DateTime.parse(payment['createdat']);
+  final paynumber = payment['paynumber'] ?? 'PAY${payId.padLeft(6, '0')}';
+  final formattedAmount = NumberFormat.currency(
+    locale: 'en_IN',
+    symbol: '₹',
+    decimalDigits: 0,
+  ).format(amount);
+
+  String title;
+  String message;
+  NotificationType type;
+
+  switch (status) {
+    case 'C':
+      title = 'Payment Successful';
+      message =
+          'Your payment of $formattedAmount ($paynumber) was completed successfully.';
+      type = NotificationType.paymentSuccess;
+      break;
+    case 'F':
+      title = 'Payment Failed';
+      message =
+          'Your payment of $formattedAmount ($paynumber) has failed. Please try again.';
+      type = NotificationType.paymentFailed;
+      break;
+    case 'R':
+      title = 'Payment Refunded';
+      message =
+          'Your payment of $formattedAmount ($paynumber) has been refunded.';
+      type = NotificationType.alert;
+      break;
+    default:
+      title = 'Payment Initiated';
+      message =
+          'Your payment of $formattedAmount ($paynumber) has been initiated.';
+      type = NotificationType.general;
+      break;
+  }
+
+  return NotificationModel(
+    id: notificationId,
+    schoolId: payment['ins_id']?.toString() ?? '',
+    parentId: '',
+    title: title,
+    message: message,
+    type: type,
+    isRead: readIds.contains(notificationId),
+    createdAt: paydate,
+  );
+}
 
 final notificationsProvider =
     FutureProvider<List<NotificationModel>>((ref) async {
-  // Use dummy data for development/testing
-  if (useDummyData) {
-    await Future.delayed(const Duration(milliseconds: 300));
-    // Return mock notifications from the persistent provider
-    return ref.watch(mockNotificationsProvider);
+  List<NotificationModel> notifications = [];
+  final readIds = ref.watch(readNotificationsProvider);
+
+  try {
+    final client = ref.watch(supabaseClientProvider);
+    final selectedStudent = ref.watch(selectedStudentProvider);
+
+    if (selectedStudent != null) {
+      // Fetch payments for the selected student
+      final response = await client
+          .from('payment')
+          .select()
+          .eq('stu_id', selectedStudent.stuId)
+          .eq('activestatus', 1)
+          .order('createdat', ascending: false)
+          .limit(50);
+
+      notifications = (response as List<dynamic>)
+          .map((e) =>
+              _paymentToNotification(e as Map<String, dynamic>, readIds))
+          .toList();
+    }
+  } catch (_) {
+    // payment table query failed - return empty
   }
 
-  final client = ref.watch(supabaseClientProvider);
-  final user = ref.watch(currentUserProvider);
-
-  if (user == null) return [];
-
-  final response = await client
-      .from('notifications')
-      .select()
-      .eq('parent_id', user.id)
-      .order('created_at', ascending: false);
-
-  return (response as List<dynamic>)
-      .map((e) => NotificationModel.fromJson(e))
-      .toList();
+  return notifications;
 });
 
-final unreadNotificationsCountProvider = Provider<int>((ref) {
+/// Unread notification count for badge display
+final notificationCountProvider = Provider<int>((ref) {
   final notificationsAsync = ref.watch(notificationsProvider);
   return notificationsAsync.maybeWhen(
     data: (notifications) => notifications.where((n) => !n.isRead).length,
@@ -108,68 +141,28 @@ final unreadNotificationsCountProvider = Provider<int>((ref) {
 });
 
 class NotificationNotifier extends StateNotifier<AsyncValue<void>> {
-  final SupabaseClient _client;
   final Ref _ref;
 
-  NotificationNotifier(this._client, this._ref)
-      : super(const AsyncValue.data(null));
+  NotificationNotifier(this._ref) : super(const AsyncValue.data(null));
 
   Future<void> markAsRead(String notificationId) async {
-    state = const AsyncValue.loading();
-    try {
-      // For mock data, update the mock notifications provider
-      if (useDummyData) {
-        _ref.read(mockNotificationsProvider.notifier).markAsRead(notificationId);
-        state = const AsyncValue.data(null);
-        return;
-      }
-
-      await _client.from('notifications').update({
-        'is_read': true,
-        'read_at': DateTime.now().toIso8601String(),
-      }).eq('id', notificationId);
-
-      _ref.invalidate(notificationsProvider);
-      state = const AsyncValue.data(null);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    await _ref
+        .read(readNotificationsProvider.notifier)
+        .markAsRead(notificationId);
+    state = const AsyncValue.data(null);
   }
 
   Future<void> markAllAsRead() async {
-    state = const AsyncValue.loading();
-    try {
-      // For mock data, update the mock notifications provider
-      if (useDummyData) {
-        _ref.read(mockNotificationsProvider.notifier).markAllAsRead();
-        state = const AsyncValue.data(null);
-        return;
-      }
-
-      final user = _ref.read(currentUserProvider);
-      if (user == null) return;
-
-      await _client
-          .from('notifications')
-          .update({
-            'is_read': true,
-            'read_at': DateTime.now().toIso8601String(),
-          })
-          .eq('parent_id', user.id)
-          .eq('is_read', false);
-
-      _ref.invalidate(notificationsProvider);
-      state = const AsyncValue.data(null);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    final notifications = _ref.read(notificationsProvider).valueOrNull ?? [];
+    final allIds = notifications.map((n) => n.id).toList();
+    await _ref
+        .read(readNotificationsProvider.notifier)
+        .markAllAsRead(allIds);
+    state = const AsyncValue.data(null);
   }
 }
 
 final notificationActionsProvider =
     StateNotifierProvider<NotificationNotifier, AsyncValue<void>>((ref) {
-  return NotificationNotifier(
-    ref.watch(supabaseClientProvider),
-    ref,
-  );
+  return NotificationNotifier(ref);
 });
