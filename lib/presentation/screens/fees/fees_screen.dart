@@ -10,6 +10,7 @@ import '../../../data/models/fee_model.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 import '../../widgets/student_avatar.dart';
@@ -200,6 +201,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
 
   Widget _buildHeader(BuildContext context) {
     final cartItemCount = ref.watch(cartItemCountProvider);
+    final notificationCount = ref.watch(notificationCountProvider);
 
     return Row(
       children: [
@@ -281,7 +283,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
           ),
         ),
         const SizedBox(width: 10),
-        // Notification Icon - Dark theme
+        // Notification Icon - Dark theme with badge
         GestureDetector(
           onTap: () => context.go(Routes.notifications),
           child: Container(
@@ -291,16 +293,43 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
               color: Color(0xFF1F2937),
               shape: BoxShape.circle,
             ),
-            child: Center(
-              child: SvgPicture.asset(
-                'assets/images/notification.svg',
-                width: 20,
-                height: 20,
-                colorFilter: const ColorFilter.mode(
-                  Colors.white,
-                  BlendMode.srcIn,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                SvgPicture.asset(
+                  'assets/images/notification.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
                 ),
-              ),
+                if (notificationCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                      ),
+                      child: Text(
+                        notificationCount > 9 ? '9+' : '$notificationCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
