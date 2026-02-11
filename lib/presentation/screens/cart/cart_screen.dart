@@ -356,6 +356,7 @@ class CartScreen extends ConsumerWidget {
   Widget _buildCategoryCard(BuildContext context, WidgetRef ref, String category, List<FeeModel> fees) {
     final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
     final categoryStyle = _getCategoryStyle(category);
+    final isBus = category.toLowerCase().contains('bus') || category.toLowerCase().contains('transport');
 
     return Container(
       decoration: BoxDecoration(
@@ -388,7 +389,7 @@ class CartScreen extends ConsumerWidget {
                     children: [
                       if (isBus)
                         SvgPicture.asset(
-                          'assets/icons/bus-solid.svg',
+                          'assets/school Icons/van.svg',
                           width: 14,
                           height: 14,
                           colorFilter: const ColorFilter.mode(
@@ -398,7 +399,7 @@ class CartScreen extends ConsumerWidget {
                         )
                       else
                         SvgPicture.asset(
-                          'assets/school Icons/book.svg',
+                          'assets/school Icons/school.svg',
                           width: 14,
                           height: 14,
                           colorFilter: const ColorFilter.mode(

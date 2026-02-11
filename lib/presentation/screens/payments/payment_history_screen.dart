@@ -9,7 +9,6 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../widgets/student_avatar.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
   final String? initialTab;
@@ -421,15 +420,15 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     } else if (lowerType.contains('bus') || lowerType.contains('transport')) {
       bgColor = AppColors.cardGreen;
       iconColor = AppColors.cardGreenDark;
-      svgPath = 'assets/icons/bus-solid.svg';
+      svgPath = 'assets/school Icons/van.svg';
     } else if (lowerType.contains('tuition') || lowerType.contains('term') || lowerType.contains('school')) {
       bgColor = AppColors.cardPurple;
       iconColor = AppColors.cardPurpleDark;
-      svgPath = 'assets/school Icons/book.svg';
+      svgPath = 'assets/school Icons/school.svg';
     } else if (lowerType.contains('exam')) {
-      bgColor = AppColors.cardCyan;
-      iconColor = AppColors.cardCyanDark;
-      svgPath = 'assets/school Icons/book.svg';
+      bgColor = const Color(0xFFCFFAFE);
+      iconColor = const Color(0xFF06B6D4);
+      svgPath = 'assets/school Icons/exam.svg';
     } else {
       bgColor = AppColors.cardBlue;
       iconColor = AppColors.cardBlueDark;

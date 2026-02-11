@@ -456,10 +456,15 @@ class HomeScreen extends ConsumerWidget {
                 height: 56,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    Icons.school_rounded,
-                    size: 28,
-                    color: AppColors.cardBlueDark,
+                  return Center(
+                    child: Text(
+                      schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
                   );
                 },
               ),
@@ -511,11 +516,15 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildSpendingSection(BuildContext context, Map<String, double> feesByGroup) {
     final categories = [
-      {'name': 'School Fees', 'svgPath': 'assets/school Icons/book.svg', 'color': const Color(0xFF22C55E), 'iconBgColor': const Color(0xFFDCFCE7)},
-      {'name': 'Van Fees', 'svgPath': 'assets/icons/bus-solid.svg', 'color': const Color(0xFF3B82F6), 'iconBgColor': const Color(0xFFDBEAFE)},
-      {'name': 'Exam Fees', 'svgPath': 'assets/school Icons/book.svg', 'color': AppColors.cardOrange, 'iconBgColor': const Color(0xFFFEF3C7)},
+      {'name': 'School Fees', 'svgPath': 'assets/school Icons/school.svg', 'color': const Color(0xFF22C55E), 'iconBgColor': const Color(0xFFDCFCE7)},
+      {'name': 'Van Fees', 'svgPath': 'assets/school Icons/van.svg', 'color': const Color(0xFFF59E0B), 'iconBgColor': const Color(0xFFFEF3C7)},
+      {'name': 'Exam Fees', 'svgPath': 'assets/school Icons/exam.svg', 'color': const Color(0xFF06B6D4), 'iconBgColor': const Color(0xFFCFFAFE)},
       {'name': 'Other', 'icon': Icons.more_horiz_rounded, 'color': AppColors.cardPurple, 'iconBgColor': const Color(0xFFF3E8FF)},
     ];
+
+    // Sort fee groups by amount in descending order
+    final sortedEntries = feesByGroup.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     return Column(
       children: [
@@ -545,10 +554,11 @@ class HomeScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 150,
+          height: 165,
           child: ListView.separated(
+            clipBehavior: Clip.none,
             scrollDirection: Axis.horizontal,
-            itemCount: feesByGroup.isEmpty ? categories.length : feesByGroup.length,
+            itemCount: feesByGroup.isEmpty ? categories.length : sortedEntries.length,
             separatorBuilder: (context, index) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               if (feesByGroup.isEmpty) {
@@ -566,12 +576,12 @@ class HomeScreen extends ConsumerWidget {
                 );
               }
 
-              final entry = feesByGroup.entries.elementAt(index);
+              final entry = sortedEntries[index];
               final iconData = _getIconForFeeGroup(entry.key);
               return _buildSpendingCard(
                 context: context,
-                icon: cat['icon'] as IconData?,
-                svgPath: cat['svgPath'] as String?,
+                icon: iconData['icon'] as IconData?,
+                svgPath: iconData['svgPath'] as String?,
                 label: _toTitleCase(entry.key),
                 groupName: entry.key,
                 amount: entry.value,
@@ -878,17 +888,21 @@ class HomeScreen extends ConsumerWidget {
 
     final lowerName = group.groupName.toLowerCase();
     if (lowerName.contains('school') || lowerName.contains('tuition')) {
-      groupSvgPath = 'assets/school Icons/book.svg';
+      groupSvgPath = 'assets/school Icons/school.svg';
       groupBg = AppColors.cardGreen;
       groupIconColor = AppColors.cardGreenDark;
     } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
-      groupSvgPath = 'assets/icons/bus-solid.svg';
+      groupSvgPath = 'assets/school Icons/van.svg';
       groupBg = AppColors.cardBlue;
       groupIconColor = AppColors.cardBlueDark;
+    } else if (lowerName.contains('hostel')) {
+      groupIcon = Icons.hotel_rounded;
+      groupBg = const Color(0xFFDBEAFE);
+      groupIconColor = const Color(0xFF3B82F6);
     } else if (lowerName.contains('exam')) {
-      groupSvgPath = 'assets/school Icons/book.svg';
-      groupBg = AppColors.cardOrange;
-      groupIconColor = AppColors.cardOrangeDark;
+      groupSvgPath = 'assets/school Icons/exam.svg';
+      groupBg = const Color(0xFFCFFAFE);
+      groupIconColor = const Color(0xFF06B6D4);
     } else {
       groupIcon = Icons.receipt_rounded;
     }
@@ -1068,13 +1082,13 @@ class HomeScreen extends ConsumerWidget {
 
     if (lowerName.contains('school') || lowerName.contains('tuition')) {
       return {
-        'icon': Icons.school_rounded,
+        'svgPath': 'assets/school Icons/school.svg',
         'color': const Color(0xFF22C55E),
         'iconBgColor': const Color(0xFFDCFCE7),
       };
     } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
       return {
-        'icon': Icons.directions_bus_rounded,
+        'svgPath': 'assets/school Icons/van.svg',
         'color': const Color(0xFFF59E0B),
         'iconBgColor': const Color(0xFFFEF3C7),
       };
@@ -1086,9 +1100,9 @@ class HomeScreen extends ConsumerWidget {
       };
     } else if (lowerName.contains('exam') || lowerName.contains('test')) {
       return {
-        'icon': Icons.assignment_rounded,
-        'color': AppColors.cardOrange,
-        'iconBgColor': const Color(0xFFFEF3C7),
+        'svgPath': 'assets/school Icons/exam.svg',
+        'color': const Color(0xFF06B6D4),
+        'iconBgColor': const Color(0xFFCFFAFE),
       };
     } else {
       return {

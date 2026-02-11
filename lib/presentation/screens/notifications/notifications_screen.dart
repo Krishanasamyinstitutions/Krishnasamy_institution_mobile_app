@@ -8,7 +8,6 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../data/models/notification_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../widgets/student_avatar.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
