@@ -2,9 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:printing/printing.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/receipt_pdf_generator.dart';
+import '../../../data/models/fee_model.dart';
 import '../../../data/models/payment_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
 
@@ -25,26 +31,17 @@ class TransactionDetailsScreen extends ConsumerWidget {
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => Center(child: Text('Error: $error')),
           data: (payment) {
-            // Use mock data if payment is null (for preview)
-            final displayPayment = payment ?? PaymentModel(
-              payId: 9826,
-              insId: 1,
-              inscode: 'INS001',
-              paydate: DateTime(2025, 7, 10, 18, 0),
-              paystatus: 'C',
-              paymethod: 'VISA**** 9918',
-              createdat: DateTime(2025, 7, 10, 18, 0),
-            );
-            const mockAmount = 15000.0;
-            const mockFeeName = 'Tuition Fee - Term 1';
+            if (payment == null) {
+              return const Center(child: Text('Payment not found'));
+            }
 
-            final isPaid = displayPayment.status == PaymentStatus.success;
+            final isPaid = payment.status == PaymentStatus.success;
 
             return Column(
               children: [
                 const SizedBox(height: 8),
                 // Header
-                _buildHeader(context),
+                _buildHeader(context, ref),
                 const SizedBox(height: 12),
                 // Main Content
                 Expanded(
@@ -55,16 +52,16 @@ class TransactionDetailsScreen extends ConsumerWidget {
                         // Transaction Card
                         _buildTransactionCard(
                           context,
-                          displayPayment,
-                          selectedStudent?.name ?? 'Robert',
-                          selectedStudent?.className ?? '10-B',
-                          mockAmount,
-                          mockFeeName,
+                          payment,
+                          selectedStudent?.name ?? '',
+                          selectedStudent?.className ?? '',
+                          payment.transtotalamount,
+                          payment.yrlabel ?? 'Fee Payment',
                           isPaid,
                         ),
                         const SizedBox(height: 24),
                         // Action Buttons
-                        _buildActionButtons(context, isPaid),
+                        _buildActionButtons(context, ref, payment, isPaid),
                       ],
                     ),
                   ),
@@ -77,7 +74,9 @@ class TransactionDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, WidgetRef ref) {
+    final notificationCount = ref.watch(notificationCountProvider);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -126,35 +125,52 @@ class TransactionDetailsScreen extends ConsumerWidget {
             ),
           ),
 
-          // Notification Button
+          // Notification Icon - Dark theme with badge
           GestureDetector(
             onTap: () => context.go(Routes.notifications),
             child: Container(
               width: 44,
               height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
               ),
               child: Stack(
+                clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
                   SvgPicture.asset(
                     'assets/images/notification.svg',
-                    width: 22,
-                    height: 22,
+                    width: 20,
+                    height: 20,
                     colorFilter: const ColorFilter.mode(
-                      Color(0xFF1F2933),
+                      Colors.white,
                       BlendMode.srcIn,
                     ),
                   ),
+                  if (notificationCount > 0)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                        ),
+                        child: Text(
+                          notificationCount > 9 ? '9+' : '$notificationCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -279,7 +295,11 @@ class TransactionDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   // Transaction Details
-                  _buildDetailRow('Transaction ID', '#TRA-${payment.id}'),
+                  _buildDetailRow('Payment No', payment.paymentNumber),
+                  if (payment.payreference != null) ...[
+                    const SizedBox(height: 16),
+                    _buildDetailRow('Transaction ID', payment.payreference!),
+                  ],
                   const SizedBox(height: 16),
                   _buildDetailRowWithDot(
                     'Date & Time',
@@ -288,8 +308,6 @@ class TransactionDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   _buildDetailRow('Payment Method', payment.paymentMethod),
-                  const SizedBox(height: 16),
-                  _buildDetailRow('Fee Type', feeName),
                   const SizedBox(height: 16),
                   _buildDetailRow('Student', studentName),
                   const SizedBox(height: 16),
@@ -376,19 +394,33 @@ class TransactionDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, bool isPaid) {
+  Widget _buildActionButtons(BuildContext context, WidgetRef ref, PaymentModel payment, bool isPaid) {
     return Row(
       children: [
         // Primary Button (Download for success, Retry for failed)
         Expanded(
           child: GestureDetector(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(isPaid ? 'Download - Coming Soon' : 'Retry - Coming Soon'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+            onTap: () async {
+              if (isPaid) {
+                final student = ref.read(selectedStudentProvider);
+                final institutionAsync = ref.read(selectedStudentWithInstitutionProvider);
+                final institution = institutionAsync.valueOrNull;
+
+                if (student == null) return;
+
+                final pdf = await generateReceiptPdf(
+                  payment: payment,
+                  student: student,
+                  institution: institution,
+                );
+
+                await Printing.layoutPdf(
+                  onLayout: (_) => pdf.save(),
+                  name: '${payment.paymentNumber}.pdf',
+                );
+              } else {
+                await _handleRetryPayment(context, ref, payment);
+              }
             },
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14),
@@ -461,6 +493,102 @@ class TransactionDetailsScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _handleRetryPayment(BuildContext context, WidgetRef ref, PaymentModel payment) async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final client = ref.read(supabaseClientProvider);
+
+      // 1. Get dem_ids from paymentdetails for this payment
+      final payDetails = await client
+          .from('paymentdetails')
+          .select('dem_id')
+          .eq('pay_id', payment.payId);
+
+      final demIds = (payDetails as List)
+          .map((d) => d['dem_id'] is int ? d['dem_id'] as int : int.parse(d['dem_id'].toString()))
+          .toList();
+
+      if (demIds.isEmpty) {
+        if (!context.mounted) return;
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No fee details found for this payment'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      // 2. Fetch fresh feedemand records to check current status
+      final fees = await client
+          .from('feedemand')
+          .select('*')
+          .inFilter('dem_id', demIds)
+          .eq('activestatus', 1);
+
+      final feeModels = (fees as List)
+          .map((f) => FeeModel.fromJson(f))
+          .toList();
+
+      // 3. Filter to only unpaid fees (balancedue > 0 and paidstatus != 'P')
+      final unpaidFees = feeModels
+          .where((f) => f.balancedue > 0 && f.paidstatus != 'P')
+          .toList();
+
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+
+      if (unpaidFees.isEmpty) {
+        // All fees already paid
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            icon: const Icon(Icons.check_circle, color: Color(0xFF2DBE60), size: 48),
+            title: const Text('Already Paid'),
+            content: const Text('All fees from this payment have already been paid.'),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        // Add unpaid fees to cart and navigate
+        final cartNotifier = ref.read(cartProvider.notifier);
+        cartNotifier.clearCart();
+        cartNotifier.addFees(unpaidFees);
+
+        if (context.mounted) {
+          context.go(Routes.cart);
+        }
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   String _formatAmount(double amount) {

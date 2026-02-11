@@ -45,3 +45,10 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 flutter_*.log
+
+# Temp files
+.pipeflutter_*
+**/node_modules/
+
+# Claude Code temp files
+C*tasksbd3de13.output

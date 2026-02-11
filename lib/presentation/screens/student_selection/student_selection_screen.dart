@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../config/routes.dart';
@@ -286,14 +287,6 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
   }
 
   Widget _buildStudentCard(StudentModel student, bool isSelected, int index) {
-    final cardColors = [
-      {'bg': AppColors.cardPurple, 'icon': AppColors.cardPurpleDark},
-      {'bg': AppColors.cardGreen, 'icon': AppColors.cardGreenDark},
-      {'bg': AppColors.cardBlue, 'icon': AppColors.cardBlueDark},
-      {'bg': AppColors.cardPink, 'icon': AppColors.cardPinkDark},
-    ];
-    final colorSet = cardColors[index % cardColors.length];
-
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -318,25 +311,48 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
         ),
         child: Row(
           children: [
-            // Avatar - Circular like home page
+            // Avatar - Circular like profile page
             Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: colorSet['bg'],
+                gradient: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
+                    ? null
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColors.primary, AppColors.primary600],
+                      ),
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2), width: 2),
               ),
-              child: Center(
-                child: Text(
-                  student.stuname.isNotEmpty ? student.stuname[0].toUpperCase() : 'S',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: colorSet['icon'],
-                  ),
-                ),
-              ),
+              clipBehavior: Clip.antiAlias,
+              child: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
+                  ? CachedNetworkImage(
+                      imageUrl: student.photoUrl!,
+                      fit: BoxFit.cover,
+                      width: 48,
+                      height: 48,
+                      errorWidget: (context, url, error) => Center(
+                        child: Text(
+                          student.stuname.isNotEmpty ? student.stuname[0].toUpperCase() : 'S',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        student.stuname.isNotEmpty ? student.stuname[0].toUpperCase() : 'S',
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
             ),
             const SizedBox(width: 14),
             // Student Info - Home page style

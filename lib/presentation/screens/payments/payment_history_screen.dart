@@ -6,9 +6,10 @@ import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
-import '../../../data/models/fee_model.dart';
-import '../../providers/fee_provider.dart';
+import '../../../data/models/payment_model.dart';
+import '../../providers/payment_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../widgets/student_avatar.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
@@ -40,7 +41,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final paidFees = ref.watch(paidFeesProvider);
+    final paymentsAsync = ref.watch(paymentsProvider);
     final filters = ['All', 'Paid', 'Failed'];
 
     return Scaffold(
@@ -76,43 +77,48 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
               ),
             ),
             Expanded(
-              child: _buildTransactionList(paidFees),
+              child: paymentsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+                data: (payments) => _buildTransactionList(payments),
+              ),
             ),
           ],
         ),
     );
   }
 
-  List<FeeModel> _filterFees(List<FeeModel> fees) {
-    if (_activeFilter == 'All') return fees;
+  List<PaymentModel> _filterPayments(List<PaymentModel> payments) {
+    if (_activeFilter == 'All') return payments;
     if (_activeFilter == 'Paid') {
-      return fees.where((f) => f.paidstatus == 'P').toList();
+      return payments.where((p) => p.paystatus == 'C').toList();
     }
     if (_activeFilter == 'Failed') {
-      return fees.where((f) => f.paidstatus != 'P').toList();
+      return payments.where((p) => p.paystatus == 'F').toList();
     }
-    return fees;
+    return payments;
   }
 
-  Widget _buildTransactionList(List<FeeModel> fees) {
-    final filteredFees = _filterFees(fees);
+  Widget _buildTransactionList(List<PaymentModel> payments) {
+    final filtered = _filterPayments(payments);
 
-    if (filteredFees.isEmpty) {
+    if (filtered.isEmpty) {
       return _buildEmptyState();
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      itemCount: filteredFees.length,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      itemCount: filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        return _buildTransactionCard(filteredFees[index]);
+        return _buildTransactionCard(filtered[index]);
       },
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     final cartItemCount = ref.watch(cartItemCountProvider);
+    final notificationCount = ref.watch(notificationCountProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -198,7 +204,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          // Notification Icon - Dark theme
+          // Notification Icon - Dark theme with badge
           GestureDetector(
             onTap: () => context.go(Routes.notifications),
             child: Container(
@@ -208,16 +214,43 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                 color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
               ),
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/images/notification.svg',
-                  width: 20,
-                  height: 20,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/images/notification.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
                   ),
-                ),
+                  if (notificationCount > 0)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                        ),
+                        child: Text(
+                          notificationCount > 9 ? '9+' : '$notificationCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -284,11 +317,12 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     );
   }
 
-  Widget _buildTransactionCard(FeeModel fee) {
-    final isPaid = fee.paidstatus == 'P';
+  Widget _buildTransactionCard(PaymentModel payment) {
+    final isPaid = payment.paystatus == 'C';
+    final isFailed = payment.paystatus == 'F';
 
     return GestureDetector(
-      onTap: () => context.push('/fees/${fee.demId}'),
+      onTap: () => context.push('/payment-history/${payment.payId}'),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -312,15 +346,15 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildTransactionIcon(fee.demfeetype, isPaid),
+                _buildTransactionIcon(isPaid, isFailed),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${fee.demfeeterm} - ${fee.demfeetype}',
-                        style: TextStyle(
+                        payment.paymentNumber,
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
                           color: AppColors.textPrimary,
@@ -328,13 +362,23 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        fee.demfeecategory ?? fee.demfeeyear,
-                        style: TextStyle(
+                        payment.yrlabel ?? 'Fee Payment',
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
                           color: AppColors.textTertiary,
                         ),
                       ),
+                      if (payment.paymethod != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          payment.paymethod!,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -344,22 +388,30 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isPaid ? AppColors.cardGreen : AppColors.cardRose,
+                        color: isPaid
+                            ? AppColors.cardGreen
+                            : isFailed
+                                ? AppColors.cardRose
+                                : const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        isPaid ? 'Paid' : 'Pending',
+                        payment.statusText,
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: isPaid ? AppColors.cardGreenDark : AppColors.cardRoseDark,
+                          color: isPaid
+                              ? AppColors.cardGreenDark
+                              : isFailed
+                                  ? AppColors.cardRoseDark
+                                  : const Color(0xFF92400E),
                         ),
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '₹ ${NumberFormat('#,##,###').format(fee.paidamount.toInt())}',
-                      style: TextStyle(
+                      '₹ ${NumberFormat('#,##,###').format(payment.transtotalamount.toInt())}',
+                      style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
                         color: AppColors.textPrimary,
@@ -381,11 +433,11 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textTertiary),
+                      const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textTertiary),
                       const SizedBox(width: 8),
                       Text(
-                        DateFormat('dd MMM yyyy').format(fee.createdat),
-                        style: TextStyle(
+                        DateFormat('dd MMM yyyy, hh:mm a').format(payment.paydate ?? payment.createdat),
+                        style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                           color: AppColors.textSecondary,
@@ -393,7 +445,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                       ),
                     ],
                   ),
-                  Icon(
+                  const Icon(
                     Icons.arrow_forward_ios_rounded,
                     size: 16,
                     color: AppColors.textHint,
@@ -407,33 +459,23 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     );
   }
 
-  Widget _buildTransactionIcon(String feeType, bool isPaid) {
-    final lowerType = feeType.toLowerCase();
+  Widget _buildTransactionIcon(bool isPaid, bool isFailed) {
     Color bgColor;
     Color iconColor;
-    IconData? iconData;
+    IconData iconData;
 
-    String? svgPath;
-    if (!isPaid) {
+    if (isFailed) {
       bgColor = AppColors.cardRose;
       iconColor = AppColors.cardRoseDark;
-      iconData = Icons.close;
-    } else if (lowerType.contains('bus') || lowerType.contains('transport')) {
+      iconData = Icons.close_rounded;
+    } else if (isPaid) {
       bgColor = AppColors.cardGreen;
       iconColor = AppColors.cardGreenDark;
-      svgPath = 'assets/icons/bus-solid.svg';
-    } else if (lowerType.contains('tuition') || lowerType.contains('term') || lowerType.contains('school')) {
-      bgColor = AppColors.cardPurple;
-      iconColor = AppColors.cardPurpleDark;
-      svgPath = 'assets/school Icons/book.svg';
-    } else if (lowerType.contains('exam')) {
-      bgColor = AppColors.cardCyan;
-      iconColor = AppColors.cardCyanDark;
-      svgPath = 'assets/school Icons/book.svg';
+      iconData = Icons.check_circle_rounded;
     } else {
-      bgColor = AppColors.cardBlue;
-      iconColor = AppColors.cardBlueDark;
-      iconData = Icons.receipt_rounded;
+      bgColor = const Color(0xFFFEF3C7);
+      iconColor = const Color(0xFF92400E);
+      iconData = Icons.hourglass_bottom_rounded;
     }
 
     return Container(
@@ -444,14 +486,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Center(
-        child: svgPath != null
-            ? SvgPicture.asset(
-                svgPath,
-                width: 24,
-                height: 24,
-                colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
-              )
-            : Icon(iconData!, size: 24, color: iconColor),
+        child: Icon(iconData, size: 24, color: iconColor),
       ),
     );
   }

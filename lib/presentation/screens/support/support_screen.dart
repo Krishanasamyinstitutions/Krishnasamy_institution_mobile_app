@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/institution_provider.dart';
+import '../../providers/notification_provider.dart';
 
 class SupportScreen extends ConsumerStatefulWidget {
   const SupportScreen({super.key});
@@ -39,12 +41,9 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     },
   ];
 
-  // Mock contact info
-  final String _schoolEmail = 'johnson@gmail.com';
-  final String _schoolPhone = '+84 414 323 567';
-
   @override
   Widget build(BuildContext context) {
+    final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       body: Column(
@@ -85,7 +84,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                     children: [
                       const SizedBox(height: 24),
                       // Contact School Card
-                      _buildContactCard(),
+                      _buildContactCard(institutionAsync),
                       const SizedBox(height: 24),
                       // FAQ's Title
                       Text(
@@ -128,6 +127,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
 
   Widget _buildHeader(BuildContext context) {
     final cartItemCount = ref.watch(cartItemCountProvider);
+    final notificationCount = ref.watch(notificationCountProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -227,7 +227,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          // Notification Icon - Dark theme
+          // Notification Icon - Dark theme with badge
           GestureDetector(
             onTap: () => context.go(Routes.notifications),
             child: Container(
@@ -237,16 +237,43 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
               ),
-              child: Center(
-                child: SvgPicture.asset(
-                  'assets/images/notification.svg',
-                  width: 20,
-                  height: 20,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.center,
+                children: [
+                  SvgPicture.asset(
+                    'assets/images/notification.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(
+                      Colors.white,
+                      BlendMode.srcIn,
+                    ),
                   ),
-                ),
+                  if (notificationCount > 0)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                        ),
+                        child: Text(
+                          notificationCount > 9 ? '9+' : '$notificationCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           ),
@@ -255,7 +282,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     );
   }
 
-  Widget _buildContactCard() {
+  Widget _buildContactCard(AsyncValue<dynamic> institutionAsync) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -313,7 +340,11 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             iconBg: AppColors.cardPurple,
             iconColor: AppColors.cardPurpleDark,
             label: 'Email',
-            value: _schoolEmail,
+            value: institutionAsync.when(
+              data: (inst) => inst?.email ?? 'N/A',
+              loading: () => 'Loading...',
+              error: (_, __) => 'N/A',
+            ),
           ),
           const SizedBox(height: 16),
           // Phone Row
@@ -322,7 +353,11 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             iconBg: AppColors.cardGreen,
             iconColor: AppColors.cardGreenDark,
             label: 'Phone',
-            value: _schoolPhone,
+            value: institutionAsync.when(
+              data: (inst) => inst?.phone ?? 'N/A',
+              loading: () => 'Loading...',
+              error: (_, __) => 'N/A',
+            ),
           ),
         ],
       ),
