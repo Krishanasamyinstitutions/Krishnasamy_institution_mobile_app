@@ -111,6 +111,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   Widget _buildHeader(BuildContext context) {
     final cartItemCount = ref.watch(cartItemCountProvider);
+    final unreadCount = ref.watch(notificationCountProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -142,6 +143,28 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               ],
             ),
           ),
+          // Mark all as read button
+          if (unreadCount > 0)
+            GestureDetector(
+              onTap: () {
+                ref.read(notificationActionsProvider.notifier).markAllAsRead();
+              },
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF1F2937),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.done_all_rounded,
+                  size: 20,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          if (unreadCount > 0)
+            const SizedBox(width: 10),
           // Cart Icon - Dark theme
           GestureDetector(
             onTap: () => context.push(Routes.cart),
