@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/models/fee_model.dart';
 import '../../../data/models/notification_model.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 
 class NotificationDetailScreen extends ConsumerStatefulWidget {
@@ -362,28 +366,149 @@ class _NotificationDetailScreenState
     return '$dateStr at $timeStr';
   }
 
+  Future<void> _handleRetryPayment(dynamic payId) async {
+    if (payId == null) {
+      context.push('/cart');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final client = ref.read(supabaseClientProvider);
+
+      // 1. Get dem_ids from paymentdetails for this payment
+      final payDetails = await client
+          .from('paymentdetails')
+          .select('dem_id')
+          .eq('pay_id', payId);
+
+      final demIds = (payDetails as List)
+          .map((d) => d['dem_id'] is int
+              ? d['dem_id'] as int
+              : int.parse(d['dem_id'].toString()))
+          .toList();
+
+      if (demIds.isEmpty) {
+        if (!mounted) return;
+        Navigator.of(context, rootNavigator: true).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No fee details found for this payment'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      // 2. Fetch fresh feedemand records
+      final fees = await client
+          .from('feedemand')
+          .select('*')
+          .inFilter('dem_id', demIds)
+          .eq('activestatus', 1);
+
+      final feeModels =
+          (fees as List).map((f) => FeeModel.fromJson(f)).toList();
+
+      // 3. Filter to only unpaid fees
+      final unpaidFees = feeModels
+          .where((f) => f.balancedue > 0 && f.paidstatus != 'P')
+          .toList();
+
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (unpaidFees.isEmpty) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            icon: const Icon(Icons.check_circle,
+                color: Color(0xFF2DBE60), size: 48),
+            title: const Text('Already Paid'),
+            content: const Text(
+                'All fees from this payment have already been paid.'),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        final cartNotifier = ref.read(cartProvider.notifier);
+        cartNotifier.clearCart();
+        cartNotifier.addFees(unpaidFees);
+
+        if (mounted) {
+          context.go(Routes.cart);
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   bool _hasAction(NotificationType type) {
     return type == NotificationType.feeReminder ||
         type == NotificationType.dueDateApproaching ||
-        type == NotificationType.paymentSuccess;
+        type == NotificationType.paymentSuccess ||
+        type == NotificationType.paymentFailed;
   }
 
   Widget _buildActionButton(NotificationModel notification) {
     String buttonText;
     IconData buttonIcon;
+    Color buttonColor;
     VoidCallback onTap;
+
+    // Extract pay_id from notification data for navigation
+    final payId = notification.data?['pay_id'];
 
     switch (notification.type) {
       case NotificationType.feeReminder:
       case NotificationType.dueDateApproaching:
         buttonText = 'Pay Now';
         buttonIcon = Icons.payment_rounded;
+        buttonColor = AppColors.accent;
         onTap = () => context.go('/home');
         break;
       case NotificationType.paymentSuccess:
         buttonText = 'View Receipt';
         buttonIcon = Icons.receipt_long_rounded;
-        onTap = () => context.go('/payment-history');
+        buttonColor = const Color(0xFF10B981);
+        onTap = () {
+          if (payId != null) {
+            context.push('/payment-history/$payId');
+          } else {
+            context.go('/payment-history');
+          }
+        };
+        break;
+      case NotificationType.paymentFailed:
+        buttonText = 'Retry Payment';
+        buttonIcon = Icons.refresh_rounded;
+        buttonColor = const Color(0xFFEF4444);
+        onTap = () => _handleRetryPayment(payId);
         break;
       default:
         return const SizedBox.shrink();
@@ -395,7 +520,7 @@ class _NotificationDetailScreenState
       child: ElevatedButton(
         onPressed: onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accent,
+          backgroundColor: buttonColor,
           foregroundColor: Colors.white,
           elevation: 0,
           shape: RoundedRectangleBorder(

@@ -8,8 +8,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../providers/notification_provider.dart';
-import '../../widgets/student_avatar.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -114,7 +112,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       _InfoItem(svgPath: 'assets/school Icons/personalcard.svg', label: 'Admission No', value: studentData['adminNo']!),
                       _InfoItem(svgPath: 'assets/school Icons/star.svg', label: 'Class', value: studentData['class']!),
                       _InfoItem(
-                        icon: studentData['gender']!.toLowerCase() == 'female' ? Icons.female_rounded : Icons.male_rounded,
+                        icon: studentData['gender'] == 'Male'
+                            ? Icons.male
+                            : studentData['gender'] == 'Female'
+                                ? Icons.female
+                                : null,
+                        svgPath: studentData['gender'] != 'Male' && studentData['gender'] != 'Female'
+                            ? 'assets/school Icons/gender-male-female-variant.svg'
+                            : null,
                         label: 'Gender',
                         value: studentData['gender']!,
                       ),
@@ -152,7 +157,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildHeader(BuildContext context) {
     final cartItemCount = ref.watch(cartItemCountProvider);
-    final notificationCount = ref.watch(notificationCountProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -236,7 +240,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          // Notification Icon - Dark theme with badge
+          // Notification Icon - Dark theme
           GestureDetector(
             onTap: () => context.go(Routes.notifications),
             child: Container(
@@ -246,43 +250,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
               ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  SvgPicture.asset(
-                    'assets/images/notification.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
+              child: Center(
+                child: SvgPicture.asset(
+                  'assets/images/notification.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
                   ),
-                  if (notificationCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
-                        ),
-                        child: Text(
-                          notificationCount > 9 ? '9+' : '$notificationCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
             ),
           ),
@@ -293,7 +270,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _buildStudentCard(Map<String, String> studentData) {
     final selectedStudent = ref.watch(selectedStudentProvider);
-    final photoUrl = selectedStudent?.photoUrl;
+    final hasPhoto = selectedStudent != null && selectedStudent.photoUrl != null && selectedStudent.photoUrl!.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -310,16 +287,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       child: Row(
         children: [
-          // Large Avatar - shows photo if available, initials otherwise
+          // Large Avatar - tappable
           GestureDetector(
-            onTap: photoUrl != null && photoUrl.isNotEmpty
-                ? () => _showPhotoZoom(context, photoUrl, studentData['name']!)
-                : null,
+            onTap: () => _showProfileImagePopup(
+              context,
+              studentData['name']!,
+              hasPhoto ? selectedStudent.photoUrl! : null,
+            ),
             child: Container(
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                gradient: photoUrl != null && photoUrl.isNotEmpty
+                gradient: hasPhoto
                     ? null
                     : const LinearGradient(
                         begin: Alignment.topLeft,
@@ -336,9 +315,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ],
               ),
               clipBehavior: Clip.antiAlias,
-              child: photoUrl != null && photoUrl.isNotEmpty
+              child: hasPhoto
                   ? CachedNetworkImage(
-                      imageUrl: photoUrl,
+                      imageUrl: selectedStudent.photoUrl!,
                       fit: BoxFit.cover,
                       width: 72,
                       height: 72,
@@ -695,6 +674,112 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  void _showProfileImagePopup(BuildContext context, String name, String? photoUrl) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.7),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Close button
+            Align(
+              alignment: Alignment.topRight,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Profile image
+            Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                gradient: photoUrl == null
+                    ? const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColors.primary, AppColors.primary600],
+                      )
+                    : null,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: photoUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: photoUrl,
+                      fit: BoxFit.cover,
+                      width: 200,
+                      height: 200,
+                      errorWidget: (context, url, error) => Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [AppColors.primary, AppColors.primary600],
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _getInitials(name),
+                            style: const TextStyle(
+                              fontSize: 64,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        _getInitials(name),
+                        style: const TextStyle(
+                          fontSize: 64,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 16),
+            // Student name
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -725,76 +810,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             child: const Text('Sign Out'),
           ),
         ],
-      ),
-    );
-  }
-
-  void _showPhotoZoom(BuildContext context, String photoUrl, String studentName) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black87,
-      builder: (context) => GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Close button
-              Align(
-                alignment: Alignment.topRight,
-                child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close, color: Colors.white, size: 20),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Zoomed photo in circle
-              Container(
-                width: 250,
-                height: 250,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white24, width: 3),
-                ),
-                child: ClipOval(
-                  child: CachedNetworkImage(
-                    imageUrl: photoUrl,
-                    fit: BoxFit.cover,
-                    width: 250,
-                    height: 250,
-                    placeholder: (context, url) => const Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
-                    errorWidget: (context, url, error) => const Center(
-                      child: Icon(Icons.broken_image, color: Colors.white54, size: 64),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Student name
-              Text(
-                studentName,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

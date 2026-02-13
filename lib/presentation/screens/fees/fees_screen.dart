@@ -13,7 +13,6 @@ import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
-import '../../widgets/student_avatar.dart';
 
 class FeesScreen extends ConsumerStatefulWidget {
   const FeesScreen({super.key});
