@@ -8,7 +8,6 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../data/models/notification_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../widgets/student_avatar.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -62,7 +61,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   }
                   final groupedNotifications = _groupNotificationsByDate(notifications);
                   return ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    padding: const EdgeInsets.only(left: 24, right: 24, bottom: 100),
                     itemCount: groupedNotifications.length,
                     itemBuilder: (context, index) {
                       final group = groupedNotifications[index];
@@ -217,7 +216,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildNotificationCard(NotificationModel notification) {
-    final isUnread = !notification.isRead;
+    final readIds = ref.watch(readNotificationsProvider);
+    final isUnread = !readIds.contains(notification.id);
 
     return GestureDetector(
       onTap: () async {

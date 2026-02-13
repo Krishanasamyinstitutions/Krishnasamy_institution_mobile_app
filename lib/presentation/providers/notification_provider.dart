@@ -92,9 +92,11 @@ NotificationModel _paymentToNotification(
     id: notificationId,
     schoolId: payment['ins_id']?.toString() ?? '',
     parentId: '',
+    studentId: payment['stu_id']?.toString(),
     title: title,
     message: message,
     type: type,
+    data: {'pay_id': payment['pay_id']},
     isRead: readIds.contains(notificationId),
     createdAt: paydate,
   );
@@ -110,12 +112,13 @@ final notificationsProvider =
     final selectedStudent = ref.watch(selectedStudentProvider);
 
     if (selectedStudent != null) {
-      // Fetch payments for the selected student
+      // Fetch completed/failed payments for the selected student (exclude initiated 'I')
       final response = await client
           .from('payment')
           .select()
           .eq('stu_id', selectedStudent.stuId)
           .eq('activestatus', 1)
+          .neq('paystatus', 'I')
           .order('createdat', ascending: false)
           .limit(50);
 
@@ -134,8 +137,10 @@ final notificationsProvider =
 /// Unread notification count for badge display
 final notificationCountProvider = Provider<int>((ref) {
   final notificationsAsync = ref.watch(notificationsProvider);
+  final readIds = ref.watch(readNotificationsProvider);
   return notificationsAsync.maybeWhen(
-    data: (notifications) => notifications.where((n) => !n.isRead).length,
+    data: (notifications) =>
+        notifications.where((n) => !readIds.contains(n.id)).length,
     orElse: () => 0,
   );
 });

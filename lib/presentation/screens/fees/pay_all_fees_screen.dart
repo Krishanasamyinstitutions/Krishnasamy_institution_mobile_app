@@ -75,10 +75,26 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
   List<String> _getFeeGroupOptions(List<FeeModel> fees) {
     final options = <String>['ALL FEES'];
 
-    // Check if there are term fees (non-bus fees)
-    final hasTermFees = fees.any((f) => !_isBusFee(f.demfeetype) && !_isExtraFee(f.demfeetype));
+    // Check if there are term fees (non-bus, non-tuition, non-hostel, non-extra fees)
+    final hasTermFees = fees.any((f) =>
+      !_isBusFee(f.demfeetype) &&
+      !_isTuitionFee(f.demfeetype) &&
+      !_isHostelFee(f.demfeetype) &&
+      !_isExtraFee(f.demfeetype));
     if (hasTermFees) {
       options.add('Term Fees');
+    }
+
+    // Check for tuition fees
+    final hasTuitionFees = fees.any((f) => _isTuitionFee(f.demfeetype));
+    if (hasTuitionFees) {
+      options.add('Tuition Fees');
+    }
+
+    // Check for hostel fees
+    final hasHostelFees = fees.any((f) => _isHostelFee(f.demfeetype));
+    if (hasHostelFees) {
+      options.add('Hostel Fees');
     }
 
     // Check for bus fees
@@ -111,7 +127,15 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     if (_selectedFeeGroup == 'ALL FEES') {
       return allFees;
     } else if (_selectedFeeGroup == 'Term Fees') {
-      return allFees.where((f) => !_isBusFee(f.demfeetype) && !_isExtraFee(f.demfeetype)).toList();
+      return allFees.where((f) =>
+        !_isBusFee(f.demfeetype) &&
+        !_isTuitionFee(f.demfeetype) &&
+        !_isHostelFee(f.demfeetype) &&
+        !_isExtraFee(f.demfeetype)).toList();
+    } else if (_selectedFeeGroup == 'Tuition Fees') {
+      return allFees.where((f) => _isTuitionFee(f.demfeetype)).toList();
+    } else if (_selectedFeeGroup == 'Hostel Fees') {
+      return allFees.where((f) => _isHostelFee(f.demfeetype)).toList();
     } else if (_selectedFeeGroup == 'Bus Fees') {
       return allFees.where((f) => _isBusFee(f.demfeetype)).toList();
     } else if (_selectedFeeGroup == 'Extra Fees') {
@@ -134,7 +158,15 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     if (group == 'All Fees') {
       feesToSelect = allFees;
     } else if (group == 'Term Fees') {
-      feesToSelect = allFees.where((f) => !_isBusFee(f.demfeetype) && !_isExtraFee(f.demfeetype)).toList();
+      feesToSelect = allFees.where((f) =>
+        !_isBusFee(f.demfeetype) &&
+        !_isTuitionFee(f.demfeetype) &&
+        !_isHostelFee(f.demfeetype) &&
+        !_isExtraFee(f.demfeetype)).toList();
+    } else if (group == 'Tuition Fees') {
+      feesToSelect = allFees.where((f) => _isTuitionFee(f.demfeetype)).toList();
+    } else if (group == 'Hostel Fees') {
+      feesToSelect = allFees.where((f) => _isHostelFee(f.demfeetype)).toList();
     } else if (group == 'Bus Fees') {
       feesToSelect = allFees.where((f) => _isBusFee(f.demfeetype)).toList();
     } else if (group == 'Extra Fees') {
@@ -1967,10 +1999,14 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.directions_bus,
-                          size: 14,
-                          color: Colors.white,
+                        SvgPicture.asset(
+                          'assets/school Icons/van.svg',
+                          width: 14,
+                          height: 14,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -2097,10 +2133,14 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
-                    Icons.directions_bus_outlined,
-                    size: 16,
-                    color: Color(0xFFF59E0B),
+                  child: SvgPicture.asset(
+                    'assets/school Icons/van.svg',
+                    width: 16,
+                    height: 16,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFFF59E0B),
+                      BlendMode.srcIn,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),

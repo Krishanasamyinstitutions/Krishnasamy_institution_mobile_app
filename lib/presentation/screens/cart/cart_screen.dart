@@ -3,23 +3,48 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/payment_provider.dart';
+import '../../providers/student_provider.dart';
 
-class CartScreen extends ConsumerWidget {
+class CartScreen extends ConsumerStatefulWidget {
   final bool isStandalone;
 
   const CartScreen({super.key, this.isStandalone = false});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cartRestorerState = ref.watch(cartRestorerProvider);
+  ConsumerState<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends ConsumerState<CartScreen> {
+  late Razorpay _razorpay;
+  bool _isProcessing = false;
+  int? _currentPayId;
+  int? _currentCarId;
+  List<FeeModel>? _currentPaymentItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cartState = ref.watch(cartProvider);
-    // Show loading only while restoring from DB and cart is still empty
-    final isRestoring = cartRestorerState.isLoading && cartState.isEmpty;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
@@ -53,11 +78,9 @@ class CartScreen extends ConsumerWidget {
             ),
             // Content
             Expanded(
-              child: isRestoring
-                  ? const Center(child: CircularProgressIndicator())
-                  : cartState.isEmpty
-                      ? _buildEmptyState(context)
-                      : _buildCartContent(context, ref, cartState),
+              child: cartState.isEmpty
+                  ? _buildEmptyState(context)
+                  : _buildCartContent(context, ref, cartState),
             ),
             // Bottom payment bar
             if (cartState.isNotEmpty)
@@ -153,7 +176,6 @@ class CartScreen extends ConsumerWidget {
   }
 
   void _showClearCartDialog(BuildContext context, WidgetRef ref) {
-    final cartState = ref.read(cartProvider);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -166,15 +188,9 @@ class CartScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              // Clear from database
-              await clearCartFromDatabase(
-                ref: ref,
-                studentId: cartState.studentId,
-              );
-              // Clear in-memory cart
+            onPressed: () {
               ref.read(cartProvider.notifier).clearCart();
+              Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
@@ -283,8 +299,6 @@ class CartScreen extends ConsumerWidget {
         category = 'Tuition Fees';
       } else if (_isHostelFee(fee.demfeetype)) {
         category = 'Hostel Fees';
-      } else if (_isExamFee(fee.demfeetype)) {
-        category = 'Exam Fees';
       } else {
         category = '${fee.demfeeterm} (${fee.demfeeyear})';
       }
@@ -292,13 +306,20 @@ class CartScreen extends ConsumerWidget {
       feesByCategory[category]!.add(fee);
     }
 
-    // Preserve selection order: categories appear in the order their first fee was added to cart
+    // Sort categories: Term fees first, then Tuition, Hostel, Bus
     final sortedCategories = feesByCategory.keys.toList()
       ..sort((a, b) {
-        // Find the earliest cart index for each category
-        final aFirstIndex = cartState.items.indexWhere((f) => feesByCategory[a]!.contains(f));
-        final bFirstIndex = cartState.items.indexWhere((f) => feesByCategory[b]!.contains(f));
-        return aFirstIndex.compareTo(bFirstIndex);
+        // Define category order: regular terms first, then special categories
+        int getCategoryOrder(String cat) {
+          if (cat == 'Tuition Fees') return 100;
+          if (cat == 'Hostel Fees') return 101;
+          if (cat == 'Bus Fees') return 102;
+          return 0; // Term fees first
+        }
+        final orderA = getCategoryOrder(a);
+        final orderB = getCategoryOrder(b);
+        if (orderA != orderB) return orderA.compareTo(orderB);
+        return a.compareTo(b);
       });
 
     return ListView(
@@ -333,11 +354,6 @@ class CartScreen extends ConsumerWidget {
     return lowerType.contains('hostel');
   }
 
-  bool _isExamFee(String feeType) {
-    final lowerType = feeType.toLowerCase();
-    return lowerType.contains('exam');
-  }
-
   Map<String, dynamic> _getCategoryStyle(String category) {
     if (category == 'Bus Fees') {
       return {
@@ -357,12 +373,6 @@ class CartScreen extends ConsumerWidget {
         'icon': Icons.hotel_rounded,
         'showMonth': true,
       };
-    } else if (category == 'Exam Fees') {
-      return {
-        'color': const Color(0xFFEF4444),
-        'icon': Icons.assignment_rounded,
-        'showMonth': true,
-      };
     } else {
       return {
         'color': AppColors.success,
@@ -375,6 +385,7 @@ class CartScreen extends ConsumerWidget {
   Widget _buildCategoryCard(BuildContext context, WidgetRef ref, String category, List<FeeModel> fees) {
     final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
     final categoryStyle = _getCategoryStyle(category);
+    final isBus = category.toLowerCase().contains('bus') || category.toLowerCase().contains('transport');
 
     return Container(
       decoration: BoxDecoration(
@@ -405,11 +416,26 @@ class CartScreen extends ConsumerWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        categoryStyle['icon'] as IconData,
-                        size: 14,
-                        color: Colors.white,
-                      ),
+                      if (isBus)
+                        SvgPicture.asset(
+                          'assets/school Icons/van.svg',
+                          width: 14,
+                          height: 14,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        )
+                      else
+                        SvgPicture.asset(
+                          'assets/school Icons/school.svg',
+                          width: 14,
+                          height: 14,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        ),
                       const SizedBox(width: 6),
                       Text(
                         category,
@@ -538,39 +564,17 @@ class CartScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () async {
-              final cartState = ref.read(cartProvider);
-              // Remove from in-memory cart
+            onPressed: () {
               for (final fee in fees) {
                 ref.read(cartProvider.notifier).removeFee(fee.id);
               }
               Navigator.pop(context);
-
-              // Sync with database
-              final remainingItems = ref.read(cartProvider).items;
-              if (remainingItems.isEmpty) {
-                // All items removed - delete cart from DB
-                await clearCartFromDatabase(
-                  ref: ref,
-                  studentId: cartState.studentId,
-                );
-              } else {
-                // Still has items - re-save with remaining items
-                await saveCartToDatabase(
-                  ref: ref,
-                  items: remainingItems,
-                  studentId: cartState.studentId,
-                );
-              }
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('$category removed'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('$category removed'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
@@ -722,151 +726,217 @@ class CartScreen extends ConsumerWidget {
   }
 
   Future<void> _handleProceedToPayment(BuildContext context, WidgetRef ref) async {
+    if (_isProcessing) return;
+
     final cartState = ref.read(cartProvider);
-    if (cartState.isEmpty) return;
+    final student = ref.read(selectedStudentProvider);
+    if (cartState.isEmpty || student == null) return;
 
-    // Show loading
+    setState(() => _isProcessing = true);
+
+    // Show loading overlay
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
-    // Step 1-2: Save cart to database
-    final carId = await saveCartToDatabase(
-      ref: ref,
-      items: cartState.items,
-      studentId: cartState.studentId,
-    );
-
-    if (carId == null) {
-      if (!context.mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save cart: ${lastCartSaveError ?? "Unknown error"}'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Step 3: Initiate payment (pass cart data directly to avoid re-fetching)
-    final payId = await initiatePayment(
-      ref: ref,
-      carId: carId,
-      cartItems: cartState.items,
-      cartTotal: cartState.totalAmount,
-    );
-
-    if (payId == null) {
-      if (!context.mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to initiate payment: ${lastPaymentError ?? "Unknown error"}'),
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    if (!context.mounted) return;
-    Navigator.pop(context); // dismiss loading
-
-    // TODO: Replace with actual payment gateway integration
-    // For now, simulate successful payment
-    _showPaymentSimulationDialog(context, ref, payId, carId, cartState.items);
-  }
-
-  /// Temporary: Simulate payment gateway response for testing
-  void _showPaymentSimulationDialog(BuildContext context, WidgetRef ref, int payId, int carId, List<FeeModel> items) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Payment Gateway'),
-        content: Text('Payment initiated (ID: $payId)\n\nSimulate payment result:'),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              // Show loading
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator()),
-              );
-
-              await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
-
-              if (!context.mounted) return;
-              Navigator.of(context, rootNavigator: true).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Payment failed. Cart is still available.'),
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            },
-            child: const Text('Fail', style: TextStyle(color: Colors.red)),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(dialogContext);
-              // Show loading
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) => const Center(child: CircularProgressIndicator()),
-              );
-
-              final success = await handlePaymentSuccess(
-                ref: ref,
-                payId: payId,
-                carId: carId,
-                paymethod: 'UPI',
-                payreference: 'SIM${DateTime.now().millisecondsSinceEpoch}',
-                items: items,
-              );
-
-              if (!context.mounted) return;
-              Navigator.of(context, rootNavigator: true).pop();
-
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Payment successful! Fees updated.'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                // Navigate back to home
-                if (context.mounted) {
-                  context.go(Routes.home);
-                }
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Payment processing error.'),
-                    behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Success'),
-          ),
-        ],
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
       ),
     );
+
+    try {
+      // Step 1: Save cart to database
+      final carId = await saveCartToDatabase(
+        ref: ref,
+        items: cartState.items,
+        studentId: student.stuId,
+      );
+
+      if (carId == null) {
+        if (context.mounted) Navigator.pop(context);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save cart: ${lastCartSaveError ?? "Unknown error"}'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      // Step 2: Initiate payment
+      final payId = await initiatePayment(
+        ref: ref,
+        carId: carId,
+        cartItems: cartState.items,
+        cartTotal: cartState.totalAmount,
+      );
+
+      if (payId == null) {
+        if (context.mounted) Navigator.pop(context);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to initiate payment: ${lastPaymentError ?? "Unknown error"}'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      // Store payment info for callbacks
+      _currentPayId = payId;
+      _currentCarId = carId;
+      _currentPaymentItems = List.from(cartState.items);
+
+      // Dismiss loading
+      if (context.mounted) Navigator.pop(context);
+
+      // Step 3: Open Razorpay checkout
+      final amountInPaise = (cartState.totalAmount * 100).toInt();
+
+      _razorpay.open({
+        'key': 'rzp_test_RQsgJgVFwM7kov',
+        'amount': amountInPaise,
+        'currency': 'INR',
+        'name': 'TBS School',
+        'description': 'School Fees Payment',
+        'prefill': {
+          'name': student.stuname,
+          'contact': student.stumobile,
+          'email': student.stuemail ?? '',
+        },
+        'theme': {
+          'color': '#1A73E8',
+        },
+        'notes': {
+          'pay_id': payId.toString(),
+          'car_id': carId.toString(),
+          'student_id': student.stuId.toString(),
+        },
+      });
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    debugPrint('Payment Success: ${response.paymentId}');
+
+    final payId = _currentPayId;
+    final carId = _currentCarId;
+    final items = _currentPaymentItems;
+
+    if (payId == null || carId == null || items == null) return;
+
+    // Show processing dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 16),
+              Text(
+                'Processing payment...',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final success = await handlePaymentSuccess(
+      ref: ref,
+      payId: payId,
+      carId: carId,
+      paymethod: 'razorpay',
+      payreference: response.paymentId ?? '',
+      items: items,
+    );
+
+    // Dismiss processing dialog
+    if (mounted) Navigator.pop(context);
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment successful!'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.go(Routes.paymentHistory);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment received but processing failed. Please contact support.'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    _currentPayId = null;
+    _currentCarId = null;
+    _currentPaymentItems = null;
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) async {
+    debugPrint('Payment Error: ${response.code} - ${response.message}');
+
+    final payId = _currentPayId;
+    final carId = _currentCarId;
+
+    if (payId != null && carId != null) {
+      await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment failed: ${response.message ?? "Cancelled by user"}'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    _currentPayId = null;
+    _currentCarId = null;
+    _currentPaymentItems = null;
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    debugPrint('External Wallet: ${response.walletName}');
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Redirecting to ${response.walletName}...'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }
