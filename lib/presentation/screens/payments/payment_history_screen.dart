@@ -5,12 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_sizes.dart';
 import '../../../data/models/payment_model.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../providers/notification_provider.dart';
-import '../../widgets/student_avatar.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
   final String? initialTab;
@@ -28,7 +25,6 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   @override
   void initState() {
     super.initState();
-    // Set initial tab based on parameter, default to 'All'
     final tab = widget.initialTab?.toLowerCase();
     if (tab == 'paid') {
       _activeFilter = 'Paid';
@@ -47,44 +43,44 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FB),
       body: Column(
-          children: [
-            // Fixed Header with white SafeArea and subtle shadow
-            Container(
-              color: Colors.white,
-              child: SafeArea(
-                bottom: false,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildHeader(context),
-                      const SizedBox(height: 20),
-                      _buildFilterTabs(filters),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
+        children: [
+          // Fixed Header
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              bottom: false,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 16),
+                    _buildHeader(context),
+                    const SizedBox(height: 20),
+                    _buildFilterTabs(filters),
+                    const SizedBox(height: 16),
+                  ],
                 ),
               ),
             ),
-            Expanded(
-              child: paymentsAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
-                data: (payments) => _buildTransactionList(payments),
-              ),
+          ),
+          Expanded(
+            child: paymentsAsync.when(
+              data: (payments) => _buildTransactionList(payments),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error loading payments: $e')),
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -107,7 +103,8 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
       itemCount: filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
@@ -118,19 +115,18 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
 
   Widget _buildHeader(BuildContext context) {
     final cartItemCount = ref.watch(cartItemCountProvider);
-    final notificationCount = ref.watch(notificationCountProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'Payment History',
                   style: TextStyle(
                     fontSize: 18,
@@ -138,19 +134,19 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                     color: Color(0xFF1F2937),
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
+                SizedBox(height: 4),
+                Text(
                   'Track all your fee payments',
                   style: TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w400,
                     color: Color(0xFF6B7280),
                   ),
                 ),
               ],
             ),
           ),
-          // Cart Icon - Dark theme
+          // Cart Icon
           GestureDetector(
             onTap: () => context.push(Routes.cart),
             child: Container(
@@ -204,7 +200,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          // Notification Icon - Dark theme with badge
+          // Notification Icon
           GestureDetector(
             onTap: () => context.go(Routes.notifications),
             child: Container(
@@ -214,43 +210,16 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                 color: Color(0xFF1F2937),
                 shape: BoxShape.circle,
               ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  SvgPicture.asset(
-                    'assets/images/notification.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
+              child: Center(
+                child: SvgPicture.asset(
+                  'assets/images/notification.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
                   ),
-                  if (notificationCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
-                        ),
-                        child: Text(
-                          notificationCount > 9 ? '9+' : '$notificationCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
             ),
           ),
@@ -318,175 +287,153 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   }
 
   Widget _buildTransactionCard(PaymentModel payment) {
-    final isPaid = payment.paystatus == 'C';
-    final isFailed = payment.paystatus == 'F';
+    final isSuccess = payment.paystatus == 'C';
 
     return GestureDetector(
       onTap: () => context.push('/payment-history/${payment.payId}'),
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: isPaid ? AppColors.shadowGreen : AppColors.shadowPink,
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-            BoxShadow(
-              color: AppColors.shadowLight,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
         ),
         child: Column(
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildTransactionIcon(isPaid, isFailed),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        payment.paymentNumber,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        payment.yrlabel ?? 'Fee Payment',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.textTertiary,
-                        ),
-                      ),
-                      if (payment.paymethod != null) ...[
-                        const SizedBox(height: 2),
+            // Main content area
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Status icon
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: isSuccess
+                          ? AppColors.cardGreen
+                          : AppColors.cardRose,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isSuccess ? Icons.check : Icons.close,
+                      size: 18,
+                      color: isSuccess
+                          ? AppColors.cardGreenDark
+                          : AppColors.cardRoseDark,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Payment number + Year + Method
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Text(
-                          payment.paymethod!,
+                          payment.paynumber ?? 'PAY/${payment.payId}',
                           style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textTertiary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1F2937),
                           ),
                         ),
+                        const SizedBox(height: 2),
+                        Text(
+                          payment.yrlabel ?? '',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                        ),
+                        if (isSuccess && payment.paymethod != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            payment.paymethod!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF9CA3AF),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isPaid
-                            ? AppColors.cardGreen
-                            : isFailed
-                                ? AppColors.cardRose
-                                : const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        payment.statusText,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: isPaid
-                              ? AppColors.cardGreenDark
-                              : isFailed
-                                  ? AppColors.cardRoseDark
-                                  : const Color(0xFF92400E),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      '₹ ${NumberFormat('#,##,###').format(payment.transtotalamount.toInt())}',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.bgSecondary,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
+                  // Status badge + Amount
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Icon(Icons.calendar_today_outlined, size: 16, color: AppColors.textTertiary),
-                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: isSuccess
+                              ? AppColors.cardGreen
+                              : AppColors.cardRose,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          payment.statusText,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isSuccess
+                                ? AppColors.cardGreenDark
+                                : AppColors.cardRoseDark,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       Text(
-                        DateFormat('dd MMM yyyy, hh:mm a').format(payment.paydate ?? payment.createdat),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondary,
+                        '₹ ${NumberFormat('#,##,###').format(payment.transtotalamount.toInt())}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: isSuccess
+                              ? const Color(0xFF1F2937)
+                              : AppColors.error,
                         ),
                       ),
                     ],
                   ),
+                ],
+              ),
+            ),
+            // Divider
+            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+            // Date row with chevron
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                children: [
                   const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 16,
-                    color: AppColors.textHint,
+                    Icons.calendar_today_outlined,
+                    size: 14,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    DateFormat('dd MMM yyyy, hh:mm a').format(
+                      payment.paydate ?? payment.createdat,
+                    ),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF9CA3AF),
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: Color(0xFF9CA3AF),
                   ),
                 ],
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildTransactionIcon(bool isPaid, bool isFailed) {
-    Color bgColor;
-    Color iconColor;
-    IconData iconData;
-
-    if (isFailed) {
-      bgColor = AppColors.cardRose;
-      iconColor = AppColors.cardRoseDark;
-      iconData = Icons.close_rounded;
-    } else if (isPaid) {
-      bgColor = AppColors.cardGreen;
-      iconColor = AppColors.cardGreenDark;
-      iconData = Icons.check_circle_rounded;
-    } else {
-      bgColor = const Color(0xFFFEF3C7);
-      iconColor = const Color(0xFF92400E);
-      iconData = Icons.hourglass_bottom_rounded;
-    }
-
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Icon(iconData, size: 24, color: iconColor),
       ),
     );
   }
@@ -539,7 +486,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
             const SizedBox(height: 24),
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 color: AppColors.textPrimary,
@@ -549,7 +496,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 color: AppColors.textTertiary,
               ),
