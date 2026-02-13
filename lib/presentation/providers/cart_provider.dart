@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/fee_model.dart';
+import 'auth_provider.dart';
+import 'student_provider.dart';
 
 /// Cart state model containing selected fees for payment
 class CartState {
@@ -31,9 +35,13 @@ class CartState {
   Set<String> get feeIds => items.map((f) => f.id).toSet();
 }
 
-/// Cart state notifier for managing fee selections
+/// Cart state notifier for managing fee selections with real-time Supabase sync
 class CartNotifier extends StateNotifier<CartState> {
-  CartNotifier() : super(const CartState());
+  final Ref _ref;
+  Timer? _syncTimer;
+  bool _skipSync = false;
+
+  CartNotifier(this._ref) : super(const CartState());
 
   /// Add single fee to cart
   void addFee(FeeModel fee) {
@@ -48,12 +56,18 @@ class CartNotifier extends StateNotifier<CartState> {
         studentId: fee.stuId,
       );
     }
+    _scheduleSyncToDatabase();
   }
 
   /// Add multiple fees to cart
   void addFees(List<FeeModel> fees) {
-    for (final fee in fees) {
-      addFee(fee);
+    _skipSync = true;
+    for (int i = 0; i < fees.length - 1; i++) {
+      addFee(fees[i]);
+    }
+    _skipSync = false;
+    if (fees.isNotEmpty) {
+      addFee(fees.last);
     }
   }
 
@@ -62,6 +76,7 @@ class CartNotifier extends StateNotifier<CartState> {
     state = state.copyWith(
       items: state.items.where((f) => f.id != feeId).toList(),
     );
+    _scheduleSyncToDatabase();
   }
 
   /// Toggle fee in cart (add if not present, remove if present)
@@ -74,23 +89,123 @@ class CartNotifier extends StateNotifier<CartState> {
   }
 
   /// Restore cart from database (on app restart or student switch)
+  /// Also handles clearing when items is empty (no DB sync triggered)
   void restoreCart(List<FeeModel> items, int studentId) {
-    if (items.isEmpty) return;
-    state = CartState(items: items, studentId: studentId);
+    _syncTimer?.cancel();
+    _skipSync = true;
+    state = items.isEmpty
+        ? const CartState()
+        : CartState(items: items, studentId: studentId);
+    _skipSync = false;
   }
 
-  /// Clear all items from cart
+  /// Clear all items from cart (in-memory only)
+  /// DB cart records are preserved until payment completes
   void clearCart() {
+    _syncTimer?.cancel();
     state = const CartState();
   }
 
   /// Check if fee is in cart
   bool isInCart(String feeId) => state.containsFee(feeId);
+
+  /// Schedule a debounced sync to Supabase (500ms delay)
+  void _scheduleSyncToDatabase() {
+    if (_skipSync) return;
+    _syncTimer?.cancel();
+    _syncTimer = Timer(const Duration(milliseconds: 500), () {
+      _syncToDatabase();
+    });
+  }
+
+  /// Sync current cart state to Supabase shoppingcart + shoppingcartdetails
+  Future<void> _syncToDatabase() async {
+    final student = _ref.read(selectedStudentProvider);
+    if (student == null) return;
+
+    final client = _ref.read(supabaseClientProvider);
+    final parent = _ref.read(currentParentProvider);
+
+    // If cart is empty, skip sync (DB cart preserved until payment completes)
+    if (state.isEmpty) return;
+
+    final items = state.items;
+    final firstFee = items.first;
+    final totalAmount = items.fold<double>(0, (sum, f) => sum + f.balancedue);
+
+    try {
+      // Find existing active (non-initiated) cart for this student
+      final existingCart = await client
+          .from('shoppingcart')
+          .select('car_id')
+          .eq('stu_id', student.stuId)
+          .eq('carinitiated', 'N')
+          .eq('activestatus', 1)
+          .maybeSingle();
+
+      int carId;
+
+      if (existingCart != null) {
+        carId = existingCart['car_id'] as int;
+
+        // Update cart header
+        await client.from('shoppingcart').update({
+          'yr_id': firstFee.yrId,
+          'yrlabel': firstFee.demfeeyear,
+          'transdate': DateTime.now().toIso8601String().split('T')[0],
+          'transtotalamount': totalAmount,
+          'createdby': parent?.payincharge ?? student.stuname,
+        }).eq('car_id', carId);
+
+        // Delete old cart details
+        await client.from('shoppingcartdetails').delete().eq('car_id', carId);
+      } else {
+        // Create new cart
+        final cartResponse = await client.from('shoppingcart').insert({
+          'yr_id': firstFee.yrId,
+          'yrlabel': firstFee.demfeeyear,
+          'ins_id': student.insId,
+          'stu_id': student.stuId,
+          'transtype': 'FEE',
+          'transdate': DateTime.now().toIso8601String().split('T')[0],
+          'transcurrency': 'INR',
+          'transtotalamount': totalAmount,
+          'carinitiated': 'N',
+          'createdby': parent?.payincharge ?? student.stuname,
+        }).select('car_id').single();
+
+        carId = cartResponse['car_id'] as int;
+      }
+
+      // Insert new detail rows
+      final detailRows = items.map((fee) => {
+        'car_id': carId,
+        'yr_id': fee.yrId,
+        'yrlabel': fee.demfeeyear,
+        'ins_id': fee.insId,
+        'dem_id': fee.demId,
+        'transcurrency': 'INR',
+        'transtotalamount': fee.balancedue,
+      }).toList();
+
+      await client.from('shoppingcartdetails').insert(detailRows);
+
+      debugPrint('Cart synced to DB: car_id=$carId, ${items.length} items, total=$totalAmount');
+    } catch (e) {
+      debugPrint('Cart sync error: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _syncTimer?.cancel();
+    super.dispose();
+  }
 }
 
-/// Cart provider - session-only (in-memory)
+/// Cart provider with real-time Supabase sync
 final cartProvider = StateNotifierProvider<CartNotifier, CartState>((ref) {
-  return CartNotifier();
+  return CartNotifier(ref);
 });
 
 /// Convenience provider for cart item count

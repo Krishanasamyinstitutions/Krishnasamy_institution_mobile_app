@@ -5,6 +5,7 @@ import '../../data/models/payment_model.dart';
 import 'student_provider.dart';
 import 'auth_provider.dart';
 import 'cart_provider.dart';
+import 'fee_provider.dart';
 import 'notification_provider.dart';
 
 /// Fetch payments from Supabase 'payment' table
@@ -325,6 +326,20 @@ Future<int?> initiatePayment({
     var items = cartItems;
     var totalAmount = cartTotal;
 
+    // 0. Clean up any stale 'I' (initiated but never completed) payments for this student
+    final stalePays = await client
+        .from('payment')
+        .select('pay_id')
+        .eq('stu_id', student.stuId)
+        .eq('paystatus', 'I');
+
+    if ((stalePays as List).isNotEmpty) {
+      final stalePayIds = stalePays.map((p) => p['pay_id'] as int).toList();
+      await client.from('paymentdetails').delete().inFilter('pay_id', stalePayIds);
+      await client.from('payment').delete().inFilter('pay_id', stalePayIds);
+      debugPrint('Cleaned up ${stalePayIds.length} stale initiated payment(s)');
+    }
+
     // 1. Validate: check actual balancedue from DB to prevent double payment
     final demIds = items.map((f) => f.demId).toList();
     final freshDemands = await client
@@ -503,11 +518,10 @@ Future<bool> handlePaymentSuccess({
       debugPrint('Deleted ${allCarIds.length} cart(s) for student $studentId');
     }
 
-    // 4. Clear in-memory cart & refresh payment history
+    // 4. Clear in-memory cart & refresh all related providers
     ref.read(cartProvider.notifier).clearCart();
+    ref.invalidate(feesProvider);
     ref.invalidate(paymentsProvider);
-
-    // 5. Refresh notifications (payment will appear from DB)
     ref.invalidate(notificationsProvider);
 
     debugPrint('Payment success: pay_id=$payId, feedemand updated, carts cleaned');
@@ -526,7 +540,7 @@ Future<bool> handlePaymentSuccess({
   }
 }
 
-/// Handle payment failure
+/// Handle payment failure — marks payment as 'F' (failed) and resets the cart
 Future<bool> handlePaymentFailure({
   required WidgetRef ref,
   required int payId,
@@ -535,23 +549,21 @@ Future<bool> handlePaymentFailure({
   final client = ref.read(supabaseClientProvider);
 
   try {
-    // Update payment status to 'F' (Failed) and reset cart in parallel
-    final payUpdateFuture = client.from('payment').update({
-      'paystatus': 'F',
-    }).eq('pay_id', payId).select('paynumber').single();
-
-    final cartResetFuture = client.from('shoppingcart').update({
-      'carinitiated': 'N',
-    }).eq('car_id', carId);
-
-    await Future.wait<dynamic>([payUpdateFuture, cartResetFuture]);
-
-    await payUpdateFuture;
+    // Mark payment as failed and reset cart in parallel
+    await Future.wait([
+      client.from('payment').update({
+        'paystatus': 'F',
+        'paydate': DateTime.now().toIso8601String(),
+      }).eq('pay_id', payId),
+      client.from('shoppingcart').update({
+        'carinitiated': 'N',
+      }).eq('car_id', carId),
+    ]);
 
     ref.invalidate(paymentsProvider);
     ref.invalidate(notificationsProvider);
 
-    debugPrint('Payment failed: pay_id=$payId, cart car_id=$carId reset');
+    debugPrint('Payment failed: pay_id=$payId marked as F, cart car_id=$carId reset');
     return true;
   } catch (e) {
     debugPrint('Error handling payment failure: $e');
@@ -575,9 +587,41 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
     return;
   }
 
-  // Clear cart (either empty or belongs to different student)
-  if (currentCart.isNotEmpty) {
-    ref.read(cartProvider.notifier).clearCart();
+  // First, recover any abandoned 'I' (initiated) carts from failed/interrupted payments
+  try {
+    final abandonedCarts = await client
+        .from('shoppingcart')
+        .select('car_id')
+        .eq('stu_id', student.stuId)
+        .eq('carinitiated', 'I')
+        .eq('activestatus', 1);
+
+    if ((abandonedCarts as List).isNotEmpty) {
+      final abandonedCarIds = abandonedCarts.map((c) => c['car_id'] as int).toList();
+      // Reset abandoned carts back to 'N' so RPC/fallback can find them
+      await client.from('shoppingcart').update({
+        'carinitiated': 'N',
+      }).inFilter('car_id', abandonedCarIds);
+
+      // Delete orphaned 'I' payments (never completed, no need to show in history)
+      final stalePays = await client
+          .from('payment')
+          .select('pay_id')
+          .eq('stu_id', student.stuId)
+          .eq('paystatus', 'I');
+
+      if ((stalePays as List).isNotEmpty) {
+        final stalePayIds = stalePays.map((p) => p['pay_id'] as int).toList();
+        await client.from('paymentdetails').delete().inFilter('pay_id', stalePayIds);
+        await client.from('payment').delete().inFilter('pay_id', stalePayIds);
+        debugPrint('Deleted ${stalePayIds.length} orphaned initiated payment(s)');
+      }
+
+      debugPrint('Reset ${abandonedCarIds.length} abandoned cart(s) from I to N');
+    }
+
+  } catch (e) {
+    debugPrint('Error resetting abandoned carts: $e');
   }
 
   try {
@@ -586,18 +630,31 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
       'p_stu_id': student.stuId,
     });
 
-    final feeModels = (fees as List)
+    final allFees = (fees as List)
         .map((f) => FeeModel.fromJson(f as Map<String, dynamic>))
         .toList();
 
-    if (feeModels.isNotEmpty) {
-      ref.read(cartProvider.notifier).restoreCart(feeModels, student.stuId);
-      debugPrint('Cart restored via RPC: ${feeModels.length} items for student ${student.stuId}');
+    // Filter out already-paid fees (balancedue <= 0 or paidstatus = 'P')
+    final unpaidFees = allFees.where((f) => f.balancedue > 0 && f.paidstatus != 'P').toList();
+    final paidFees = allFees.where((f) => f.balancedue <= 0 || f.paidstatus == 'P').toList();
+
+    // Clean up paid fee rows from DB
+    if (unpaidFees.isEmpty && allFees.isNotEmpty) {
+      await _cleanupPaidCart(client, student.stuId);
+      debugPrint('All cart fees already paid — cart cleaned up');
+    } else if (paidFees.isNotEmpty) {
+      await _cleanupPaidCartItems(client, student.stuId, paidFees, unpaidFees);
+    }
+
+    ref.read(cartProvider.notifier).restoreCart(unpaidFees, student.stuId);
+    if (unpaidFees.isNotEmpty) {
+      debugPrint('Cart restored via RPC: ${unpaidFees.length} unpaid items for student ${student.stuId}');
     }
   } catch (rpcError) {
     // Fallback: 3 sequential queries (RPC not deployed yet)
     debugPrint('RPC fallback: $rpcError');
     try {
+      // Abandoned 'I' carts were already reset to 'N' above, so just look for 'N'
       final cart = await client
           .from('shoppingcart')
           .select('car_id')
@@ -606,7 +663,10 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
           .eq('activestatus', 1)
           .maybeSingle();
 
-      if (cart == null) return;
+      if (cart == null) {
+        ref.read(cartProvider.notifier).restoreCart([], student.stuId);
+        return;
+      }
 
       final carId = cart['car_id'] as int;
 
@@ -621,7 +681,10 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
           .map((d) => d['dem_id'] is int ? d['dem_id'] as int : int.parse(d['dem_id'].toString()))
           .toList();
 
-      if (demIds.isEmpty) return;
+      if (demIds.isEmpty) {
+        ref.read(cartProvider.notifier).restoreCart([], student.stuId);
+        return;
+      }
 
       // Fetch full feedemand records for these dem_ids
       final fees = await client
@@ -630,16 +693,84 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
           .inFilter('dem_id', demIds)
           .eq('activestatus', 1);
 
-      final feeModels = (fees as List)
+      final allFees = (fees as List)
           .map((f) => FeeModel.fromJson(f))
           .toList();
 
-      if (feeModels.isNotEmpty) {
-        ref.read(cartProvider.notifier).restoreCart(feeModels, student.stuId);
-        debugPrint('Cart restored from DB: ${feeModels.length} items for student ${student.stuId}');
+      // Filter out already-paid fees
+      final unpaidFees = allFees.where((f) => f.balancedue > 0 && f.paidstatus != 'P').toList();
+      final paidFees = allFees.where((f) => f.balancedue <= 0 || f.paidstatus == 'P').toList();
+
+      // Clean up paid fee rows from DB
+      if (unpaidFees.isEmpty && allFees.isNotEmpty) {
+        await _cleanupPaidCart(client, student.stuId);
+        debugPrint('All cart fees already paid — cart cleaned up (fallback)');
+      } else if (paidFees.isNotEmpty) {
+        await _cleanupPaidCartItems(client, student.stuId, paidFees, unpaidFees);
+      }
+
+      ref.read(cartProvider.notifier).restoreCart(unpaidFees, student.stuId);
+      if (unpaidFees.isNotEmpty) {
+        debugPrint('Cart restored from DB: ${unpaidFees.length} unpaid items for student ${student.stuId}');
       }
     } catch (e) {
       debugPrint('Error restoring cart from database: $e');
+      ref.read(cartProvider.notifier).restoreCart([], student.stuId);
     }
   }
 });
+
+/// Helper: Remove individual paid fee rows from shoppingcartdetails (partial payment scenario)
+/// Updates the cart total to reflect only unpaid fees remaining.
+Future<void> _cleanupPaidCartItems(dynamic client, int stuId, List<FeeModel> paidFees, List<FeeModel> unpaidFees) async {
+  try {
+    final carts = await client
+        .from('shoppingcart')
+        .select('car_id')
+        .eq('stu_id', stuId)
+        .eq('activestatus', 1);
+
+    if ((carts as List).isEmpty) return;
+
+    final carIds = carts.map((c) => c['car_id'] as int).toList();
+    final paidDemIds = paidFees.map((f) => f.demId).toList();
+
+    // Delete paid fee rows from shoppingcartdetails
+    await client
+        .from('shoppingcartdetails')
+        .delete()
+        .inFilter('car_id', carIds)
+        .inFilter('dem_id', paidDemIds);
+
+    // Update cart header total to reflect only unpaid fees
+    final newTotal = unpaidFees.fold<double>(0, (sum, f) => sum + f.balancedue);
+    await client
+        .from('shoppingcart')
+        .update({'transtotalamount': newTotal})
+        .inFilter('car_id', carIds);
+
+    debugPrint('Removed ${paidFees.length} paid fee(s) from cart details, updated total to $newTotal');
+  } catch (e) {
+    debugPrint('Error cleaning up paid cart items: $e');
+  }
+}
+
+/// Helper: Delete stale shopping cart for a student whose fees are all paid
+Future<void> _cleanupPaidCart(dynamic client, int stuId) async {
+  try {
+    final carts = await client
+        .from('shoppingcart')
+        .select('car_id')
+        .eq('stu_id', stuId)
+        .eq('activestatus', 1);
+
+    if ((carts as List).isNotEmpty) {
+      final carIds = carts.map((c) => c['car_id'] as int).toList();
+      await client.from('shoppingcartdetails').delete().inFilter('car_id', carIds);
+      await client.from('shoppingcart').delete().inFilter('car_id', carIds);
+      debugPrint('Deleted ${carIds.length} stale cart(s) for student $stuId (all fees paid)');
+    }
+  } catch (e) {
+    debugPrint('Error cleaning up paid cart: $e');
+  }
+}

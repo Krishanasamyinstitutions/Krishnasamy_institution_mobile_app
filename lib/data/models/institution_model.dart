@@ -10,6 +10,7 @@ class InstitutionModel {
   final String? inspincode;
   final String? insmobno;
   final String? insmail;
+  final String? inslogo;
   final int activestatus;
 
   InstitutionModel({
@@ -23,6 +24,7 @@ class InstitutionModel {
     this.inspincode,
     this.insmobno,
     this.insmail,
+    this.inslogo,
     this.activestatus = 1,
   });
 
@@ -45,6 +47,7 @@ class InstitutionModel {
       inspincode: json['inspincode'],
       insmobno: json['insmobno'],
       insmail: json['insmail'],
+      inslogo: json['inslogo'],
       activestatus: json['activestatus'] ?? 1,
     );
   }
@@ -54,6 +57,7 @@ class InstitutionModel {
   String get code => inscode;
   String? get phone => insmobno;
   String? get email => insmail;
+  String? get logoUrl => inslogo;
   bool get isActive => activestatus == 1;
 
   /// Get formatted address

@@ -467,6 +467,8 @@ class HomeScreen extends ConsumerWidget {
     final institution = institutionAsync.valueOrNull;
     final schoolName = institution?.name ?? 'School';
     final schoolAddress = institution?.shortAddress ?? 'Address not available';
+    final logoUrl = institution?.logoUrl;
+    final hasLogo = logoUrl != null && logoUrl.isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -493,24 +495,43 @@ class HomeScreen extends ConsumerWidget {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.asset(
-                'assets/images/school_logo.png',
-                width: 56,
-                height: 56,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Center(
-                    child: Text(
-                      schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
+              child: hasLogo
+                  ? CachedNetworkImage(
+                      imageUrl: logoUrl,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Center(
+                        child: Text(
+                          schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Center(
+                        child: Text(
+                          schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  );
-                },
-              ),
             ),
           ),
           const SizedBox(width: 14),

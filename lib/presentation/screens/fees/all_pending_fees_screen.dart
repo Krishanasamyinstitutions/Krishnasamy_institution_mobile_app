@@ -1900,19 +1900,21 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               child: Row(
                 children: [
                   Container(
-                    width: 28,
-                    height: 28,
+                    width: 22,
+                    height: 22,
                     decoration: BoxDecoration(
                       color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(5),
                     ),
-                    child: SvgPicture.asset(
-                      'assets/school Icons/van.svg',
-                      width: 16,
-                      height: 16,
-                      colorFilter: const ColorFilter.mode(
-                        Color(0xFFF59E0B),
-                        BlendMode.srcIn,
+                    child: Center(
+                      child: SvgPicture.asset(
+                        'assets/school Icons/van.svg',
+                        width: 12,
+                        height: 12,
+                        colorFilter: const ColorFilter.mode(
+                          Color(0xFFF59E0B),
+                          BlendMode.srcIn,
+                        ),
                       ),
                     ),
                   ),

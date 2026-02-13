@@ -3,18 +3,47 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/payment_provider.dart';
+import '../../providers/student_provider.dart';
 
-class CartScreen extends ConsumerWidget {
+class CartScreen extends ConsumerStatefulWidget {
   final bool isStandalone;
 
   const CartScreen({super.key, this.isStandalone = false});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CartScreen> createState() => _CartScreenState();
+}
+
+class _CartScreenState extends ConsumerState<CartScreen> {
+  late Razorpay _razorpay;
+  bool _isProcessing = false;
+  int? _currentPayId;
+  int? _currentCarId;
+  List<FeeModel>? _currentPaymentItems;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cartState = ref.watch(cartProvider);
 
     return Scaffold(
@@ -696,13 +725,218 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  void _handleProceedToPayment(BuildContext context, WidgetRef ref) {
-    // TODO: Integrate with payment gateway
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Payment gateway integration coming soon!'),
-        behavior: SnackBarBehavior.floating,
+  Future<void> _handleProceedToPayment(BuildContext context, WidgetRef ref) async {
+    if (_isProcessing) return;
+
+    final cartState = ref.read(cartProvider);
+    final student = ref.read(selectedStudentProvider);
+    if (cartState.isEmpty || student == null) return;
+
+    setState(() => _isProcessing = true);
+
+    // Show loading overlay
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: AppColors.primary),
       ),
     );
+
+    try {
+      // Step 1: Save cart to database
+      final carId = await saveCartToDatabase(
+        ref: ref,
+        items: cartState.items,
+        studentId: student.stuId,
+      );
+
+      if (carId == null) {
+        if (context.mounted) Navigator.pop(context);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to save cart: ${lastCartSaveError ?? "Unknown error"}'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      // Step 2: Initiate payment
+      final payId = await initiatePayment(
+        ref: ref,
+        carId: carId,
+        cartItems: cartState.items,
+        cartTotal: cartState.totalAmount,
+      );
+
+      if (payId == null) {
+        if (context.mounted) Navigator.pop(context);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to initiate payment: ${lastPaymentError ?? "Unknown error"}'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        setState(() => _isProcessing = false);
+        return;
+      }
+
+      // Store payment info for callbacks
+      _currentPayId = payId;
+      _currentCarId = carId;
+      _currentPaymentItems = List.from(cartState.items);
+
+      // Dismiss loading
+      if (context.mounted) Navigator.pop(context);
+
+      // Step 3: Open Razorpay checkout
+      final amountInPaise = (cartState.totalAmount * 100).toInt();
+
+      _razorpay.open({
+        'key': 'rzp_test_RQsgJgVFwM7kov',
+        'amount': amountInPaise,
+        'currency': 'INR',
+        'name': 'TBS School',
+        'description': 'School Fees Payment',
+        'prefill': {
+          'name': student.stuname,
+          'contact': student.stumobile,
+          'email': student.stuemail ?? '',
+        },
+        'theme': {
+          'color': '#1A73E8',
+        },
+        'notes': {
+          'pay_id': payId.toString(),
+          'car_id': carId.toString(),
+          'student_id': student.stuId.toString(),
+        },
+      });
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    debugPrint('Payment Success: ${response.paymentId}');
+
+    final payId = _currentPayId;
+    final carId = _currentCarId;
+    final items = _currentPaymentItems;
+
+    if (payId == null || carId == null || items == null) return;
+
+    // Show processing dialog
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 16),
+              Text(
+                'Processing payment...',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final success = await handlePaymentSuccess(
+      ref: ref,
+      payId: payId,
+      carId: carId,
+      paymethod: 'razorpay',
+      payreference: response.paymentId ?? '',
+      items: items,
+    );
+
+    // Dismiss processing dialog
+    if (mounted) Navigator.pop(context);
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment successful!'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.go(Routes.paymentHistory);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Payment received but processing failed. Please contact support.'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    _currentPayId = null;
+    _currentCarId = null;
+    _currentPaymentItems = null;
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) async {
+    debugPrint('Payment Error: ${response.code} - ${response.message}');
+
+    final payId = _currentPayId;
+    final carId = _currentCarId;
+
+    if (payId != null && carId != null) {
+      await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment failed: ${response.message ?? "Cancelled by user"}'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    _currentPayId = null;
+    _currentCarId = null;
+    _currentPaymentItems = null;
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    debugPrint('External Wallet: ${response.walletName}');
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Redirecting to ${response.walletName}...'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }

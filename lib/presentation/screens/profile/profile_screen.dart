@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
@@ -110,7 +111,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _buildInfoCard([
                       _InfoItem(svgPath: 'assets/school Icons/personalcard.svg', label: 'Admission No', value: studentData['adminNo']!),
                       _InfoItem(svgPath: 'assets/school Icons/star.svg', label: 'Class', value: studentData['class']!),
-                      _InfoItem(svgPath: 'assets/school Icons/gender-male-female-variant.svg', label: 'Gender', value: studentData['gender']!),
+                      _InfoItem(
+                        icon: studentData['gender'] == 'Male'
+                            ? Icons.male
+                            : studentData['gender'] == 'Female'
+                                ? Icons.female
+                                : null,
+                        svgPath: studentData['gender'] != 'Male' && studentData['gender'] != 'Female'
+                            ? 'assets/school Icons/gender-male-female-variant.svg'
+                            : null,
+                        label: 'Gender',
+                        value: studentData['gender']!,
+                      ),
                       _InfoItem(svgPath: 'assets/school Icons/cake.svg', label: 'Date of Birth', value: studentData['dob']!),
                       _InfoItem(svgPath: 'assets/school Icons/blood.svg', label: 'Blood Group', value: studentData['blood']!),
                     ]),
@@ -257,6 +269,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildStudentCard(Map<String, String> studentData) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final hasPhoto = selectedStudent != null && selectedStudent.photoUrl != null && selectedStudent.photoUrl!.isNotEmpty;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -272,34 +287,80 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       child: Row(
         children: [
-          // Large Avatar
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.primary, AppColors.primary600],
-              ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+          // Large Avatar - tappable
+          GestureDetector(
+            onTap: () => _showProfileImagePopup(
+              context,
+              studentData['name']!,
+              hasPhoto ? selectedStudent.photoUrl! : null,
             ),
-            child: Center(
-              child: Text(
-                _getInitials(studentData['name']!),
-                style: const TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
+            child: Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                gradient: hasPhoto
+                    ? null
+                    : const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColors.primary, AppColors.primary600],
+                      ),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
+              clipBehavior: Clip.antiAlias,
+              child: hasPhoto
+                  ? CachedNetworkImage(
+                      imageUrl: selectedStudent.photoUrl!,
+                      fit: BoxFit.cover,
+                      width: 72,
+                      height: 72,
+                      placeholder: (context, url) => Center(
+                        child: Text(
+                          _getInitials(studentData['name']!),
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [AppColors.primary, AppColors.primary600],
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _getInitials(studentData['name']!),
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        _getInitials(studentData['name']!),
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
             ),
           ),
           const SizedBox(width: 16),
@@ -605,6 +666,112 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               colorFilter: const ColorFilter.mode(
                 Colors.white,
                 BlendMode.srcIn,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showProfileImagePopup(BuildContext context, String name, String? photoUrl) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.7),
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Close button
+            Align(
+              alignment: Alignment.topRight,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Profile image
+            Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                gradient: photoUrl == null
+                    ? const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColors.primary, AppColors.primary600],
+                      )
+                    : null,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: photoUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: photoUrl,
+                      fit: BoxFit.cover,
+                      width: 200,
+                      height: 200,
+                      errorWidget: (context, url, error) => Container(
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [AppColors.primary, AppColors.primary600],
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _getInitials(name),
+                            style: const TextStyle(
+                              fontSize: 64,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        _getInitials(name),
+                        style: const TextStyle(
+                          fontSize: 64,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 16),
+            // Student name
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
               ),
             ),
           ],
