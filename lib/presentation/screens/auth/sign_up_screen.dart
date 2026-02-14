@@ -99,37 +99,27 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     super.dispose();
   }
 
-  /// Cross-check if the entered number looks like it belongs to a different country
-  /// Returns an error message if mismatch detected, null otherwise
   String? _crossCheckCountryNumber(String number, int selectedIndex) {
     final selectedCountry = _countryCodes[selectedIndex];
 
-    // Check against other countries with same phone length
     for (int i = 0; i < _countryCodes.length; i++) {
       if (i == selectedIndex) continue;
 
       final otherCountry = _countryCodes[i];
 
-      // Only cross-check countries with the same phone length
       if (otherCountry.phoneLength != number.length) continue;
 
       final otherRegex = RegExp(otherCountry.pattern);
       if (otherRegex.hasMatch(number)) {
-        // Special case: Indian numbers are very distinctive (start with 6-9)
-        // If user selected non-India but number matches Indian pattern
         if (otherCountry.code == '+91' && selectedCountry.code != '+91') {
           return 'This looks like an Indian number. Please select India (+91) as your country';
         }
 
-        // Special case: UAE/Saudi numbers both start with 5
-        // Don't warn between these two as they're similar
         if ((selectedCountry.code == '+971' && otherCountry.code == '+966') ||
             (selectedCountry.code == '+966' && otherCountry.code == '+971')) {
           continue;
         }
 
-        // For other mismatches where the number clearly matches another country's pattern
-        // but doesn't match selected country's pattern well
         final selectedRegex = RegExp(selectedCountry.pattern);
         if (!selectedRegex.hasMatch(number) && otherRegex.hasMatch(number)) {
           return 'This number appears to be from ${otherCountry.country}. Please select the correct country';
@@ -143,7 +133,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   void _showCountryPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.cardBg(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -161,12 +151,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Select Country',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1F2933),
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             const SizedBox(height: 8),
@@ -183,22 +173,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     ),
                     title: Text(
                       country.country,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: AppSizes.textSm,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                     trailing: Text(
                       country.code,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: AppSizes.textSm,
-                        color: AppColors.textSecondary,
+                        color: AppColors.textSecondaryC(context),
                       ),
                     ),
                     onTap: () {
                       setState(() {
                         _selectedCountryIndex = index;
-                        // Clear mobile input when country changes
                         _mobileController.clear();
                       });
                       Navigator.pop(context);
@@ -235,7 +224,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     } catch (e) {
       if (mounted) {
         String errorMessage = e.toString();
-        // Clean up exception prefix for user-friendly display
         if (errorMessage.startsWith('Exception: ')) {
           errorMessage = errorMessage.substring(11);
         }
@@ -258,7 +246,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: SafeArea(
           child: Column(
             children: [
@@ -272,23 +260,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 16),
-
-                          // Back Button
                           _buildBackButton(),
-
                           const SizedBox(height: 24),
-
-                          // Header with title and illustration
                           _buildHeader(),
-
                           const SizedBox(height: 32),
-
-                          // Mobile Number Field
                           _buildMobileField(),
-
                           const SizedBox(height: 32),
-
-                          // Get OTP Button
                           _buildGetOtpButton(),
                         ],
                       ),
@@ -296,7 +273,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   ),
                 ),
               ),
-              // Sign In Link at bottom
               Padding(
                 padding: const EdgeInsets.only(bottom: 24),
                 child: _buildSignInLink(),
@@ -313,8 +289,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       child: Container(
         width: 44,
         height: 44,
-        decoration: const BoxDecoration(
-          color: Color(0xFF1F2937),
+        decoration: BoxDecoration(
+          color: AppColors.iconButtonBg(context),
           shape: BoxShape.circle,
         ),
         child: const Icon(
@@ -330,7 +306,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title and subtitle
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -340,7 +315,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: AppColors.textPrimaryC(context),
                 ),
               ),
               const SizedBox(height: 8),
@@ -349,13 +324,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w400,
-                  color: AppColors.textTertiary,
+                  color: AppColors.textSecondaryC(context),
                 ),
               ),
             ],
           ),
         ),
-        // Illustration
         SizedBox(
           width: 120,
           height: 120,
@@ -372,12 +346,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Mobile Number',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF6B7280),
+            color: AppColors.textSecondaryC(context),
           ),
         ),
         const SizedBox(height: 8),
@@ -385,26 +359,26 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           controller: _mobileController,
           focusNode: _mobileFocusNode,
           keyboardType: TextInputType.phone,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
-            color: Color(0xFF1F2933),
+            color: AppColors.textPrimaryC(context),
           ),
           decoration: InputDecoration(
             hintText: 'Enter mobile number',
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
               fontSize: 15,
-              color: Color(0xFF9CA3AF),
+              color: AppColors.textHintC(context),
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: AppColors.cardBg(context),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: AppColors.borderC(context)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: AppColors.borderC(context)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -430,17 +404,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       style: const TextStyle(fontSize: 20),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(
+                    Icon(
                       Icons.keyboard_arrow_down_rounded,
                       size: 18,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       _countryCodes[_selectedCountryIndex].code,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
-                        color: Color(0xFF1F2933),
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ],
@@ -463,13 +437,11 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               return 'Please enter a valid ${selectedCountry.phoneLength}-digit ${selectedCountry.country} number';
             }
 
-            // Validate against country-specific pattern
             final regex = RegExp(selectedCountry.pattern);
             if (!regex.hasMatch(value)) {
               return 'Please enter a valid ${selectedCountry.country} mobile number';
             }
 
-            // Cross-country validation: Check if number looks like it belongs to another country
             final crossCheckResult = _crossCheckCountryNumber(value, _selectedCountryIndex);
             if (crossCheckResult != null) {
               return crossCheckResult;
@@ -547,7 +519,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           'Already have an Account ?',
           style: TextStyle(
             fontSize: 15,
-            color: AppColors.textTertiary,
+            color: AppColors.textSecondaryC(context),
           ),
         ),
         const SizedBox(width: 4),

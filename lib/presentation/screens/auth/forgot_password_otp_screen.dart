@@ -150,7 +150,7 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: SafeArea(
           child: Column(
             children: [
@@ -238,8 +238,8 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
       child: Container(
         width: 44,
         height: 44,
-        decoration: const BoxDecoration(
-          color: Color(0xFF1F2937),
+        decoration: BoxDecoration(
+          color: AppColors.iconButtonBg(context),
           shape: BoxShape.circle,
         ),
         child: const Icon(
@@ -265,7 +265,7 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: AppColors.textPrimaryC(context),
                 ),
               ),
               const SizedBox(height: 8),
@@ -274,7 +274,7 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w400,
-                  color: AppColors.textTertiary,
+                  color: AppColors.textSecondaryC(context),
                 ),
               ),
             ],
@@ -297,15 +297,15 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
     final defaultPinTheme = PinTheme(
       width: 50,
       height: 56,
-      textStyle: const TextStyle(
+      textStyle: TextStyle(
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        color: Color(0xFF1F2933),
+        color: AppColors.textPrimaryC(context),
       ),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: AppColors.borderC(context)),
       ),
     );
 
@@ -343,7 +343,7 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
                 text: 'Resend OTP in ',
                 style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.textTertiary,
+                  color: AppColors.textSecondaryC(context),
                 ),
                 children: [
                   TextSpan(
@@ -432,7 +432,7 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
           'Remember your password ?',
           style: TextStyle(
             fontSize: 15,
-            color: AppColors.textTertiary,
+            color: AppColors.textSecondaryC(context),
           ),
         ),
         const SizedBox(width: 4),

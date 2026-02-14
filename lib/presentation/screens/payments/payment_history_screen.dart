@@ -41,24 +41,18 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     final filters = ['All', 'Paid', 'Failed'];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: Column(
         children: [
           // Fixed Header
           Container(
-            color: Colors.white,
+            color: AppColors.headerBg(context),
             child: SafeArea(
               bottom: false,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+                  color: AppColors.headerBg(context),
+                  boxShadow: AppColors.cardShadow(context),
                 ),
                 child: Column(
                   children: [
@@ -104,7 +98,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 100),
+      padding: EdgeInsets.fromLTRB(24, 16, 24, 70 + MediaQuery.of(context).padding.bottom + 20),
       itemCount: filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
@@ -121,7 +115,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -131,16 +125,16 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Track all your fee payments',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
               ],
@@ -152,8 +146,8 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -182,7 +176,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.error,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
                         ),
                         child: Text(
                           cartItemCount > 9 ? '9+' : '$cartItemCount',
@@ -206,8 +200,8 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: Center(
@@ -234,7 +228,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
       child: Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: const Color(0xFFF1F5F9),
+          color: AppColors.filterBg(context),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -273,7 +267,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                        color: isActive ? Colors.white : AppColors.textTertiary,
+                        color: isActive ? Colors.white : AppColors.textSecondaryC(context),
                       ),
                     ),
                   ),
@@ -293,9 +287,9 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
       onTap: () => context.push('/payment-history/${payment.payId}'),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E7EB), width: 1),
+          border: Border.all(color: AppColors.borderC(context), width: 1),
         ),
         child: Column(
           children: [
@@ -331,29 +325,29 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                       children: [
                         Text(
                           payment.paynumber ?? 'PAY/${payment.payId}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1F2937),
+                            color: AppColors.textPrimaryC(context),
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           payment.yrlabel ?? '',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: Color(0xFF9CA3AF),
+                            color: AppColors.textHintC(context),
                           ),
                         ),
                         if (isSuccess && payment.paymethod != null) ...[
                           const SizedBox(height: 2),
                           Text(
                             payment.paymethod!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w400,
-                              color: Color(0xFF9CA3AF),
+                              color: AppColors.textHintC(context),
                             ),
                           ),
                         ],
@@ -391,7 +385,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: isSuccess
-                              ? const Color(0xFF1F2937)
+                              ? AppColors.textPrimaryC(context)
                               : AppColors.error,
                         ),
                       ),
@@ -401,33 +395,33 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
               ),
             ),
             // Divider
-            const Divider(height: 1, color: Color(0xFFE5E7EB)),
+            Divider(height: 1, color: AppColors.borderC(context)),
             // Date row with chevron
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.calendar_today_outlined,
                     size: 14,
-                    color: Color(0xFF9CA3AF),
+                    color: AppColors.textHintC(context),
                   ),
                   const SizedBox(width: 8),
                   Text(
                     DateFormat('dd MMM yyyy, hh:mm a').format(
                       payment.paydate ?? payment.createdat,
                     ),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
-                      color: Color(0xFF9CA3AF),
+                      color: AppColors.textHintC(context),
                     ),
                   ),
                   const Spacer(),
-                  const Icon(
+                  Icon(
                     Icons.chevron_right,
                     size: 20,
-                    color: Color(0xFF9CA3AF),
+                    color: AppColors.textHintC(context),
                   ),
                 ],
               ),
@@ -486,19 +480,19 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
             const SizedBox(height: 24),
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textTertiary,
+                color: AppColors.textSecondaryC(context),
               ),
             ),
           ],

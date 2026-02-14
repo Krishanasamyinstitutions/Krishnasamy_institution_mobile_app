@@ -25,7 +25,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
     final selectedStudent = ref.watch(selectedStudentProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: SafeArea(
         child: paymentAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -95,33 +95,27 @@ class TransactionDetailsScreen extends ConsumerWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.cardBg(context),
                 shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
+                boxShadow: AppColors.cardShadow(context),
               ),
-              child: const Center(
+              child: Center(
                 child: Icon(
                   Icons.arrow_back_ios_new_rounded,
                   size: 18,
-                  color: Color(0xFF1F2933),
+                  color: AppColors.textPrimaryC(context),
                 ),
               ),
             ),
           ),
 
           // Title
-          const Text(
+          Text(
             'Transaction Details',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2933),
+              color: AppColors.textPrimaryC(context),
             ),
           ),
 
@@ -131,8 +125,8 @@ class TransactionDetailsScreen extends ConsumerWidget {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -158,7 +152,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: AppColors.error,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
                         ),
                         child: Text(
                           notificationCount > 9 ? '9+' : '$notificationCount',
@@ -260,20 +254,20 @@ class TransactionDetailsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            // White Details Section
+            // Details Section
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-              color: Colors.white,
+              color: AppColors.cardBg(context),
               child: Column(
                 children: [
                   // Amount Section
-                  const Text(
+                  Text(
                     'Amount Paid',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                       height: 1.47,
                     ),
                   ),
@@ -291,27 +285,28 @@ class TransactionDetailsScreen extends ConsumerWidget {
                   // Divider
                   Container(
                     height: 1,
-                    color: const Color(0xFFC6DDFF),
+                    color: AppColors.borderC(context),
                   ),
                   const SizedBox(height: 16),
                   // Transaction Details
-                  _buildDetailRow('Payment No', payment.paymentNumber),
+                  _buildDetailRow(context, 'Payment No', payment.paymentNumber),
                   if (payment.payreference != null) ...[
                     const SizedBox(height: 16),
-                    _buildDetailRow('Transaction ID', payment.payreference!),
+                    _buildDetailRow(context, 'Transaction ID', payment.payreference!),
                   ],
                   const SizedBox(height: 16),
                   _buildDetailRowWithDot(
+                    context,
                     'Date & Time',
                     _formatDate(payment.paidAt ?? payment.createdAt),
                     _formatTime(payment.paidAt ?? payment.createdAt),
                   ),
                   const SizedBox(height: 16),
-                  _buildDetailRow('Payment Method', payment.paymentMethod),
+                  _buildDetailRow(context, 'Payment Method', payment.paymentMethod),
                   const SizedBox(height: 16),
-                  _buildDetailRow('Student', studentName),
+                  _buildDetailRow(context, 'Student', studentName),
                   const SizedBox(height: 16),
-                  _buildDetailRow('Class', className),
+                  _buildDetailRow(context, 'Class', className),
                 ],
               ),
             ),
@@ -321,25 +316,25 @@ class TransactionDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(BuildContext context, String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF6B7280),
+            color: AppColors.textSecondaryC(context),
             height: 1.43,
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF1F2933),
+            color: AppColors.textPrimaryC(context),
             height: 1.47,
           ),
         ),
@@ -347,16 +342,16 @@ class TransactionDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildDetailRowWithDot(String label, String date, String time) {
+  Widget _buildDetailRowWithDot(BuildContext context, String label, String date, String time) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF6B7280),
+            color: AppColors.textSecondaryC(context),
             height: 1.43,
           ),
         ),
@@ -364,27 +359,27 @@ class TransactionDetailsScreen extends ConsumerWidget {
           children: [
             Text(
               '$date ',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w400,
-                color: Color(0xFF1F2933),
+                color: AppColors.textPrimaryC(context),
                 height: 1.47,
               ),
             ),
             Container(
               width: 4,
               height: 4,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2933),
+              decoration: BoxDecoration(
+                color: AppColors.textPrimaryC(context),
                 shape: BoxShape.circle,
               ),
             ),
             Text(
               ' $time',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w400,
-                color: Color(0xFF1F2933),
+                color: AppColors.textPrimaryC(context),
                 height: 1.47,
               ),
             ),
@@ -467,23 +462,23 @@ class TransactionDetailsScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF6B7280), width: 1.5),
+                border: Border.all(color: AppColors.textSecondaryC(context), width: 1.5),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
                     Icons.share,
                     size: 24,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.textSecondaryC(context),
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Text(
                     'Share',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                     ),
                   ),
                 ],
