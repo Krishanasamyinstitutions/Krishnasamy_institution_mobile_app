@@ -789,6 +789,33 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         return;
       }
 
+      // Step 3: Create Razorpay order via Edge Function
+      final amountInPaise = (cartState.totalAmount * 100).toInt();
+
+      final orderId = await createRazorpayOrder(
+        ref: ref,
+        payId: payId,
+        amountInPaise: amountInPaise,
+        receipt: 'PAY-$payId',
+      );
+
+      if (orderId == null) {
+        // Roll back payment since we can't proceed without an order
+        await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
+        if (context.mounted) Navigator.pop(context);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to create payment order: ${lastOrderCreationError ?? "Unknown error"}. Please try again.'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        setState(() => _isProcessing = false);
+        return;
+      }
+
       // Store payment info for callbacks
       _currentPayId = payId;
       _currentCarId = carId;
@@ -797,15 +824,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       // Dismiss loading
       if (context.mounted) Navigator.pop(context);
 
-      // Step 3: Open Razorpay checkout
-      final amountInPaise = (cartState.totalAmount * 100).toInt();
-
+      // Step 4: Open Razorpay checkout with order_id
       _razorpay.open({
         'key': 'rzp_test_RQsgJgVFwM7kov',
         'amount': amountInPaise,
         'currency': 'INR',
         'name': 'TBS School',
         'description': 'School Fees Payment',
+        'order_id': orderId,
         'prefill': {
           'name': student.stuname,
           'contact': student.stumobile,

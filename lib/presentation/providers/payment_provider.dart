@@ -439,6 +439,57 @@ Future<int?> initiatePayment({
   }
 }
 
+/// Step 3: Create Razorpay order via Supabase Edge Function.
+/// Returns the order_id string on success, null on failure.
+String? lastOrderCreationError;
+
+Future<String?> createRazorpayOrder({
+  required WidgetRef ref,
+  required int payId,
+  required int amountInPaise,
+  required String receipt,
+  String currency = 'INR',
+}) async {
+  lastOrderCreationError = null;
+  final client = ref.read(supabaseClientProvider);
+
+  try {
+    final response = await client.functions.invoke(
+      'create-razorpay-order',
+      body: {
+        'amount': amountInPaise,
+        'currency': currency,
+        'pay_id': payId,
+        'receipt': receipt,
+      },
+    );
+
+    if (response.status != 200) {
+      lastOrderCreationError =
+          'Edge function returned status ${response.status}';
+      debugPrint('Razorpay order creation failed: ${response.data}');
+      return null;
+    }
+
+    final data = response.data as Map<String, dynamic>;
+    final orderId = data['order_id'] as String?;
+
+    if (orderId == null || orderId.isEmpty) {
+      lastOrderCreationError = 'No order_id in response';
+      debugPrint('Razorpay order response missing order_id: $data');
+      return null;
+    }
+
+    debugPrint('Razorpay order created: $orderId for pay_id=$payId');
+    return orderId;
+  } catch (e, stackTrace) {
+    lastOrderCreationError = e.toString();
+    debugPrint('Error creating Razorpay order: $e');
+    debugPrint('Stack trace: $stackTrace');
+    return null;
+  }
+}
+
 /// Step 4: Handle payment gateway response.
 /// On success: update payment status, update feedemand, delete cart, clear memory.
 Future<bool> handlePaymentSuccess({
