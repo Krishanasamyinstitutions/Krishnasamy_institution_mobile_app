@@ -151,7 +151,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final isLastPage = _currentPage == _pages.length - 1;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -227,8 +227,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: Container(
         width: 44,
         height: 44,
-        decoration: const BoxDecoration(
-          color: Color(0xFF1F2937),
+        decoration: BoxDecoration(
+          color: AppColors.iconButtonBg(context),
           shape: BoxShape.circle,
         ),
         child: const Icon(
@@ -279,12 +279,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           borderRadius: BorderRadius.circular(8),
         ),
       ),
-      child: const Text(
+      child: Text(
         'Skip',
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF1F2933),
+          color: AppColors.textPrimaryC(context),
           letterSpacing: 0.3,
         ),
       ),
@@ -305,10 +305,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               blurRadius: 1,
               offset: Offset.zero,
             ),
-            const BoxShadow(
-              color: Color(0xFFE5E7EB),
+            BoxShadow(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.transparent
+                  : const Color(0xFFE5E7EB),
               blurRadius: 4,
-              offset: Offset(0, 2),
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -356,10 +358,10 @@ class _OnboardingPage extends StatelessWidget {
             child: Text(
               data.title,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1F2933),
+                color: AppColors.textPrimaryC(context),
                 height: 1.27,
               ),
             ),
@@ -419,10 +421,10 @@ class _OnboardingPage extends StatelessWidget {
                   child: Text(
                     data.description,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                       height: 1.43,
                     ),
                   ),

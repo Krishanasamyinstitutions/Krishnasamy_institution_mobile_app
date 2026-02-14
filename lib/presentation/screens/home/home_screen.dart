@@ -31,24 +31,18 @@ class HomeScreen extends ConsumerWidget {
     final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: Column(
         children: [
           // Fixed Header with white SafeArea and subtle shadow
           Container(
-            color: Colors.white,
+            color: AppColors.headerBg(context),
             child: SafeArea(
               bottom: false,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+                  color: AppColors.headerBg(context),
+                  boxShadow: AppColors.cardShadow(context),
                 ),
                 child: Column(
                   children: [
@@ -75,7 +69,7 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: 28),
 
                     // Balance Section
-                    _buildBalanceSection(feeSummaryAsync),
+                    _buildBalanceSection(context, feeSummaryAsync),
 
                     const SizedBox(height: 20),
 
@@ -85,7 +79,7 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: 20),
 
                     // School Info Widget
-                    _buildSchoolInfoWidget(institutionAsync),
+                    _buildSchoolInfoWidget(context, institutionAsync),
 
                     const SizedBox(height: 28),
 
@@ -97,7 +91,7 @@ class HomeScreen extends ConsumerWidget {
                     // Activity Section - Overdue & Due Soon
                     _buildActivitySection(context, overdueGroups, dueSoonGroups),
 
-                    const SizedBox(height: 100),
+                    SizedBox(height: 70 + MediaQuery.of(context).padding.bottom + 20),
                   ],
                 ),
               ),
@@ -169,46 +163,46 @@ class HomeScreen extends ConsumerWidget {
             children: [
               Text(
                 studentName,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF1F2937),
+                  color: AppColors.textPrimaryC(context),
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Text(
+                  Text(
                     'Adm No: ',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                     ),
                   ),
                   Text(
                     admissionNumber,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1F2937),
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
-                  const Text(
+                  Text(
                     ' | Class: ',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                     ),
                   ),
                   Text(
                     className,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1F2937),
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ],
@@ -222,8 +216,8 @@ class HomeScreen extends ConsumerWidget {
           child: Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1F2937),
+            decoration: BoxDecoration(
+              color: AppColors.iconButtonBg(context),
               shape: BoxShape.circle,
             ),
             child: Stack(
@@ -252,7 +246,7 @@ class HomeScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: AppColors.error,
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                        border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
                       ),
                       child: Text(
                         cartItemCount > 9 ? '9+' : '$cartItemCount',
@@ -276,8 +270,8 @@ class HomeScreen extends ConsumerWidget {
           child: Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(
-              color: Color(0xFF1F2937),
+            decoration: BoxDecoration(
+              color: AppColors.iconButtonBg(context),
               shape: BoxShape.circle,
             ),
             child: Stack(
@@ -303,7 +297,7 @@ class HomeScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: AppColors.error,
                         shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                        border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
                       ),
                       child: Text(
                         notificationCount > 9 ? '9+' : '$notificationCount',
@@ -324,7 +318,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildBalanceSection(AsyncValue<FeeSummary> feeSummaryAsync) {
+  Widget _buildBalanceSection(BuildContext context, AsyncValue<FeeSummary> feeSummaryAsync) {
     final feeSummary = feeSummaryAsync.valueOrNull;
     final totalPending = feeSummary?.totalPending ?? 0;
 
@@ -337,12 +331,12 @@ class HomeScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Text(
+        Text(
           'Balance Fees Due',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: Color(0xFF6B7280),
+            color: AppColors.textSecondaryC(context),
           ),
         ),
         const SizedBox(height: 8),
@@ -353,29 +347,29 @@ class HomeScreen extends ConsumerWidget {
           children: [
             Text(
               '₹${NumberFormat('#,##,###').format(totalPending)}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 40,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1F2937),
+                color: AppColors.textPrimaryC(context),
                 letterSpacing: -1,
               ),
             ),
             const SizedBox(width: 8),
-            const Text(
+            Text(
               '/',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w400,
-                color: Color(0xFF9CA3AF),
+                color: AppColors.textHintC(context),
               ),
             ),
             const SizedBox(width: 8),
             Text(
               academicYear,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: Color(0xFF6B7280),
+                color: AppColors.textSecondaryC(context),
               ),
             ),
           ],
@@ -434,7 +428,7 @@ class HomeScreen extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1F2937),
+                color: AppColors.iconButtonBg(context),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -463,7 +457,7 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSchoolInfoWidget(AsyncValue<InstitutionModel?> institutionAsync) {
+  Widget _buildSchoolInfoWidget(BuildContext context, AsyncValue<InstitutionModel?> institutionAsync) {
     final institution = institutionAsync.valueOrNull;
     final schoolName = institution?.name ?? 'School';
     final schoolAddress = institution?.shortAddress ?? 'Address not available';
@@ -473,15 +467,9 @@ class HomeScreen extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppColors.cardShadow(context),
       ),
       child: Row(
         children: [
@@ -542,28 +530,28 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Text(
                   schoolName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.location_on_outlined,
                       size: 14,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                     ),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
                         schoolAddress,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -595,12 +583,12 @@ class HomeScreen extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Pending Dues',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1F2937),
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             GestureDetector(
@@ -680,17 +668,17 @@ class HomeScreen extends ConsumerWidget {
         width: 160,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: hasColoredBg ? primaryColor : Colors.white,
+          color: hasColoredBg ? primaryColor : AppColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: hasColoredBg
-                  ? primaryColor.withValues(alpha: 0.3)
-                  : Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: hasColoredBg
+              ? [
+                  BoxShadow(
+                    color: primaryColor.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : AppColors.cardShadow(context),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -773,7 +761,7 @@ class HomeScreen extends ConsumerWidget {
                 fontWeight: FontWeight.w500,
                 color: hasColoredBg
                     ? Colors.white.withValues(alpha: 0.8)
-                    : const Color(0xFF6B7280),
+                    : AppColors.textSecondaryC(context),
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -788,14 +776,14 @@ class HomeScreen extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
-                      color: hasColoredBg ? Colors.white : const Color(0xFF1F2937),
+                      color: hasColoredBg ? Colors.white : AppColors.textPrimaryC(context),
                     ),
                   ),
                 ),
                 Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
-                  color: hasColoredBg ? Colors.white : const Color(0xFF6B7280),
+                  color: hasColoredBg ? Colors.white : AppColors.textSecondaryC(context),
                 ),
               ],
             ),
@@ -820,12 +808,12 @@ class HomeScreen extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Fee Status',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF1F2937),
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             GestureDetector(
@@ -843,7 +831,7 @@ class HomeScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         if (!hasAnyFees)
-          _buildEmptyActivity()
+          _buildEmptyActivity(context)
         else ...[
           // Overdue Section
           if (hasOverdue) ...[
@@ -957,8 +945,8 @@ class HomeScreen extends ConsumerWidget {
       groupIconColor = AppColors.cardGreenDark;
     } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
       groupSvgPath = 'assets/school Icons/van.svg';
-      groupBg = AppColors.cardBlue;
-      groupIconColor = AppColors.cardBlueDark;
+      groupBg = const Color(0xFFFEF3C7);
+      groupIconColor = const Color(0xFFF59E0B);
     } else if (lowerName.contains('hostel')) {
       groupIcon = Icons.hotel_rounded;
       groupBg = const Color(0xFFDBEAFE);
@@ -976,19 +964,13 @@ class HomeScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: statusColor.withValues(alpha: 0.15),
             width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: AppColors.cardShadow(context),
         ),
         child: Row(
           children: [
@@ -1017,10 +999,10 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   Text(
                     _toTitleCase(group.groupName),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1F2937),
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -1031,7 +1013,7 @@ class HomeScreen extends ConsumerWidget {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w400,
-                          color: AppColors.textTertiary,
+                          color: AppColors.textSecondaryC(context),
                         ),
                       ),
                       if (timeInfo.isNotEmpty) ...[
@@ -1063,17 +1045,17 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Text(
                   '₹${NumberFormat('#,##,###').format(group.totalAmount.toInt())}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Icon(
+                Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 14,
-                  color: Color(0xFF1F2937),
+                  color: AppColors.textPrimaryC(context),
                 ),
               ],
             ),
@@ -1083,42 +1065,36 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyActivity() {
+  Widget _buildEmptyActivity(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 32),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: AppColors.cardShadow(context),
       ),
       child: Column(
         children: [
           Container(
             width: 64,
             height: 64,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.cardGreen,
               shape: BoxShape.circle,
             ),
-            child: Icon(
+            child: const Icon(
               Icons.check_circle_rounded,
               size: 32,
               color: AppColors.cardGreenDark,
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'All caught up!',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2937),
+              color: AppColors.textPrimaryC(context),
             ),
           ),
           const SizedBox(height: 4),
@@ -1126,7 +1102,7 @@ class HomeScreen extends ConsumerWidget {
             'No overdue or upcoming fees',
             style: TextStyle(
               fontSize: 14,
-              color: AppColors.textTertiary,
+              color: AppColors.textSecondaryC(context),
             ),
           ),
         ],

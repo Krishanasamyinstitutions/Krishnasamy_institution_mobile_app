@@ -45,24 +45,18 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   Widget build(BuildContext context) {
     final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: Column(
           children: [
             // Header with white SafeArea and subtle shadow
             Container(
-              color: Colors.white,
+              color: AppColors.headerBg(context),
               child: SafeArea(
                 bottom: false,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
+                    color: AppColors.headerBg(context),
+                    boxShadow: AppColors.cardShadow(context),
                   ),
                   child: Column(
                     children: [
@@ -92,7 +86,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -139,8 +133,8 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -152,7 +146,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
           ),
           const SizedBox(width: 12),
           // Title & Subtitle
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -161,16 +155,16 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Get assistance',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
               ],
@@ -182,8 +176,8 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -209,7 +203,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.error,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
                         ),
                         child: Text(
                           cartItemCount > 9 ? '9+' : '$cartItemCount',
@@ -233,8 +227,8 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -260,7 +254,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.error,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
                         ),
                         child: Text(
                           notificationCount > 9 ? '9+' : '$notificationCount',
@@ -287,15 +281,9 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowPurple,
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        boxShadow: AppColors.cardShadow(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -322,7 +310,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: AppColors.textPrimaryC(context),
                 ),
               ),
             ],
@@ -331,7 +319,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
           // Divider
           Container(
             height: 1,
-            color: AppColors.borderLight,
+            color: AppColors.borderC(context),
           ),
           const SizedBox(height: 20),
           // Email Row
@@ -392,7 +380,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textTertiary,
+                  color: AppColors.textHintC(context),
                 ),
               ),
               const SizedBox(height: 2),
@@ -401,7 +389,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: AppColors.textPrimaryC(context),
                 ),
               ),
             ],
@@ -422,7 +410,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
           border: isOpen
               ? Border.all(color: AppColors.primary, width: 2)
@@ -462,7 +450,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: isOpen ? FontWeight.w600 : FontWeight.w500,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
@@ -470,13 +458,13 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                     width: 28,
                     height: 28,
                     decoration: BoxDecoration(
-                      color: isOpen ? AppColors.primary : AppColors.bgSecondary,
+                      color: isOpen ? AppColors.primary : AppColors.filterBg(context),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       isOpen ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                       size: 20,
-                      color: isOpen ? Colors.white : AppColors.textTertiary,
+                      color: isOpen ? Colors.white : AppColors.textHintC(context),
                     ),
                   ),
                 ],
@@ -496,7 +484,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.textSecondary,
+                      color: AppColors.textSecondaryC(context),
                       height: 1.6,
                     ),
                   ),

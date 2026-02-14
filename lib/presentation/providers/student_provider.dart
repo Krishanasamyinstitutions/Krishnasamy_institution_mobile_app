@@ -67,7 +67,7 @@ class SelectedStudentNotifier extends StateNotifier<StudentModel?> {
     // Clear cart when switching students
     final currentStudentId = state?.stuId;
     if (currentStudentId != null && currentStudentId != student.stuId) {
-      _ref.read(cartProvider.notifier).clearCart();
+      _ref.read(cartProvider.notifier).clearCartLocal();
       debugPrint('Cart cleared for student switch');
     }
 

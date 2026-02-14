@@ -6,39 +6,44 @@ import '../../data/models/notification_model.dart';
 import 'auth_provider.dart';
 import 'student_provider.dart';
 
-const _readNotificationsKey = 'read_notification_ids';
+/// Tracks which notification IDs have been read (persisted locally per student)
+/// State is null while loading from SharedPreferences, then Set<String> when loaded
+class ReadNotificationsNotifier extends StateNotifier<Set<String>?> {
+  final int? _studentId;
 
-/// Tracks which notification IDs have been read (persisted locally)
-class ReadNotificationsNotifier extends StateNotifier<Set<String>> {
-  ReadNotificationsNotifier() : super({}) {
+  ReadNotificationsNotifier(this._studentId) : super(null) {
     _load();
   }
 
+  String get _storageKey => 'read_notification_ids_${_studentId ?? 'none'}';
+
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
-    final ids = prefs.getStringList(_readNotificationsKey) ?? [];
+    final ids = prefs.getStringList(_storageKey) ?? [];
     state = ids.toSet();
   }
 
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_readNotificationsKey, state.toList());
+    await prefs.setStringList(_storageKey, (state ?? {}).toList());
   }
 
   Future<void> markAsRead(String id) async {
-    state = {...state, id};
+    state = {...(state ?? {}), id};
     await _save();
   }
 
   Future<void> markAllAsRead(List<String> ids) async {
-    state = {...state, ...ids};
+    state = {...(state ?? {}), ...ids};
     await _save();
   }
 }
 
 final readNotificationsProvider =
-    StateNotifierProvider<ReadNotificationsNotifier, Set<String>>(
-        (ref) => ReadNotificationsNotifier());
+    StateNotifierProvider<ReadNotificationsNotifier, Set<String>?>((ref) {
+  final selectedStudent = ref.watch(selectedStudentProvider);
+  return ReadNotificationsNotifier(selectedStudent?.stuId);
+});
 
 /// Converts a payment record from Supabase into a NotificationModel
 NotificationModel _paymentToNotification(
@@ -105,7 +110,8 @@ NotificationModel _paymentToNotification(
 final notificationsProvider =
     FutureProvider<List<NotificationModel>>((ref) async {
   List<NotificationModel> notifications = [];
-  final readIds = ref.watch(readNotificationsProvider);
+  final readIds = ref.watch(readNotificationsProvider) ?? {};
+
 
   try {
     final client = ref.watch(supabaseClientProvider);
@@ -137,7 +143,7 @@ final notificationsProvider =
 /// Unread notification count for badge display
 final notificationCountProvider = Provider<int>((ref) {
   final notificationsAsync = ref.watch(notificationsProvider);
-  final readIds = ref.watch(readNotificationsProvider);
+  final readIds = ref.watch(readNotificationsProvider) ?? {};
   return notificationsAsync.maybeWhen(
     data: (notifications) =>
         notifications.where((n) => !readIds.contains(n.id)).length,

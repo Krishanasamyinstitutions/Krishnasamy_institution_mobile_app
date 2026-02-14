@@ -46,7 +46,7 @@ class _NotificationDetailScreenState
 
     if (notification == null) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FB),
+        backgroundColor: AppColors.scaffoldBg(context),
         appBar: _buildAppBar(context),
         body: const Center(
           child: Text('Notification not found'),
@@ -55,24 +55,18 @@ class _NotificationDetailScreenState
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: Column(
         children: [
           // Header with white SafeArea and subtle shadow
           Container(
-            color: Colors.white,
+            color: AppColors.headerBg(context),
             child: SafeArea(
               bottom: false,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+                  color: AppColors.headerBg(context),
+                  boxShadow: AppColors.cardShadow(context),
                 ),
                 child: Column(
                   children: [
@@ -99,10 +93,10 @@ class _NotificationDetailScreenState
                     // Title
                     Text(
                       notification.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                         height: 1.3,
                       ),
                     ),
@@ -113,7 +107,7 @@ class _NotificationDetailScreenState
                         Icon(
                           Icons.schedule_rounded,
                           size: 16,
-                          color: AppColors.textSecondary.withValues(alpha: 0.7),
+                          color: AppColors.textHintC(context),
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -121,7 +115,7 @@ class _NotificationDetailScreenState
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w400,
-                            color: AppColors.textSecondary.withValues(alpha: 0.8),
+                            color: AppColors.textSecondaryC(context),
                           ),
                         ),
                       ],
@@ -132,15 +126,9 @@ class _NotificationDetailScreenState
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.cardBg(context),
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.04),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        boxShadow: AppColors.cardShadow(context),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,10 +139,10 @@ class _NotificationDetailScreenState
                           // Message
                           Text(
                             notification.body,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w400,
-                              color: AppColors.textPrimary,
+                              color: AppColors.textPrimaryC(context),
                               height: 1.7,
                             ),
                           ),
@@ -188,8 +176,8 @@ class _NotificationDetailScreenState
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -200,12 +188,12 @@ class _NotificationDetailScreenState
             ),
           ),
           // Title
-          const Text(
+          Text(
             'Notification',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
           // Placeholder for symmetry
@@ -217,22 +205,22 @@ class _NotificationDetailScreenState
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       elevation: 0,
       leading: IconButton(
         onPressed: () => context.pop(),
-        icon: const Icon(
+        icon: Icon(
           Icons.arrow_back_ios_new_rounded,
           size: 18,
-          color: AppColors.textPrimary,
+          color: AppColors.textPrimaryC(context),
         ),
       ),
-      title: const Text(
+      title: Text(
         'Notification',
         style: TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w600,
-          color: AppColors.textPrimary,
+          color: AppColors.textPrimaryC(context),
         ),
       ),
       centerTitle: true,

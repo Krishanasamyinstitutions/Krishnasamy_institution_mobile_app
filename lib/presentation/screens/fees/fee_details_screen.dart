@@ -18,7 +18,7 @@ class FeeDetailsScreen extends ConsumerWidget {
     final feesAsync = ref.watch(feesProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       appBar: AppBar(
         title: const Text('Fee Details'),
       ),
@@ -36,11 +36,11 @@ class FeeDetailsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildFeeHeader(fee),
+                _buildFeeHeader(context, fee),
                 const SizedBox(height: AppSizes.s4),
-                _buildFeeDetails(fee),
+                _buildFeeDetails(context, fee),
                 const SizedBox(height: AppSizes.s4),
-                _buildPaymentBreakdown(fee),
+                _buildPaymentBreakdown(context, fee),
                 if (fee.status != FeeStatus.paid) ...[
                   const SizedBox(height: AppSizes.s6),
                   AppButton(
@@ -59,13 +59,13 @@ class FeeDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeeHeader(FeeModel fee) {
+  Widget _buildFeeHeader(BuildContext context, FeeModel fee) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.s4),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(AppSizes.roundedXl),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderC(context)),
       ),
       child: Row(
         children: [
@@ -89,18 +89,18 @@ class FeeDetailsScreen extends ConsumerWidget {
               children: [
                 Text(
                   fee.feeTypeName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: AppSizes.textLg,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
                 const SizedBox(height: AppSizes.s1),
                 Text(
                   fee.term,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: AppSizes.textSm,
-                    color: AppColors.textSecondary,
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
               ],
@@ -112,67 +112,67 @@ class FeeDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeeDetails(FeeModel fee) {
+  Widget _buildFeeDetails(BuildContext context, FeeModel fee) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.s4),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(AppSizes.roundedXl),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderC(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Fee Details',
             style: TextStyle(
               fontSize: AppSizes.textBase,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
           const SizedBox(height: AppSizes.s4),
-          _buildDetailRow('Due Date', Formatters.date(fee.dueDate)),
-          _buildDetailRow('Base Amount', Formatters.currency(fee.amount)),
+          _buildDetailRow(context, 'Due Date', Formatters.date(fee.dueDate)),
+          _buildDetailRow(context, 'Base Amount', Formatters.currency(fee.amount)),
           if (fee.discountAmount > 0)
-            _buildDetailRow('Discount', '- ${Formatters.currency(fee.discountAmount)}', valueColor: AppColors.success),
+            _buildDetailRow(context, 'Discount', '- ${Formatters.currency(fee.discountAmount)}', valueColor: AppColors.success),
           if (fee.lateFee > 0)
-            _buildDetailRow('Late Fee', '+ ${Formatters.currency(fee.lateFee)}', valueColor: AppColors.error),
+            _buildDetailRow(context, 'Late Fee', '+ ${Formatters.currency(fee.lateFee)}', valueColor: AppColors.error),
           const Divider(height: AppSizes.s6),
-          _buildDetailRow('Total Amount', Formatters.currency(fee.totalAmount), isBold: true),
+          _buildDetailRow(context, 'Total Amount', Formatters.currency(fee.totalAmount), isBold: true),
         ],
       ),
     );
   }
 
-  Widget _buildPaymentBreakdown(FeeModel fee) {
+  Widget _buildPaymentBreakdown(BuildContext context, FeeModel fee) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.s4),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(AppSizes.roundedXl),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderC(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Payment Summary',
             style: TextStyle(
               fontSize: AppSizes.textBase,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
           const SizedBox(height: AppSizes.s4),
-          _buildDetailRow('Amount Paid', Formatters.currency(fee.paidAmount), valueColor: AppColors.success),
-          _buildDetailRow('Balance Due', Formatters.currency(fee.balanceAmount), valueColor: fee.balanceAmount > 0 ? AppColors.error : AppColors.success),
+          _buildDetailRow(context, 'Amount Paid', Formatters.currency(fee.paidAmount), valueColor: AppColors.success),
+          _buildDetailRow(context, 'Balance Due', Formatters.currency(fee.balanceAmount), valueColor: fee.balanceAmount > 0 ? AppColors.error : AppColors.success),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {Color? valueColor, bool isBold = false}) {
+  Widget _buildDetailRow(BuildContext context, String label, String value, {Color? valueColor, bool isBold = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSizes.s2),
       child: Row(
@@ -182,7 +182,7 @@ class FeeDetailsScreen extends ConsumerWidget {
             label,
             style: TextStyle(
               fontSize: AppSizes.textSm,
-              color: AppColors.textSecondary,
+              color: AppColors.textSecondaryC(context),
               fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
             ),
           ),
@@ -190,7 +190,7 @@ class FeeDetailsScreen extends ConsumerWidget {
             value,
             style: TextStyle(
               fontSize: AppSizes.textSm,
-              color: valueColor ?? AppColors.textPrimary,
+              color: valueColor ?? AppColors.textPrimaryC(context),
               fontWeight: isBold ? FontWeight.w600 : FontWeight.w500,
             ),
           ),

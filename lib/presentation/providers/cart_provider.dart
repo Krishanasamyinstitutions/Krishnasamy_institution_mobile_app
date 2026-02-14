@@ -99,9 +99,15 @@ class CartNotifier extends StateNotifier<CartState> {
     _skipSync = false;
   }
 
-  /// Clear all items from cart (in-memory only)
-  /// DB cart records are preserved until payment completes
+  /// Clear all items from cart and delete from database (user explicitly clears)
   void clearCart() {
+    _syncTimer?.cancel();
+    state = const CartState();
+    _syncToDatabase();
+  }
+
+  /// Clear in-memory cart only (used for student switch, does NOT delete from DB)
+  void clearCartLocal() {
     _syncTimer?.cancel();
     state = const CartState();
   }
@@ -126,13 +132,6 @@ class CartNotifier extends StateNotifier<CartState> {
     final client = _ref.read(supabaseClientProvider);
     final parent = _ref.read(currentParentProvider);
 
-    // If cart is empty, skip sync (DB cart preserved until payment completes)
-    if (state.isEmpty) return;
-
-    final items = state.items;
-    final firstFee = items.first;
-    final totalAmount = items.fold<double>(0, (sum, f) => sum + f.balancedue);
-
     try {
       // Find existing active (non-initiated) cart for this student
       final existingCart = await client
@@ -142,6 +141,21 @@ class CartNotifier extends StateNotifier<CartState> {
           .eq('carinitiated', 'N')
           .eq('activestatus', 1)
           .maybeSingle();
+
+      // If cart is empty, delete existing cart from database
+      if (state.isEmpty) {
+        if (existingCart != null) {
+          final carId = existingCart['car_id'] as int;
+          await client.from('shoppingcartdetails').delete().eq('car_id', carId);
+          await client.from('shoppingcart').delete().eq('car_id', carId);
+          debugPrint('Cart deleted from DB: car_id=$carId');
+        }
+        return;
+      }
+
+      final items = state.items;
+      final firstFee = items.first;
+      final totalAmount = items.fold<double>(0, (sum, f) => sum + f.balancedue);
 
       int carId;
 

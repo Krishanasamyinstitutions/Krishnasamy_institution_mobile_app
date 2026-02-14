@@ -10,7 +10,7 @@ class WelcomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -22,15 +22,11 @@ class WelcomeScreen extends StatelessWidget {
                   width: 180,
                   height: 180,
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.cardBg(context),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.shadowPurple,
-                        blurRadius: 40,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+                    boxShadow: Theme.of(context).brightness == Brightness.dark
+                        ? []
+                        : [BoxShadow(color: AppColors.shadowPurple, blurRadius: 40, offset: const Offset(0, 10))],
                   ),
                   child: ClipOval(
                     child: Image.asset(
@@ -47,7 +43,7 @@ class WelcomeScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
 
@@ -57,13 +53,14 @@ class WelcomeScreen extends StatelessWidget {
                   'Pay school fees with ease',
                   style: TextStyle(
                     fontSize: 16,
-                    color: AppColors.textTertiary,
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
 
                 const Spacer(),
 
                 _buildFeatureItem(
+                  context: context,
                   icon: Icons.speed_rounded,
                   text: 'Quick & Easy Payments',
                   color: AppColors.cardPurple,
@@ -71,6 +68,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _buildFeatureItem(
+                  context: context,
                   icon: Icons.security_rounded,
                   text: '100% Secure Transactions',
                   color: AppColors.cardGreen,
@@ -78,6 +76,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 _buildFeatureItem(
+                  context: context,
                   icon: Icons.receipt_long_rounded,
                   text: 'Instant Digital Receipts',
                   color: AppColors.cardBlue,
@@ -138,7 +137,7 @@ class WelcomeScreen extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: AppColors.primary, width: 2),
                     ),
@@ -177,6 +176,7 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   Widget _buildFeatureItem({
+    required BuildContext context,
     required IconData icon,
     required String text,
     required Color color,
@@ -185,15 +185,11 @@ class WelcomeScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadowLight,
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: AppColors.shadowLight, blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Row(
         children: [
@@ -217,7 +213,7 @@ class WelcomeScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
+                color: AppColors.textPrimaryC(context),
               ),
             ),
           ),

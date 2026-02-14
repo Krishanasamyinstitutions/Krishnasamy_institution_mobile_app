@@ -140,26 +140,20 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
     final selectedAmount = selectedFees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: Stack(
         children: [
           Column(
             children: [
               // Header with white SafeArea and subtle shadow
               Container(
-                color: Colors.white,
+                color: AppColors.headerBg(context),
                 child: SafeArea(
                   bottom: false,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
-                        ),
-                      ],
+                      color: AppColors.headerBg(context),
+                      boxShadow: AppColors.cardShadow(context),
                     ),
                     child: Column(
                       children: [
@@ -199,8 +193,8 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -216,10 +210,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
           // Title
           Text(
             _getScreenTitle(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2933),
+              color: AppColors.textPrimaryC(context),
             ),
           ),
 
@@ -229,8 +223,8 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -485,25 +479,21 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             filterLabel,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF6B7280),
+              color: AppColors.textSecondaryC(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -520,9 +510,9 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FA),
+                      color: AppColors.filterBg(context),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                      border: Border.all(color: AppColors.borderC(context)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -530,17 +520,17 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                         Expanded(
                           child: Text(
                             _selectedSubFilter ?? 'ALL',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF1F2933),
+                              color: AppColors.textPrimaryC(context),
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Icon(
                           _isDropdownOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                          color: const Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                           size: 24,
                         ),
                       ],
@@ -562,7 +552,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: hasFilter ? const Color(0xFF1F2937) : const Color(0xFFE5E7EB),
+                    color: hasFilter ? AppColors.iconButtonBg(context) : AppColors.borderC(context),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -570,7 +560,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                       Icon(
                         Icons.filter_list_rounded,
                         size: 18,
-                        color: hasFilter ? Colors.white : const Color(0xFF9CA3AF),
+                        color: hasFilter ? Colors.white : AppColors.textHintC(context),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -578,7 +568,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: hasFilter ? Colors.white : const Color(0xFF9CA3AF),
+                          color: hasFilter ? Colors.white : AppColors.textHintC(context),
                         ),
                       ),
                     ],
@@ -595,15 +585,11 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
   Widget _buildFloatingDropdown(List<String> subFilterOptions) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 16, offset: const Offset(0, 4))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -645,7 +631,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                      color: isSelected ? AppColors.primary : const Color(0xFF1F2937),
+                      color: isSelected ? AppColors.primary : AppColors.textPrimaryC(context),
                     ),
                   ),
                 ),
@@ -660,7 +646,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
           ),
         ),
         if (showDivider)
-          const Divider(height: 1, color: Color(0xFFF3F4F6)),
+          Divider(height: 1, color: AppColors.borderC(context)),
       ],
     );
   }
@@ -697,15 +683,11 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -722,19 +704,19 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     children: [
                       Text(
                         term,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2933),
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         monthRange,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                         ),
                       ),
                     ],
@@ -779,10 +761,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: allSelected ? AppColors.primary : Colors.white,
+                      color: allSelected ? AppColors.primary : AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: allSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                        color: allSelected ? AppColors.primary : AppColors.borderC(context),
                         width: 1.5,
                       ),
                     ),
@@ -797,7 +779,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             const SizedBox(height: 16),
 
             // Table Header
-            const Row(
+            Row(
               children: [
                 Expanded(
                   child: Text(
@@ -805,7 +787,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ),
@@ -814,7 +796,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   style: TextStyle(
                     fontSize: AppSizes.textBase,
                     fontWeight: AppSizes.fontSemibold,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
               ],
@@ -824,7 +806,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             Container(
               margin: const EdgeInsets.only(top: 12),
               height: 1,
-              color: const Color(0xFFE5E7EB),
+              color: AppColors.borderC(context),
             ),
 
             // Fee Items
@@ -835,22 +817,22 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'TOTAL',
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
                   Text(
                     '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: AppSizes.textLg,
                       fontWeight: AppSizes.fontBold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ],
@@ -900,9 +882,9 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+          bottom: BorderSide(color: AppColors.borderC(context), width: 1),
         ),
       ),
       child: Row(
@@ -931,10 +913,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     children: [
                       Text(
                         feeName.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: AppSizes.bodyText,
                           fontWeight: AppSizes.fontMedium,
-                          color: AppColors.textPrimary,
+                          color: AppColors.textPrimaryC(context),
                           height: 1.47,
                         ),
                       ),
@@ -944,7 +926,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                           Icon(
                             Icons.calendar_today_outlined,
                             size: 12,
-                            color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -952,7 +934,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                              color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                             ),
                           ),
                           if (isOverdue) ...[
@@ -983,10 +965,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
           ),
           Text(
             '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppSizes.textBase,
               fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
         ],
@@ -1020,15 +1002,11 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1043,21 +1021,21 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'TUITION FEES',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2933),
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         monthRange,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                         ),
                       ),
                     ],
@@ -1098,10 +1076,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: allSelected ? AppColors.primary : Colors.white,
+                      color: allSelected ? AppColors.primary : AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: allSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                        color: allSelected ? AppColors.primary : AppColors.borderC(context),
                         width: 1.5,
                       ),
                     ),
@@ -1116,7 +1094,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             const SizedBox(height: 16),
 
             // Table Header
-            const Row(
+            Row(
               children: [
                 Expanded(
                   child: Text(
@@ -1124,7 +1102,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ),
@@ -1133,10 +1111,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   style: TextStyle(
                     fontSize: AppSizes.textBase,
                     fontWeight: AppSizes.fontSemibold,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
-                SizedBox(width: 36), // Space for checkbox
+                const SizedBox(width: 36), // Space for checkbox
               ],
             ),
 
@@ -1144,7 +1122,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             Container(
               margin: const EdgeInsets.only(top: 12),
               height: 1,
-              color: const Color(0xFFE5E7EB),
+              color: AppColors.borderC(context),
             ),
 
             // Fee Items with individual checkboxes
@@ -1155,22 +1133,22 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'TOTAL',
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
                   Text(
                     '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: AppSizes.textLg,
                       fontWeight: AppSizes.fontBold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                   const SizedBox(width: 36), // Space for checkbox alignment
@@ -1215,9 +1193,9 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
       onTap: () => _toggleSingleFee(fee, isSelected),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+            bottom: BorderSide(color: AppColors.borderC(context), width: 1),
           ),
         ),
         child: Row(
@@ -1247,10 +1225,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                       children: [
                         Text(
                           monthName.toUpperCase(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: AppSizes.bodyText,
                             fontWeight: AppSizes.fontMedium,
-                            color: AppColors.textPrimary,
+                            color: AppColors.textPrimaryC(context),
                             height: 1.47,
                           ),
                         ),
@@ -1260,7 +1238,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                             Icon(
                               Icons.calendar_today_outlined,
                               size: 12,
-                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                              color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -1268,7 +1246,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
-                                color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                                color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                               ),
                             ),
                             if (isOverdue) ...[
@@ -1299,10 +1277,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             ),
             Text(
               '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: AppSizes.textBase,
                 fontWeight: AppSizes.fontSemibold,
-                color: AppColors.textPrimary,
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             const SizedBox(width: 12),
@@ -1311,10 +1289,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.white,
+                color: isSelected ? AppColors.primary : AppColors.cardBg(context),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                  color: isSelected ? AppColors.primary : AppColors.borderC(context),
                   width: 1.5,
                 ),
               ),
@@ -1354,15 +1332,11 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1377,21 +1351,21 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'HOSTEL FEES',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2933),
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         monthRange,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                         ),
                       ),
                     ],
@@ -1432,10 +1406,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: allSelected ? AppColors.primary : Colors.white,
+                      color: allSelected ? AppColors.primary : AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: allSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                        color: allSelected ? AppColors.primary : AppColors.borderC(context),
                         width: 1.5,
                       ),
                     ),
@@ -1450,7 +1424,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             const SizedBox(height: 16),
 
             // Table Header
-            const Row(
+            Row(
               children: [
                 Expanded(
                   child: Text(
@@ -1458,7 +1432,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ),
@@ -1467,10 +1441,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   style: TextStyle(
                     fontSize: AppSizes.textBase,
                     fontWeight: AppSizes.fontSemibold,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
-                SizedBox(width: 36), // Space for checkbox
+                const SizedBox(width: 36), // Space for checkbox
               ],
             ),
 
@@ -1478,7 +1452,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             Container(
               margin: const EdgeInsets.only(top: 12),
               height: 1,
-              color: const Color(0xFFE5E7EB),
+              color: AppColors.borderC(context),
             ),
 
             // Fee Items with individual checkboxes
@@ -1489,22 +1463,22 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'TOTAL',
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
                   Text(
                     '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: AppSizes.textLg,
                       fontWeight: AppSizes.fontBold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                   const SizedBox(width: 36), // Space for checkbox alignment
@@ -1549,9 +1523,9 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
       onTap: () => _toggleSingleFee(fee, isSelected),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+            bottom: BorderSide(color: AppColors.borderC(context), width: 1),
           ),
         ),
         child: Row(
@@ -1581,10 +1555,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                       children: [
                         Text(
                           monthName.toUpperCase(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: AppSizes.bodyText,
                             fontWeight: AppSizes.fontMedium,
-                            color: AppColors.textPrimary,
+                            color: AppColors.textPrimaryC(context),
                             height: 1.47,
                           ),
                         ),
@@ -1594,7 +1568,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                             Icon(
                               Icons.calendar_today_outlined,
                               size: 12,
-                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                              color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -1602,7 +1576,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
-                                color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                                color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                               ),
                             ),
                             if (isOverdue) ...[
@@ -1633,10 +1607,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             ),
             Text(
               '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: AppSizes.textBase,
                 fontWeight: AppSizes.fontSemibold,
-                color: AppColors.textPrimary,
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             const SizedBox(width: 12),
@@ -1645,10 +1619,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.white,
+                color: isSelected ? AppColors.primary : AppColors.cardBg(context),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                  color: isSelected ? AppColors.primary : AppColors.borderC(context),
                   width: 1.5,
                 ),
               ),
@@ -1688,15 +1662,11 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1711,21 +1681,21 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'VAN FEES',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2933),
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         monthRange,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                         ),
                       ),
                     ],
@@ -1770,10 +1740,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: allSelected ? AppColors.primary : Colors.white,
+                      color: allSelected ? AppColors.primary : AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: allSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                        color: allSelected ? AppColors.primary : AppColors.borderC(context),
                         width: 1.5,
                       ),
                     ),
@@ -1788,7 +1758,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             const SizedBox(height: 16),
 
             // Table Header
-            const Row(
+            Row(
               children: [
                 Expanded(
                   child: Text(
@@ -1796,7 +1766,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ),
@@ -1805,10 +1775,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   style: TextStyle(
                     fontSize: AppSizes.textBase,
                     fontWeight: AppSizes.fontSemibold,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
-                SizedBox(width: 36), // Space for checkbox
+                const SizedBox(width: 36), // Space for checkbox
               ],
             ),
 
@@ -1816,7 +1786,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             Container(
               margin: const EdgeInsets.only(top: 12),
               height: 1,
-              color: const Color(0xFFE5E7EB),
+              color: AppColors.borderC(context),
             ),
 
             // Fee Items with individual checkboxes
@@ -1827,22 +1797,22 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'TOTAL',
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
                   Text(
                     '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: AppSizes.textLg,
                       fontWeight: AppSizes.fontBold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                   const SizedBox(width: 36), // Space for checkbox alignment
@@ -1887,9 +1857,9 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
       onTap: () => _toggleSingleFee(fee, isSelected),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+            bottom: BorderSide(color: AppColors.borderC(context), width: 1),
           ),
         ),
         child: Row(
@@ -1925,10 +1895,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                       children: [
                         Text(
                           monthName.toUpperCase(),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: AppSizes.bodyText,
                             fontWeight: AppSizes.fontMedium,
-                            color: AppColors.textPrimary,
+                            color: AppColors.textPrimaryC(context),
                             height: 1.47,
                           ),
                         ),
@@ -1938,7 +1908,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                             Icon(
                               Icons.calendar_today_outlined,
                               size: 12,
-                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                              color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -1946,7 +1916,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
-                                color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                                color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                               ),
                             ),
                             if (isOverdue) ...[
@@ -1977,10 +1947,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             ),
             Text(
               '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: AppSizes.textBase,
                 fontWeight: AppSizes.fontSemibold,
-                color: AppColors.textPrimary,
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             const SizedBox(width: 12),
@@ -1989,10 +1959,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               width: 24,
               height: 24,
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primary : Colors.white,
+                color: isSelected ? AppColors.primary : AppColors.cardBg(context),
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                  color: isSelected ? AppColors.primary : AppColors.borderC(context),
                   width: 1.5,
                 ),
               ),
@@ -2010,18 +1980,14 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(28),
           topRight: Radius.circular(28),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, -8),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, -8))],
       ),
       child: SafeArea(
         top: false,
@@ -2034,18 +2000,18 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               children: [
                 Text(
                   '$selectedCount fee${selectedCount > 1 ? 's' : ''} selected',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '₹ ${NumberFormat('#,##,###').format(selectedAmount.toInt())}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
               ],
@@ -2119,21 +2085,21 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'No Pending Fees',
               style: TextStyle(
                 fontSize: AppSizes.textLg,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'All your fees are paid. Great job!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: AppSizes.textSm,
-                color: AppColors.textSecondary,
+                color: AppColors.textSecondaryC(context),
               ),
             ),
           ],
