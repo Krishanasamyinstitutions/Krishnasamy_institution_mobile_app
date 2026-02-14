@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
@@ -22,14 +23,22 @@ class MainScaffold extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = _calculateSelectedIndex(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: AppColors.cardBg(context),
+        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      ),
+      child: Scaffold(
+      backgroundColor: AppColors.scaffoldBg(context),
       body: child,
       extendBody: true,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBg(context),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
@@ -86,6 +95,7 @@ class MainScaffold extends ConsumerWidget {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -113,7 +123,7 @@ class MainScaffold extends ConsumerWidget {
               width: 24,
               height: 24,
               colorFilter: ColorFilter.mode(
-                isSelected ? AppColors.primary : const Color(0xFF9CA3AF),
+                isSelected ? AppColors.primary : AppColors.textHintC(context),
                 BlendMode.srcIn,
               ),
             ),
@@ -123,7 +133,7 @@ class MainScaffold extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color: isSelected ? AppColors.primary : const Color(0xFF9CA3AF),
+                color: isSelected ? AppColors.primary : AppColors.textHintC(context),
               ),
             ),
           ],

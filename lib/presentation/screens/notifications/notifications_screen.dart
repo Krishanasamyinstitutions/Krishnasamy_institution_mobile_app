@@ -20,26 +20,21 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final notificationsAsync = ref.watch(notificationsProvider);
+    final readIdsLoaded = ref.watch(readNotificationsProvider) != null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: Column(
         children: [
             // Fixed Header with white SafeArea and subtle shadow
             Container(
-              color: Colors.white,
+              color: AppColors.headerBg(context),
               child: SafeArea(
                 bottom: false,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
+                    color: AppColors.headerBg(context),
+                    boxShadow: AppColors.cardShadow(context),
                   ),
                   child: Column(
                     children: [
@@ -52,7 +47,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               ),
             ),
             Expanded(
-              child: notificationsAsync.when(
+              child: !readIdsLoaded
+                ? const Center(child: CircularProgressIndicator())
+                : notificationsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => Center(child: Text('Error: $error')),
                 data: (notifications) {
@@ -60,8 +57,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     return _buildEmptyState();
                   }
                   final groupedNotifications = _groupNotificationsByDate(notifications);
+                  final bottomPadding = 70 + MediaQuery.of(context).padding.bottom + 20;
                   return ListView.builder(
-                    padding: const EdgeInsets.only(left: 24, right: 24, bottom: 100),
+                    padding: EdgeInsets.only(left: 24, right: 24, bottom: bottomPadding),
                     itemCount: groupedNotifications.length,
                     itemBuilder: (context, index) {
                       final group = groupedNotifications[index];
@@ -116,7 +114,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -126,16 +124,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Stay updated with alerts',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
               ],
@@ -147,8 +145,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -174,7 +172,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.error,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
                         ),
                         child: Text(
                           cartItemCount > 9 ? '9+' : '$cartItemCount',
@@ -203,7 +201,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
         ),
@@ -216,7 +214,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildNotificationCard(NotificationModel notification) {
-    final readIds = ref.watch(readNotificationsProvider);
+    final readIds = ref.watch(readNotificationsProvider) ?? {};
     final isUnread = !readIds.contains(notification.id);
 
     return GestureDetector(
@@ -229,15 +227,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: AppColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: isUnread ? AppColors.shadowPurple : AppColors.shadowLight,
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          boxShadow: Theme.of(context).brightness == Brightness.dark
+              ? []
+              : [
+                  BoxShadow(
+                    color: isUnread ? AppColors.shadowPurple : AppColors.shadowLight,
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,7 +256,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
-                            color: AppColors.textPrimary,
+                            color: AppColors.textPrimaryC(context),
                           ),
                         ),
                       ),
@@ -283,7 +283,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.textTertiary,
+                      color: AppColors.textSecondaryC(context),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -303,7 +303,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       Icon(
                         Icons.arrow_forward_ios_rounded,
                         size: 14,
-                        color: AppColors.textHint,
+                        color: AppColors.textHintC(context),
                       ),
                     ],
                   ),
@@ -408,7 +408,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             const SizedBox(height: 8),
@@ -417,7 +417,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textTertiary,
+                color: AppColors.textSecondaryC(context),
               ),
             ),
           ],

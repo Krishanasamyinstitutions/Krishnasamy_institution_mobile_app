@@ -161,4 +161,59 @@ class AppColors {
   // Glassmorphism effect colors
   static const Color glassWhite = Color(0xCCFFFFFF);
   static const Color glassBorder = Color(0x33FFFFFF);
+
+  // ──────────────────────────────────────────────
+  // Brightness-aware colors (for dark mode support)
+  // ──────────────────────────────────────────────
+
+  static bool _isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  /// Scaffold / page background
+  static Color scaffoldBg(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF121218) : const Color(0xFFF8F9FB);
+
+  /// Card / container surface background
+  static Color cardBg(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF1E1E2A) : Colors.white;
+
+  /// Primary text color
+  static Color textPrimaryC(BuildContext context) =>
+      _isDark(context) ? const Color(0xFFF3F4F6) : const Color(0xFF1F2937);
+
+  /// Secondary text color
+  static Color textSecondaryC(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF9CA3AF) : const Color(0xFF6B7280);
+
+  /// Hint / tertiary text color
+  static Color textHintC(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF6B7280) : const Color(0xFF9CA3AF);
+
+  /// Border / divider color
+  static Color borderC(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF2D2D3D) : const Color(0xFFE5E7EB);
+
+  /// Filter tab / section inactive background
+  static Color filterBg(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF252536) : const Color(0xFFF1F5F9);
+
+  /// Dark circle icon button background (cart, notification buttons)
+  static Color iconButtonBg(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF374151) : const Color(0xFF1F2937);
+
+  /// Header / app bar container background
+  static Color headerBg(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF1A1A26) : Colors.white;
+
+  /// Card shadow (invisible in dark mode)
+  static List<BoxShadow> cardShadow(BuildContext context) =>
+      _isDark(context)
+          ? []
+          : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ];
 }

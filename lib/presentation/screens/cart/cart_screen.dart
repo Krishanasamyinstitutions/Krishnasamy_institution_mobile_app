@@ -47,24 +47,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final cartState = ref.watch(cartProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: Column(
           children: [
             // Header with white SafeArea and subtle shadow
             Container(
-              color: Colors.white,
+              color: AppColors.headerBg(context),
               child: SafeArea(
                 bottom: false,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
-                      ),
-                    ],
+                    color: AppColors.headerBg(context),
+                    boxShadow: AppColors.cardShadow(context),
                   ),
                   child: Column(
                     children: [
@@ -108,8 +102,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -126,22 +120,22 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'Payment Summary',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F2933),
+                  color: AppColors.textPrimaryC(context),
                 ),
               ),
               if (cartState.isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(
                   '${cartState.items.length} item${cartState.items.length > 1 ? 's' : ''} selected',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w400,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
               ],
@@ -211,8 +205,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Container(
             width: 100,
             height: 100,
-            decoration: const BoxDecoration(
-              color: AppColors.gray100,
+            decoration: BoxDecoration(
+              color: AppColors.filterBg(context),
               shape: BoxShape.circle,
             ),
             child: Center(
@@ -220,31 +214,31 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 'assets/icons/Cart.svg',
                 width: 48,
                 height: 48,
-                colorFilter: const ColorFilter.mode(
-                  AppColors.textSecondary,
+                colorFilter: ColorFilter.mode(
+                  AppColors.textHintC(context),
                   BlendMode.srcIn,
                 ),
               ),
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Your Cart is Empty',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
           const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 40),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
               'Select fees from the pending section to add them to your cart',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondary,
+                color: AppColors.textSecondaryC(context),
                 height: 1.5,
               ),
             ),
@@ -334,7 +328,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           );
         }),
 
-        const SizedBox(height: 100), // Space for bottom bar
+        SizedBox(height: 70 + MediaQuery.of(context).padding.bottom + 20), // Space for bottom bar
       ],
     );
   }
@@ -389,15 +383,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: AppColors.cardShadow(context),
       ),
       child: Column(
         children: [
@@ -452,9 +440,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 // Items count
                 Text(
                   '${fees.length} item${fees.length > 1 ? 's' : ''}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -480,11 +468,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ),
 
           // Divider
-          Container(height: 1, color: const Color(0xFFE5E7EB)),
+          Container(height: 1, color: AppColors.borderC(context)),
 
           // Table Header
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
                 Expanded(
@@ -493,7 +481,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ),
@@ -502,14 +490,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
               ],
             ),
           ),
 
-          Container(height: 1, color: const Color(0xFFE5E7EB)),
+          Container(height: 1, color: AppColors.borderC(context)),
 
           // Fee Items
           ...fees.map((fee) => _buildFeeItem(fee, categoryStyle['showMonth'] as bool)),
@@ -517,9 +505,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           // Total Row
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF8F9FB),
-              borderRadius: BorderRadius.only(
+            decoration: BoxDecoration(
+              color: AppColors.filterBg(context),
+              borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(12),
                 bottomRight: Radius.circular(12),
               ),
@@ -527,20 +515,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'TOTAL',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
                 Text(
                   '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
               ],
@@ -590,9 +578,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget _buildFeeItem(FeeModel fee, bool showMonth) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+          bottom: BorderSide(color: AppColors.borderC(context), width: 1),
         ),
       ),
       child: Row(
@@ -603,10 +591,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               children: [
                 Text(
                   fee.feeTypeName.toUpperCase(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimaryC(context),
                     height: 1.4,
                   ),
                 ),
@@ -614,9 +602,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   const SizedBox(height: 2),
                   Text(
                     _extractMonthFromDate(fee),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF9CA3AF),
+                      color: AppColors.textHintC(context),
                     ),
                   ),
                 ],
@@ -625,10 +613,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ),
           Text(
             '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
         ],
@@ -645,18 +633,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(28),
           topRight: Radius.circular(28),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, -8),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 24,
+                  offset: const Offset(0, -8),
+                ),
+              ],
       ),
       child: SafeArea(
         top: false,
@@ -667,20 +657,20 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'Total Amount',
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '₹ ${NumberFormat('#,##,###').format(cartState.totalAmount.toInt())}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
               ],

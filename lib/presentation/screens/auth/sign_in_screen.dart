@@ -184,7 +184,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   void _showCountryPicker() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.cardBg(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -202,12 +202,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Select Country',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF1F2933),
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             const SizedBox(height: 8),
@@ -224,16 +224,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ),
                     title: Text(
                       country.country,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: AppSizes.textSm,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                     trailing: Text(
                       country.code,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: AppSizes.textSm,
-                        color: AppColors.textSecondary,
+                        color: AppColors.textSecondaryC(context),
                       ),
                     ),
                     onTap: () {
@@ -258,7 +258,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: SafeArea(
           child: Column(
             children: [
@@ -343,8 +343,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       child: Container(
         width: 44,
         height: 44,
-        decoration: const BoxDecoration(
-          color: Color(0xFF1F2937),
+        decoration: BoxDecoration(
+          color: AppColors.iconButtonBg(context),
           shape: BoxShape.circle,
         ),
         child: const Icon(
@@ -370,7 +370,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: AppColors.textPrimaryC(context),
                 ),
               ),
               const SizedBox(height: 8),
@@ -379,7 +379,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w400,
-                  color: AppColors.textTertiary,
+                  color: AppColors.textSecondaryC(context),
                 ),
               ),
             ],
@@ -402,12 +402,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Mobile No.',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF1F2933),
+            color: AppColors.textPrimaryC(context),
           ),
         ),
         const SizedBox(height: 8),
@@ -415,26 +415,26 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           controller: _mobileController,
           focusNode: _mobileFocusNode,
           keyboardType: TextInputType.phone,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
-            color: Color(0xFF1F2933),
+            color: AppColors.textPrimaryC(context),
           ),
           decoration: InputDecoration(
             hintText: 'Enter mobile number',
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
               fontSize: 15,
-              color: Color(0xFF9CA3AF),
+              color: AppColors.textHintC(context),
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: AppColors.cardBg(context),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: AppColors.borderC(context)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: AppColors.borderC(context)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -460,17 +460,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                       style: const TextStyle(fontSize: 20),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(
+                    Icon(
                       Icons.keyboard_arrow_down_rounded,
                       size: 18,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       _countryCodes[_selectedCountryIndex].code,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
-                        color: Color(0xFF1F2933),
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ],
@@ -516,12 +516,12 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Password',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w400,
-            color: Color(0xFF1F2933),
+            color: AppColors.textPrimaryC(context),
           ),
         ),
         const SizedBox(height: 8),
@@ -529,26 +529,26 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           controller: _passwordController,
           focusNode: _passwordFocusNode,
           obscureText: !_showPassword,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
-            color: Color(0xFF1F2933),
+            color: AppColors.textPrimaryC(context),
           ),
           decoration: InputDecoration(
             hintText: 'Enter your password',
-            hintStyle: const TextStyle(
+            hintStyle: TextStyle(
               fontSize: 15,
-              color: Color(0xFF9CA3AF),
+              color: AppColors.textHintC(context),
             ),
             filled: true,
-            fillColor: Colors.white,
+            fillColor: AppColors.cardBg(context),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: AppColors.borderC(context)),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              borderSide: BorderSide(color: AppColors.borderC(context)),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -562,10 +562,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
             ),
-            prefixIcon: const Icon(
+            prefixIcon: Icon(
               Icons.lock_outline_rounded,
               size: 22,
-              color: Color(0xFF6B7280),
+              color: AppColors.textSecondaryC(context),
             ),
             suffixIcon: GestureDetector(
               onTap: () => setState(() => _showPassword = !_showPassword),
@@ -574,7 +574,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     ? Icons.visibility_outlined
                     : Icons.visibility_off_outlined,
                 size: 22,
-                color: const Color(0xFF6B7280),
+                color: AppColors.textSecondaryC(context),
               ),
             ),
           ),
@@ -654,7 +654,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           "Don't have an Account ?",
           style: TextStyle(
             fontSize: 15,
-            color: AppColors.textTertiary,
+            color: AppColors.textSecondaryC(context),
           ),
         ),
         const SizedBox(width: 4),

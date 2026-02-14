@@ -20,7 +20,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
     final selectedStudent = ref.watch(selectedStudentProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       appBar: AppBar(
         title: const Text('Payment Receipt'),
         actions: [
@@ -44,9 +44,9 @@ class PaymentReceiptScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: AppSizes.s4),
             child: Column(
               children: [
-                _buildReceiptCard(payment, selectedStudent?.name ?? ''),
+                _buildReceiptCard(context, payment, selectedStudent?.name ?? ''),
                 const SizedBox(height: AppSizes.s4),
-                _buildPaymentDetails(payment),
+                _buildPaymentDetails(context, payment),
                 const SizedBox(height: AppSizes.s6),
                 AppButton(
                   text: 'Download Receipt',
@@ -64,13 +64,13 @@ class PaymentReceiptScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildReceiptCard(PaymentModel payment, String studentName) {
+  Widget _buildReceiptCard(BuildContext context, PaymentModel payment, String studentName) {
     return Container(
       padding: const EdgeInsets.all(AppSizes.s6),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(AppSizes.roundedXl),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderC(context)),
       ),
       child: Column(
         children: [
@@ -78,7 +78,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: _getStatusColor(payment.status).withOpacity(0.1),
+              color: _getStatusColor(payment.status).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -99,10 +99,10 @@ class PaymentReceiptScreen extends ConsumerWidget {
           const SizedBox(height: AppSizes.s2),
           Text(
             Formatters.currency(payment.amount),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppSizes.text3xl,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
           const SizedBox(height: AppSizes.s4),
@@ -117,45 +117,45 @@ class PaymentReceiptScreen extends ConsumerWidget {
             ),
             child: Text(
               payment.paymentNumber,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: AppSizes.textSm,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textSecondary,
+                color: AppColors.textSecondaryC(context),
               ),
             ),
           ),
           const SizedBox(height: AppSizes.s4),
           const Divider(),
           const SizedBox(height: AppSizes.s4),
-          _buildInfoRow('Student', studentName),
-          _buildInfoRow('Date', payment.paidAt != null ? Formatters.dateTime(payment.paidAt!) : '-'),
-          _buildInfoRow('Method', payment.paymentMethod ?? '-'),
+          _buildInfoRow(context, 'Student', studentName),
+          _buildInfoRow(context, 'Date', payment.paidAt != null ? Formatters.dateTime(payment.paidAt!) : '-'),
+          _buildInfoRow(context, 'Method', payment.paymentMethod ?? '-'),
           if (payment.transactionId != null)
-            _buildInfoRow('Transaction ID', payment.transactionId!),
+            _buildInfoRow(context, 'Transaction ID', payment.transactionId!),
         ],
       ),
     );
   }
 
-  Widget _buildPaymentDetails(PaymentModel payment) {
+  Widget _buildPaymentDetails(BuildContext context, PaymentModel payment) {
     if (payment.details.isEmpty) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(AppSizes.s4),
       decoration: BoxDecoration(
-        color: AppColors.bgPrimary,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(AppSizes.roundedXl),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.borderC(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Fee Breakdown',
             style: TextStyle(
               fontSize: AppSizes.textBase,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
           const SizedBox(height: AppSizes.s4),
@@ -166,17 +166,17 @@ class PaymentReceiptScreen extends ConsumerWidget {
               children: [
                 Text(
                   detail.feeName ?? 'Fee',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: AppSizes.textSm,
-                    color: AppColors.textSecondary,
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
                 Text(
                   Formatters.currency(detail.amount),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: AppSizes.textSm,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
               ],
@@ -186,12 +186,12 @@ class PaymentReceiptScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Total',
                 style: TextStyle(
                   fontSize: AppSizes.textBase,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: AppColors.textPrimaryC(context),
                 ),
               ),
               Text(
@@ -209,7 +209,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(BuildContext context, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSizes.s2),
       child: Row(
@@ -217,17 +217,17 @@ class PaymentReceiptScreen extends ConsumerWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppSizes.textSm,
-              color: AppColors.textSecondary,
+              color: AppColors.textSecondaryC(context),
             ),
           ),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppSizes.textSm,
               fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
         ],

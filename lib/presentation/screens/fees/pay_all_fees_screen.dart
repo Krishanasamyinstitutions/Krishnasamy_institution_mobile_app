@@ -220,24 +220,18 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     final selectedAmount = selectedFees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: Column(
         children: [
           // Header with white SafeArea and subtle shadow
           Container(
-            color: Colors.white,
+            color: AppColors.headerBg(context),
             child: SafeArea(
               bottom: false,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+                  color: AppColors.headerBg(context),
+                  boxShadow: AppColors.cardShadow(context),
                 ),
                 child: Column(
                   children: [
@@ -294,8 +288,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: const Center(
@@ -309,12 +303,12 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           ),
 
           // Title
-          const Text(
+          Text(
             'Pay All Fees',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: Color(0xFF1F2933),
+              color: AppColors.textPrimaryC(context),
             ),
           ),
 
@@ -324,8 +318,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: Stack(
@@ -351,7 +345,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                         decoration: BoxDecoration(
                           color: AppColors.error,
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFF1F2937), width: 2),
+                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
                         ),
                         child: Text(
                           notificationCount > 9 ? '9+' : '$notificationCount',
@@ -473,26 +467,22 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Fee Group Label
-          const Text(
+          Text(
             'Fee Group',
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w500,
-              color: Color(0xFF6B7280),
+              color: AppColors.textSecondaryC(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -511,24 +501,24 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FA),
+                      color: AppColors.filterBg(context),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                      border: Border.all(color: AppColors.borderC(context)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
                           _selectedFeeGroup,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1F2933),
+                            color: AppColors.textPrimaryC(context),
                           ),
                         ),
                         Icon(
                           _isDropdownOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                          color: const Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                           size: 24,
                         ),
                       ],
@@ -578,16 +568,12 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        border: Border.all(color: AppColors.borderC(context)),
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -612,11 +598,11 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.08) : Colors.white,
+                  color: isSelected ? AppColors.primary.withValues(alpha: 0.08) : AppColors.cardBg(context),
                   border: isLast
                       ? null
-                      : const Border(
-                          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+                      : Border(
+                          bottom: BorderSide(color: AppColors.borderC(context), width: 1),
                         ),
                   borderRadius: isFirst && isLast
                       ? BorderRadius.circular(15)
@@ -640,7 +626,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? AppColors.primary : const Color(0xFF1F2933),
+                          color: isSelected ? AppColors.primary : AppColors.textPrimaryC(context),
                         ),
                       ),
                     ),
@@ -686,15 +672,11 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -711,19 +693,19 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     children: [
                       Text(
                         term,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2933),
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         monthRange,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                         ),
                       ),
                     ],
@@ -785,10 +767,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     width: 22,
                     height: 22,
                     decoration: BoxDecoration(
-                      color: allSelected ? AppColors.primary : Colors.white,
+                      color: allSelected ? AppColors.primary : AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
-                        color: allSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                        color: allSelected ? AppColors.primary : AppColors.borderC(context),
                         width: 1.5,
                       ),
                     ),
@@ -803,8 +785,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             const SizedBox(height: 16),
 
             // Table Header
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSizes.s2),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSizes.s2),
               child: Row(
                 children: [
                   Expanded(
@@ -813,7 +795,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontSemibold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
@@ -822,7 +804,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ],
@@ -830,7 +812,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             ),
 
             // Divider
-            Container(height: 1, color: const Color(0xFFE5E7EB)),
+            Container(height: 1, color: AppColors.borderC(context)),
 
             // Fee Items with individual checkboxes
             ...sortedFees.map((fee) => _buildFeeRow(fee, cartState)),
@@ -840,22 +822,22 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'TOTAL',
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
                   Text(
                     '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: AppSizes.textLg,
                       fontWeight: AppSizes.fontBold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ],
@@ -915,15 +897,11 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -938,21 +916,21 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'TUITION FEES',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2933),
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         monthRange,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                         ),
                       ),
                     ],
@@ -1010,10 +988,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     width: 22,
                     height: 22,
                     decoration: BoxDecoration(
-                      color: allSelected ? AppColors.primary : Colors.white,
+                      color: allSelected ? AppColors.primary : AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
-                        color: allSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                        color: allSelected ? AppColors.primary : AppColors.borderC(context),
                         width: 1.5,
                       ),
                     ),
@@ -1028,8 +1006,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             const SizedBox(height: 16),
 
             // Table Header
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSizes.s2),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSizes.s2),
               child: Row(
                 children: [
                   Expanded(
@@ -1038,7 +1016,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontSemibold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
@@ -1047,7 +1025,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ],
@@ -1055,7 +1033,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             ),
 
             // Divider
-            Container(height: 1, color: const Color(0xFFE5E7EB)),
+            Container(height: 1, color: AppColors.borderC(context)),
 
             // Fee Items
             ...sortedFees.map((fee) => _buildTuitionFeeRow(fee)),
@@ -1065,22 +1043,22 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'TOTAL',
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
                   Text(
                     '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: AppSizes.textLg,
                       fontWeight: AppSizes.fontBold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ],
@@ -1121,9 +1099,9 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+          bottom: BorderSide(color: AppColors.borderC(context), width: 1),
         ),
       ),
       child: Row(
@@ -1152,10 +1130,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     children: [
                       Text(
                         monthName.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: AppSizes.bodyText,
                           fontWeight: AppSizes.fontMedium,
-                          color: AppColors.textPrimary,
+                          color: AppColors.textPrimaryC(context),
                           height: 1.47,
                         ),
                       ),
@@ -1165,7 +1143,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                           Icon(
                             Icons.calendar_today_outlined,
                             size: 12,
-                            color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -1173,7 +1151,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                              color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                             ),
                           ),
                           if (isOverdue) ...[
@@ -1204,10 +1182,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           ),
           Text(
             '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppSizes.textBase,
               fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
         ],
@@ -1227,9 +1205,9 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+          bottom: BorderSide(color: AppColors.borderC(context), width: 1),
         ),
       ),
       child: Row(
@@ -1258,10 +1236,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     children: [
                       Text(
                         feeName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: AppSizes.bodyText,
                           fontWeight: AppSizes.fontMedium,
-                          color: AppColors.textPrimary,
+                          color: AppColors.textPrimaryC(context),
                           height: 1.47,
                         ),
                       ),
@@ -1271,7 +1249,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                           Icon(
                             Icons.calendar_today_outlined,
                             size: 12,
-                            color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -1279,7 +1257,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                              color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                             ),
                           ),
                           if (isOverdue) ...[
@@ -1310,10 +1288,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           ),
           Text(
             '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppSizes.textBase,
               fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
         ],
@@ -1347,15 +1325,11 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1370,21 +1344,21 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'HOSTEL FEES',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2933),
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         monthRange,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                         ),
                       ),
                     ],
@@ -1438,10 +1412,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     width: 24,
                     height: 24,
                     decoration: BoxDecoration(
-                      color: allSelected ? AppColors.primary : Colors.white,
+                      color: allSelected ? AppColors.primary : AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: allSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                        color: allSelected ? AppColors.primary : AppColors.borderC(context),
                         width: 1.5,
                       ),
                     ),
@@ -1456,8 +1430,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             const SizedBox(height: 16),
 
             // Table Header
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSizes.s2),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSizes.s2),
               child: Row(
                 children: [
                   Expanded(
@@ -1466,7 +1440,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontSemibold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
@@ -1475,7 +1449,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ],
@@ -1483,7 +1457,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             ),
 
             // Divider
-            Container(height: 1, color: const Color(0xFFE5E7EB)),
+            Container(height: 1, color: AppColors.borderC(context)),
 
             // Fee Items (no individual checkboxes)
             ...sortedFees.map((fee) => _buildHostelFeeRow(fee)),
@@ -1493,22 +1467,22 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'TOTAL',
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
                   Text(
                     '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: AppSizes.textLg,
                       fontWeight: AppSizes.fontBold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ],
@@ -1549,9 +1523,9 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+          bottom: BorderSide(color: AppColors.borderC(context), width: 1),
         ),
       ),
       child: Row(
@@ -1580,10 +1554,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     children: [
                       Text(
                         monthName.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: AppSizes.bodyText,
                           fontWeight: AppSizes.fontMedium,
-                          color: AppColors.textPrimary,
+                          color: AppColors.textPrimaryC(context),
                           height: 1.47,
                         ),
                       ),
@@ -1593,7 +1567,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                           Icon(
                             Icons.calendar_today_outlined,
                             size: 12,
-                            color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -1601,7 +1575,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                              color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                             ),
                           ),
                           if (isOverdue) ...[
@@ -1632,10 +1606,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           ),
           Text(
             '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppSizes.textBase,
               fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
         ],
@@ -1666,15 +1640,11 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -1688,21 +1658,21 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'EXAM FEES',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1F2933),
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         monthRange,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w400,
-                          color: Color(0xFF6B7280),
+                          color: AppColors.textSecondaryC(context),
                         ),
                       ),
                     ],
@@ -1737,7 +1707,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            const Row(
+            Row(
               children: [
                 Expanded(
                   child: Text(
@@ -1745,7 +1715,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ),
@@ -1754,7 +1724,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                   style: TextStyle(
                     fontSize: AppSizes.textBase,
                     fontWeight: AppSizes.fontSemibold,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
               ],
@@ -1762,29 +1732,29 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             Container(
               margin: const EdgeInsets.only(top: 12),
               height: 1,
-              color: const Color(0xFFE5E7EB),
+              color: AppColors.borderC(context),
             ),
             ...sortedFees.map((fee) => _buildExamFeeRow(fee)),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'TOTAL',
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
                   Text(
                     '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: AppSizes.textLg,
                       fontWeight: AppSizes.fontBold,
-                      color: AppColors.textPrimary,
+                      color: AppColors.textPrimaryC(context),
                     ),
                   ),
                 ],
@@ -1817,9 +1787,9 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+          bottom: BorderSide(color: AppColors.borderC(context), width: 1),
         ),
       ),
       child: Row(
@@ -1847,10 +1817,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     children: [
                       Text(
                         feeName.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: AppSizes.bodyText,
                           fontWeight: AppSizes.fontMedium,
-                          color: AppColors.textPrimary,
+                          color: AppColors.textPrimaryC(context),
                           height: 1.47,
                         ),
                       ),
@@ -1860,7 +1830,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                           Icon(
                             Icons.calendar_today_outlined,
                             size: 12,
-                            color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -1868,7 +1838,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                              color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                             ),
                           ),
                           if (isOverdue) ...[
@@ -1899,10 +1869,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           ),
           Text(
             '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppSizes.textBase,
               fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
         ],
@@ -1942,15 +1912,11 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: Theme.of(context).brightness == Brightness.dark
+              ? []
+              : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -1961,7 +1927,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1970,16 +1936,16 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1F2933),
+                            color: AppColors.textPrimaryC(context),
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
                           'Monthly breakdown',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
-                            color: Color(0xFF6B7280),
+                            color: AppColors.textSecondaryC(context),
                           ),
                         ),
                       ],
@@ -2026,10 +1992,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     width: 22,
                     height: 22,
                     decoration: BoxDecoration(
-                      color: allSelected ? AppColors.primary : Colors.white,
+                      color: allSelected ? AppColors.primary : AppColors.cardBg(context),
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
-                        color: allSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                        color: allSelected ? AppColors.primary : AppColors.borderC(context),
                         width: 1.5,
                       ),
                     ),
@@ -2043,8 +2009,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               const SizedBox(height: 16),
 
               // Table Header
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSizes.s2),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSizes.s2),
                 child: Row(
                   children: [
                     Expanded(
@@ -2053,7 +2019,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                         style: TextStyle(
                           fontSize: AppSizes.textBase,
                           fontWeight: AppSizes.fontSemibold,
-                          color: AppColors.textPrimary,
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                     ),
@@ -2062,7 +2028,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       style: TextStyle(
                         fontSize: AppSizes.textBase,
                         fontWeight: AppSizes.fontSemibold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ],
@@ -2070,7 +2036,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               ),
 
               // Divider
-              Container(height: 1, color: const Color(0xFFE5E7EB)),
+              Container(height: 1, color: AppColors.borderC(context)),
 
               // Bus Fee Items
               ...sortedFees.map((fee) => _buildBusFeeRow(fee, cartState)),
@@ -2080,22 +2046,22 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'TOTAL',
                         style: TextStyle(
                           fontSize: AppSizes.textBase,
                           fontWeight: AppSizes.fontBold,
-                          color: AppColors.textPrimary,
+                          color: AppColors.textPrimaryC(context),
                         ),
                       ),
                     ),
                     Text(
                       '₹ ${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: AppSizes.textLg,
                         fontWeight: AppSizes.fontBold,
-                        color: AppColors.textPrimary,
+                        color: AppColors.textPrimaryC(context),
                       ),
                     ),
                   ],
@@ -2115,9 +2081,9 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: Color(0xFFF3F4F6), width: 1),
+          bottom: BorderSide(color: AppColors.borderC(context), width: 1),
         ),
       ),
       child: Row(
@@ -2150,10 +2116,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     children: [
                       Text(
                         feeName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: AppSizes.bodyText,
                           fontWeight: AppSizes.fontMedium,
-                          color: AppColors.textPrimary,
+                          color: AppColors.textPrimaryC(context),
                           height: 1.47,
                         ),
                       ),
@@ -2163,7 +2129,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                           Icon(
                             Icons.calendar_today_outlined,
                             size: 12,
-                            color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                            color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -2171,7 +2137,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w500,
-                              color: isOverdue ? AppColors.error : const Color(0xFF9CA3AF),
+                              color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                             ),
                           ),
                           if (isOverdue) ...[
@@ -2202,10 +2168,10 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           ),
           Text(
             '₹ ${NumberFormat('#,##,###').format(fee.balancedue.toInt())}',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: AppSizes.textBase,
               fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimary,
+              color: AppColors.textPrimaryC(context),
             ),
           ),
         ],
@@ -2217,18 +2183,14 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.cardBg(context),
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(28),
           topRight: Radius.circular(28),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, -8),
-          ),
-        ],
+        boxShadow: Theme.of(context).brightness == Brightness.dark
+            ? []
+            : [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, -8))],
       ),
       child: SafeArea(
         top: false,
@@ -2241,18 +2203,18 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               children: [
                 Text(
                   '$selectedCount fee${selectedCount > 1 ? 's' : ''} selected',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '₹ ${NumberFormat('#,##,###').format(selectedAmount.toInt())}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
               ],
@@ -2322,21 +2284,21 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'No Pending Fees',
               style: TextStyle(
                 fontSize: AppSizes.textLg,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: AppColors.textPrimaryC(context),
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'All your fees are paid. Great job!',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: AppSizes.textSm,
-                color: AppColors.textSecondary,
+                color: AppColors.textSecondaryC(context),
               ),
             ),
           ],
