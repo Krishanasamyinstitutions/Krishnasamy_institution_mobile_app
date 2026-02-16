@@ -26,6 +26,7 @@ import '../presentation/screens/support/support_screen.dart';
 import '../presentation/screens/cart/cart_screen.dart';
 import '../presentation/screens/fees/all_pending_fees_screen.dart';
 import '../presentation/screens/fees/pay_all_fees_screen.dart';
+import '../presentation/screens/fees/paid_fees_screen.dart';
 import '../presentation/widgets/common/main_scaffold.dart';
 import '../presentation/providers/auth_provider.dart' show parentAuthStateProvider;
 import '../presentation/providers/student_provider.dart';
@@ -56,6 +57,8 @@ class Routes {
   static const cartStandalone = '/cart-standalone';
   static const allPendingFees = '/all-pending-fees';
   static const payAllFees = '/pay-all-fees';
+  static const paidFees = '/paid-fees';
+  static const transactionDetails = '/transaction';
   static const homeTest = '/home-test';
 }
 
@@ -223,6 +226,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: Routes.payAllFees,
         builder: (context, state) => const PayAllFeesScreen(),
+      ),
+
+      // Paid Fees Screen (paid fee records grouped by category)
+      GoRoute(
+        path: Routes.paidFees,
+        builder: (context, state) => const PaidFeesScreen(),
+      ),
+
+      // Standalone Transaction Details (for navigation from paid fees, etc.)
+      GoRoute(
+        path: '${Routes.transactionDetails}/:paymentId',
+        builder: (context, state) {
+          final paymentId = state.pathParameters['paymentId']!;
+          return TransactionDetailsScreen(paymentId: paymentId);
+        },
       ),
 
       // Cart Screen (standalone without bottom nav)

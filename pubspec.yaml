@@ -28,6 +28,7 @@ dependencies:
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0
   flutter_spinkit: ^5.2.0
+  confetti: ^0.8.0
 
   # Forms & Validation
   flutter_form_builder: ^10.2.0
@@ -41,6 +42,9 @@ dependencies:
   pdf: ^3.10.7
   printing: ^5.12.0
   path_provider: ^2.1.2
+
+  # Sharing
+  share_plus: ^7.2.2
 
   # Utilities
   intl: any

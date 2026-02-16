@@ -9,6 +9,7 @@ import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/notification_provider.dart';
 
 class AllPendingFeesScreen extends ConsumerStatefulWidget {
   final String? filterGroup;
@@ -182,6 +183,8 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final notificationCount = ref.watch(notificationCountProvider);
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -228,6 +231,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                 shape: BoxShape.circle,
               ),
               child: Stack(
+                clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
                   SvgPicture.asset(
@@ -239,6 +243,29 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                       BlendMode.srcIn,
                     ),
                   ),
+                  if (notificationCount > 0)
+                    Positioned(
+                      top: -4,
+                      right: -4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
+                        ),
+                        child: Text(
+                          notificationCount > 9 ? '9+' : '$notificationCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -783,7 +810,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Month',
+                    'Fee Details',
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
@@ -1098,7 +1125,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Month',
+                    'Fee Details',
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
@@ -1428,7 +1455,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Month',
+                    'Fee Details',
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,
@@ -1762,7 +1789,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    'Month',
+                    'Fee Details',
                     style: TextStyle(
                       fontSize: AppSizes.textBase,
                       fontWeight: AppSizes.fontSemibold,

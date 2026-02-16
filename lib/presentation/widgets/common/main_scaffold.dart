@@ -35,7 +35,7 @@ class MainScaffold extends ConsumerWidget {
       child: Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
       body: child,
-      extendBody: true,
+      extendBody: false,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppColors.cardBg(context),

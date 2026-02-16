@@ -5,3 +5,6 @@
 -keepclasseswithmembers class * {
   public void onPayment*(...);
 }
+
+# smart_auth (pinput dependency) - Google Play Services Credentials
+-dontwarn com.google.android.gms.auth.api.credentials.**

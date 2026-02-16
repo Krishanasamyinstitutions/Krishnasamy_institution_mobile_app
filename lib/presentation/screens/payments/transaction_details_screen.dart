@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/receipt_pdf_generator.dart';
@@ -55,6 +58,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                           payment,
                           selectedStudent?.name ?? '',
                           selectedStudent?.className ?? '',
+                          selectedStudent?.admissionNumber ?? '',
                           payment.transtotalamount,
                           payment.yrlabel ?? 'Fee Payment',
                           isPaid,
@@ -95,15 +99,14 @@ class TransactionDetailsScreen extends ConsumerWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppColors.cardBg(context),
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
-                boxShadow: AppColors.cardShadow(context),
               ),
-              child: Center(
+              child: const Center(
                 child: Icon(
                   Icons.arrow_back_ios_new_rounded,
                   size: 18,
-                  color: AppColors.textPrimaryC(context),
+                  color: Colors.white,
                 ),
               ),
             ),
@@ -179,6 +182,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
     PaymentModel payment,
     String studentName,
     String className,
+    String admissionNumber,
     double amount,
     String feeName,
     bool isPaid,
@@ -263,7 +267,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                 children: [
                   // Amount Section
                   Text(
-                    'Amount Paid',
+                    isPaid ? 'Amount Paid' : 'Amount',
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
@@ -290,10 +294,18 @@ class TransactionDetailsScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   // Transaction Details
                   _buildDetailRow(context, 'Payment No', payment.paymentNumber),
+                  const SizedBox(height: 16),
+                  _buildDetailRow(context, 'Student', studentName),
+                  const SizedBox(height: 16),
+                  _buildDetailRow(context, 'Class', className),
+                  const SizedBox(height: 16),
+                  _buildDetailRow(context, 'Admission No', admissionNumber),
                   if (payment.payreference != null) ...[
                     const SizedBox(height: 16),
                     _buildDetailRow(context, 'Transaction ID', payment.payreference!),
                   ],
+                  const SizedBox(height: 16),
+                  _buildDetailRow(context, 'Payment Method', payment.paymentMethod),
                   const SizedBox(height: 16),
                   _buildDetailRowWithDot(
                     context,
@@ -301,12 +313,6 @@ class TransactionDetailsScreen extends ConsumerWidget {
                     _formatDate(payment.paidAt ?? payment.createdAt),
                     _formatTime(payment.paidAt ?? payment.createdAt),
                   ),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(context, 'Payment Method', payment.paymentMethod),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(context, 'Student', studentName),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(context, 'Class', className),
                 ],
               ),
             ),
@@ -397,22 +403,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
           child: GestureDetector(
             onTap: () async {
               if (isPaid) {
-                final student = ref.read(selectedStudentProvider);
-                final institutionAsync = ref.read(selectedStudentWithInstitutionProvider);
-                final institution = institutionAsync.valueOrNull;
-
-                if (student == null) return;
-
-                final pdf = await generateReceiptPdf(
-                  payment: payment,
-                  student: student,
-                  institution: institution,
-                );
-
-                await Printing.layoutPdf(
-                  onLayout: (_) => pdf.save(),
-                  name: '${payment.paymentNumber}.pdf',
-                );
+                await _handleDownloadOrShare(context, ref, payment, isShare: false);
               } else {
                 await _handleRetryPayment(context, ref, payment);
               }
@@ -449,14 +440,11 @@ class TransactionDetailsScreen extends ConsumerWidget {
         // Share Button
         Expanded(
           child: GestureDetector(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Share - Coming Soon'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
+            onTap: isPaid
+                ? () async {
+                    await _handleDownloadOrShare(context, ref, payment, isShare: true);
+                  }
+                : null,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
@@ -488,6 +476,80 @@ class TransactionDetailsScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  Future<void> _handleDownloadOrShare(BuildContext context, WidgetRef ref, PaymentModel payment, {required bool isShare}) async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg(context),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Generating receipt...'),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final student = ref.read(selectedStudentProvider);
+      final institutionAsync = ref.read(selectedStudentWithInstitutionProvider);
+      final institution = institutionAsync.valueOrNull;
+
+      if (student == null) {
+        if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+        return;
+      }
+
+      final pdf = await generateReceiptPdf(
+        payment: payment,
+        student: student,
+        institution: institution,
+      );
+
+      final bytes = await pdf.save();
+
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+
+      if (isShare) {
+        // Save PDF to temp file and share via share_plus
+        final safeFilename = payment.paymentNumber.replaceAll('/', '_');
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/$safeFilename.pdf');
+        await file.writeAsBytes(bytes);
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          text: 'Payment Receipt - ${payment.paymentNumber}',
+        );
+      } else {
+        await Printing.layoutPdf(
+          onLayout: (_) async => bytes,
+          name: '${payment.paymentNumber}.pdf',
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   Future<void> _handleRetryPayment(BuildContext context, WidgetRef ref, PaymentModel payment) async {

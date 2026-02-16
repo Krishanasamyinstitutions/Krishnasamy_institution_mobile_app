@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_sizes.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/student_model.dart';
 import '../../providers/student_provider.dart';
@@ -455,7 +454,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
                     colors: [AppColors.primary, AppColors.primary600],
                   )
                 : null,
-            color: isEnabled ? null : AppColors.gray300,
+            color: isEnabled ? null : AppColors.borderC(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: isEnabled
                 ? [
@@ -475,14 +474,14 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: isEnabled ? Colors.white : AppColors.textDisabled,
+                  color: isEnabled ? Colors.white : AppColors.textHintC(context),
                 ),
               ),
               const SizedBox(width: 8),
               Icon(
                 Icons.arrow_forward_rounded,
                 size: 20,
-                color: isEnabled ? Colors.white : AppColors.textDisabled,
+                color: isEnabled ? Colors.white : AppColors.textHintC(context),
               ),
             ],
           ),

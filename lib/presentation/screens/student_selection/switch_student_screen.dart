@@ -33,24 +33,18 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
     final currentStudent = ref.watch(selectedStudentProvider);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: Column(
         children: [
-          // Header with white SafeArea and subtle shadow
+          // Header
           Container(
-            color: Colors.white,
+            color: AppColors.headerBg(context),
             child: SafeArea(
               bottom: false,
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+                  color: AppColors.headerBg(context),
+                  boxShadow: AppColors.cardShadow(context),
                 ),
                 child: Column(
                   children: [
@@ -98,8 +92,8 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
             child: Container(
               width: 44,
               height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
+              decoration: BoxDecoration(
+                color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -111,7 +105,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
           ),
           const SizedBox(width: 12),
           // Title & Subtitle
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -120,16 +114,16 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   'Select a different student',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF6B7280),
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
               ],
@@ -165,19 +159,13 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? AppColors.primary : Colors.transparent,
             width: 2,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: AppColors.cardShadow(context),
         ),
         child: Row(
           children: [
@@ -235,10 +223,10 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                       Expanded(
                         child: Text(
                           student.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1F2937),
+                            color: AppColors.textPrimaryC(context),
                           ),
                         ),
                       ),
@@ -263,10 +251,10 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                   const SizedBox(height: 6),
                   Text(
                     'Adm No: ${student.admissionNumber} | Class: ${student.className}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                     ),
                   ),
                 ],
@@ -281,7 +269,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 shape: BoxShape.circle,
                 color: isSelected ? AppColors.primary : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                  color: isSelected ? AppColors.primary : AppColors.borderC(context),
                   width: 2,
                 ),
               ),
@@ -316,7 +304,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                     colors: [AppColors.primary, AppColors.primary600],
                   )
                 : null,
-            color: isNewSelection ? null : const Color(0xFFE5E7EB),
+            color: isNewSelection ? null : AppColors.borderC(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: isNewSelection
                 ? [
@@ -336,7 +324,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: isNewSelection ? Colors.white : const Color(0xFF9CA3AF),
+                  color: isNewSelection ? Colors.white : AppColors.textHintC(context),
                 ),
               ),
               if (isNewSelection) ...[

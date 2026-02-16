@@ -57,9 +57,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     return _buildEmptyState();
                   }
                   final groupedNotifications = _groupNotificationsByDate(notifications);
-                  final bottomPadding = 70 + MediaQuery.of(context).padding.bottom + 20;
                   return ListView.builder(
-                    padding: EdgeInsets.only(left: 24, right: 24, bottom: bottomPadding),
+                    padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24),
                     itemCount: groupedNotifications.length,
                     itemBuilder: (context, index) {
                       final group = groupedNotifications[index];

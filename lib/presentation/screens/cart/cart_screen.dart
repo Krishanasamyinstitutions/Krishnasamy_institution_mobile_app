@@ -328,7 +328,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           );
         }),
 
-        SizedBox(height: 70 + MediaQuery.of(context).padding.bottom + 20), // Space for bottom bar
+        const SizedBox(height: 24), // Space for bottom bar
       ],
     );
   }

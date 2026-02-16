@@ -147,7 +147,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
+      backgroundColor: AppColors.scaffoldBg(context),
       body: Stack(
         children: [
           // Background decorative elements
@@ -210,7 +210,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                 width: 120,
                                 height: 120,
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: AppColors.cardBg(context),
                                   borderRadius: BorderRadius.circular(32),
                                   boxShadow: [
                                     BoxShadow(
@@ -268,7 +268,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                           ),
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: Colors.white,
+                                            color: AppColors.cardBg(context),
                                             width: 3,
                                           ),
                                           boxShadow: [
@@ -307,12 +307,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     child: Column(
                       children: [
                         // App name
-                        const Text(
+                        Text(
                           'SchoolPay',
                           style: TextStyle(
                             fontSize: 36,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF1F2937),
+                            color: AppColors.textPrimaryC(context),
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -399,11 +399,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     }),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Loading...',
                     style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                       fontWeight: FontWeight.w500,
                       letterSpacing: 0.5,
                     ),
@@ -420,12 +420,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             right: 0,
             child: FadeTransition(
               opacity: _textOpacity,
-              child: const Text(
+              child: Text(
                 'v1.0.0',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF9CA3AF),
+                  color: AppColors.textHintC(context),
                   fontWeight: FontWeight.w500,
                 ),
               ),

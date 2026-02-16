@@ -7,19 +7,68 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/fee_model.dart';
-import '../../../data/models/institution_model.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
-import '../../providers/institution_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../../core/utils/birthday_utils.dart';
+import '../../widgets/common/birthday_dialog.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  bool _birthdayChecked = false;
+  ProviderSubscription? _studentSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowBirthdayDialog();
+      _studentSubscription = ref.listenManual(selectedStudentProvider, (previous, next) {
+        if (previous == null && next != null && !_birthdayChecked) {
+          _checkAndShowBirthdayDialog();
+        }
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _studentSubscription?.close();
+    super.dispose();
+  }
+
+  Future<void> _checkAndShowBirthdayDialog() async {
+    if (_birthdayChecked) return;
+
+    final student = ref.read(selectedStudentProvider);
+    final shouldShow = await BirthdayUtils.shouldShowBirthdayDialog(student);
+
+    if (shouldShow && mounted) {
+      _birthdayChecked = true;
+      await BirthdayUtils.markAsShown(student!.stuId);
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (dialogContext) => BirthdayDialog(
+          studentName: student.name,
+          onDismiss: () => Navigator.of(dialogContext).pop(),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedStudent = ref.watch(selectedStudentProvider);
     ref.watch(cartRestorerProvider); // Restore cart from DB on startup
     final feeSummaryAsync = ref.watch(feeSummaryProvider);
@@ -28,7 +77,6 @@ class HomeScreen extends ConsumerWidget {
     final notificationCount = ref.watch(notificationCountProvider);
     final overdueGroups = ref.watch(overdueByGroupProvider);
     final dueSoonGroups = ref.watch(dueSoonByGroupProvider);
-    final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
@@ -76,11 +124,6 @@ class HomeScreen extends ConsumerWidget {
                     // Action Buttons
                     _buildActionButtons(context),
 
-                    const SizedBox(height: 20),
-
-                    // School Info Widget
-                    _buildSchoolInfoWidget(context, institutionAsync),
-
                     const SizedBox(height: 28),
 
                     // Spending/Fee Categories Section
@@ -91,7 +134,7 @@ class HomeScreen extends ConsumerWidget {
                     // Activity Section - Overdue & Due Soon
                     _buildActivitySection(context, overdueGroups, dueSoonGroups),
 
-                    SizedBox(height: 70 + MediaQuery.of(context).padding.bottom + 20),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -112,7 +155,7 @@ class HomeScreen extends ConsumerWidget {
       children: [
         // Profile Avatar
         GestureDetector(
-          onTap: () => context.go(Routes.profile),
+          onTap: () => context.push(Routes.switchStudent),
           child: Container(
             width: 44,
             height: 44,
@@ -424,7 +467,7 @@ class HomeScreen extends ConsumerWidget {
         // Paid Fees Button (Secondary)
         Expanded(
           child: GestureDetector(
-            onTap: () => context.go('${Routes.paymentHistory}?tab=paid'),
+            onTap: () => context.push(Routes.paidFees),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
@@ -454,115 +497,6 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSchoolInfoWidget(BuildContext context, AsyncValue<InstitutionModel?> institutionAsync) {
-    final institution = institutionAsync.valueOrNull;
-    final schoolName = institution?.name ?? 'School';
-    final schoolAddress = institution?.shortAddress ?? 'Address not available';
-    final logoUrl = institution?.logoUrl;
-    final hasLogo = logoUrl != null && logoUrl.isNotEmpty;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg(context),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: AppColors.cardShadow(context),
-      ),
-      child: Row(
-        children: [
-          // School Logo
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.cardBlue,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: hasLogo
-                  ? CachedNetworkImage(
-                      imageUrl: logoUrl,
-                      width: 56,
-                      height: 56,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Center(
-                        child: Text(
-                          schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      errorWidget: (context, url, error) => Center(
-                        child: Text(
-                          schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    )
-                  : Center(
-                      child: Text(
-                        schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          // School Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  schoolName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.location_on_outlined,
-                      size: 14,
-                      color: AppColors.textSecondaryC(context),
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        schoolAddress,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.textSecondaryC(context),
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 
