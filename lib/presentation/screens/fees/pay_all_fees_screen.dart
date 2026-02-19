@@ -20,91 +20,88 @@ class PayAllFeesScreen extends ConsumerStatefulWidget {
 
 class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
   String _selectedFeeGroup = 'ALL FEES';
+  String? _selectedSubFilter;
+  String? _expandedGroup;
   bool _isDropdownOpen = false;
-  bool _hasPreselectedFees = false;
+  bool _showCartPreview = false;
+  final Set<String> _localSelectedFeeIds = {};
+  bool _initializedFromCart = false;
 
   @override
   void initState() {
     super.initState();
-    // Pre-select all fees after the first frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _preselectAllFees();
-    });
   }
 
-  void _preselectAllFees() {
-    if (_hasPreselectedFees) return;
-    _hasPreselectedFees = true;
-
-    final allPendingFees = ref.read(pendingFeesProvider);
-    final cartNotifier = ref.read(cartProvider.notifier);
-    final cartState = ref.read(cartProvider);
-
-    for (final fee in allPendingFees) {
-      if (!cartState.containsFee(fee.id)) {
-        cartNotifier.addFee(fee);
-      }
-    }
-  }
-
-  /// Check if a fee is a bus/transport/van fee
-  bool _isBusFee(String feeType) {
-    final lowerType = feeType.toLowerCase();
-    return lowerType.contains('bus') || lowerType.contains('transport') || lowerType.contains('van');
+  /// Check if a fee is a bus/transport/van fee (checks both demfeetype and feeGroupName)
+  bool _isBusFee(FeeModel f) {
+    final lowerType = f.demfeetype.toLowerCase();
+    final lowerGroup = f.feeGroupName.toLowerCase();
+    return lowerType.contains('bus') || lowerType.contains('transport') || lowerType.contains('van') ||
+           lowerGroup.contains('bus') || lowerGroup.contains('transport') || lowerGroup.contains('van');
   }
 
   /// Check if a fee is a tuition fee
-  bool _isTuitionFee(String feeType) {
-    final lowerType = feeType.toLowerCase();
-    return lowerType.contains('tuition');
+  bool _isTuitionFee(FeeModel f) {
+    final lowerType = f.demfeetype.toLowerCase();
+    final lowerGroup = f.feeGroupName.toLowerCase();
+    return lowerType.contains('tuition') || lowerGroup.contains('tuition');
   }
 
   /// Check if a fee is a hostel fee
-  bool _isHostelFee(String feeType) {
-    final lowerType = feeType.toLowerCase();
-    return lowerType.contains('hostel');
+  bool _isHostelFee(FeeModel f) {
+    final lowerType = f.demfeetype.toLowerCase();
+    final lowerGroup = f.feeGroupName.toLowerCase();
+    return lowerType.contains('hostel') || lowerGroup.contains('hostel');
   }
 
   /// Check if a fee is an exam fee
-  bool _isExamFee(String feeType) {
-    final lowerType = feeType.toLowerCase();
-    return lowerType.contains('exam');
+  bool _isExamFee(FeeModel f) {
+    final lowerType = f.demfeetype.toLowerCase();
+    final lowerGroup = f.feeGroupName.toLowerCase();
+    return lowerType.contains('exam') || lowerGroup.contains('exam');
   }
 
   /// Get fee group options based on available fees
   List<String> _getFeeGroupOptions(List<FeeModel> fees) {
     final options = <String>['ALL FEES'];
 
-    // Check if there are term fees (non-bus, non-tuition, non-hostel, non-extra fees)
+    // Check if there are term fees (non-bus, non-tuition, non-hostel, non-extra, non-exam fees)
     final hasTermFees = fees.any((f) =>
-      !_isBusFee(f.demfeetype) &&
-      !_isTuitionFee(f.demfeetype) &&
-      !_isHostelFee(f.demfeetype) &&
-      !_isExtraFee(f.demfeetype));
+      !_isBusFee(f) &&
+      !_isTuitionFee(f) &&
+      !_isHostelFee(f) &&
+      !_isExtraFee(f) &&
+      !_isExamFee(f));
     if (hasTermFees) {
       options.add('Term Fees');
     }
 
     // Check for tuition fees
-    final hasTuitionFees = fees.any((f) => _isTuitionFee(f.demfeetype));
+    final hasTuitionFees = fees.any((f) => _isTuitionFee(f));
     if (hasTuitionFees) {
       options.add('Tuition Fees');
     }
 
     // Check for hostel fees
-    final hasHostelFees = fees.any((f) => _isHostelFee(f.demfeetype));
+    final hasHostelFees = fees.any((f) => _isHostelFee(f));
     if (hasHostelFees) {
       options.add('Hostel Fees');
     }
 
+    // Check for exam fees
+    final hasExamFees = fees.any((f) => _isExamFee(f));
+    if (hasExamFees) {
+      options.add('Exam Fees');
+    }
+
     // Check for bus fees
-    final hasBusFees = fees.any((f) => _isBusFee(f.demfeetype));
+    final hasBusFees = fees.any((f) => _isBusFee(f));
     if (hasBusFees) {
       options.add('Bus Fees');
     }
 
-    // Check for extra fees (can add more types here in future)
-    final hasExtraFees = fees.any((f) => _isExtraFee(f.demfeetype));
+    // Check for extra fees
+    final hasExtraFees = fees.any((f) => _isExtraFee(f));
     if (hasExtraFees) {
       options.add('Extra Fees');
     }
@@ -113,79 +110,140 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
   }
 
   /// Check if a fee is an extra/miscellaneous fee
-  bool _isExtraFee(String feeType) {
-    final lowerType = feeType.toLowerCase();
-    return lowerType.contains('extra') ||
-           lowerType.contains('misc') ||
+  bool _isExtraFee(FeeModel f) {
+    final lowerType = f.demfeetype.toLowerCase();
+    final lowerGroup = f.feeGroupName.toLowerCase();
+    return lowerType.contains('extra') || lowerGroup.contains('extra') ||
+           lowerType.contains('misc') || lowerGroup.contains('misc') ||
            lowerType.contains('other') ||
            lowerType.contains('activity') ||
            lowerType.contains('event');
   }
 
-  /// Filter fees based on selected group
-  List<FeeModel> _getFilteredFees(List<FeeModel> allFees) {
-    if (_selectedFeeGroup == 'ALL FEES') {
-      return allFees;
-    } else if (_selectedFeeGroup == 'Term Fees') {
-      return allFees.where((f) =>
-        !_isBusFee(f.demfeetype) &&
-        !_isTuitionFee(f.demfeetype) &&
-        !_isHostelFee(f.demfeetype) &&
-        !_isExtraFee(f.demfeetype)).toList();
-    } else if (_selectedFeeGroup == 'Tuition Fees') {
-      return allFees.where((f) => _isTuitionFee(f.demfeetype)).toList();
-    } else if (_selectedFeeGroup == 'Hostel Fees') {
-      return allFees.where((f) => _isHostelFee(f.demfeetype)).toList();
-    } else if (_selectedFeeGroup == 'Bus Fees') {
-      return allFees.where((f) => _isBusFee(f.demfeetype)).toList();
-    } else if (_selectedFeeGroup == 'Extra Fees') {
-      return allFees.where((f) => _isExtraFee(f.demfeetype)).toList();
+  /// Get sub-options for a fee group (terms or months)
+  List<String> _getSubOptions(String group, List<FeeModel> allFees) {
+    if (group == 'ALL FEES' || group == 'Extra Fees' || group == 'Exam Fees') {
+      return [];
     }
-    return allFees;
+
+    List<FeeModel> groupFees;
+    if (group == 'Term Fees') {
+      groupFees = allFees.where((f) =>
+        !_isBusFee(f) &&
+        !_isTuitionFee(f) &&
+        !_isHostelFee(f) &&
+        !_isExtraFee(f)).toList();
+      // Return unique term names sorted
+      final terms = groupFees.map((f) => f.demfeeterm).toSet().toList()
+        ..sort();
+      return terms;
+    }
+
+    // For Bus, Tuition, Hostel — return unique months
+    if (group == 'Bus Fees') {
+      groupFees = allFees.where((f) => _isBusFee(f)).toList();
+    } else if (group == 'Tuition Fees') {
+      groupFees = allFees.where((f) => _isTuitionFee(f)).toList();
+    } else if (group == 'Hostel Fees') {
+      groupFees = allFees.where((f) => _isHostelFee(f)).toList();
+    } else {
+      return [];
+    }
+
+    // Extract unique months sorted chronologically
+    final monthMap = <String, DateTime>{};
+    for (final fee in groupFees) {
+      final date = fee.duedate ?? fee.createdat;
+      final label = DateFormat('MMMM yyyy').format(date);
+      if (!monthMap.containsKey(label)) {
+        monthMap[label] = date;
+      }
+    }
+    final sorted = monthMap.entries.toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
+    return sorted.map((e) => e.key).toList();
   }
 
-  void _selectFeesForGroup(String group, List<FeeModel> allFees) {
-    final cartNotifier = ref.read(cartProvider.notifier);
-
-    // First, clear all fees from cart when selecting a specific group
-    if (group != 'All Fees') {
-      for (final fee in allFees) {
-        cartNotifier.removeFee(fee.id);
-      }
-    }
-
-    List<FeeModel> feesToSelect;
-    if (group == 'All Fees') {
-      feesToSelect = allFees;
-    } else if (group == 'Term Fees') {
-      feesToSelect = allFees.where((f) =>
-        !_isBusFee(f.demfeetype) &&
-        !_isTuitionFee(f.demfeetype) &&
-        !_isHostelFee(f.demfeetype) &&
-        !_isExtraFee(f.demfeetype)).toList();
-    } else if (group == 'Tuition Fees') {
-      feesToSelect = allFees.where((f) => _isTuitionFee(f.demfeetype)).toList();
-    } else if (group == 'Hostel Fees') {
-      feesToSelect = allFees.where((f) => _isHostelFee(f.demfeetype)).toList();
+  /// Get fees for a given group + sub-option combination
+  List<FeeModel> _getFeesForSubOption(String group, String subOption, List<FeeModel> allFees) {
+    if (group == 'Term Fees') {
+      return allFees.where((f) =>
+        !_isBusFee(f) && !_isTuitionFee(f) && !_isHostelFee(f) && !_isExtraFee(f) && !_isExamFee(f)
+        && f.demfeeterm == subOption).toList();
     } else if (group == 'Bus Fees') {
-      feesToSelect = allFees.where((f) => _isBusFee(f.demfeetype)).toList();
-    } else if (group == 'Extra Fees') {
-      feesToSelect = allFees.where((f) => _isExtraFee(f.demfeetype)).toList();
+      return allFees.where((f) => _isBusFee(f) && DateFormat('MMMM yyyy').format(f.duedate ?? f.createdat) == subOption).toList();
+    } else if (group == 'Tuition Fees') {
+      return allFees.where((f) => _isTuitionFee(f) && DateFormat('MMMM yyyy').format(f.duedate ?? f.createdat) == subOption).toList();
+    } else if (group == 'Hostel Fees') {
+      return allFees.where((f) => _isHostelFee(f) && DateFormat('MMMM yyyy').format(f.duedate ?? f.createdat) == subOption).toList();
+    }
+    return [];
+  }
+
+  /// Filter fees based on selected group and sub-filter
+  List<FeeModel> _getFilteredFees(List<FeeModel> allFees) {
+    List<FeeModel> groupFiltered;
+    if (_selectedFeeGroup == 'ALL FEES') {
+      groupFiltered = allFees;
+    } else if (_selectedFeeGroup == 'Term Fees') {
+      groupFiltered = allFees.where((f) =>
+        !_isBusFee(f) &&
+        !_isTuitionFee(f) &&
+        !_isHostelFee(f) &&
+        !_isExtraFee(f) &&
+        !_isExamFee(f)).toList();
+    } else if (_selectedFeeGroup == 'Tuition Fees') {
+      groupFiltered = allFees.where((f) => _isTuitionFee(f)).toList();
+    } else if (_selectedFeeGroup == 'Hostel Fees') {
+      groupFiltered = allFees.where((f) => _isHostelFee(f)).toList();
+    } else if (_selectedFeeGroup == 'Exam Fees') {
+      groupFiltered = allFees.where((f) => _isExamFee(f)).toList();
+    } else if (_selectedFeeGroup == 'Bus Fees') {
+      groupFiltered = allFees.where((f) => _isBusFee(f)).toList();
+    } else if (_selectedFeeGroup == 'Extra Fees') {
+      groupFiltered = allFees.where((f) => _isExtraFee(f)).toList();
     } else {
-      feesToSelect = allFees;
+      groupFiltered = allFees;
     }
 
-    for (final fee in feesToSelect) {
-      if (!ref.read(cartProvider).containsFee(fee.id)) {
-        cartNotifier.addFee(fee);
+    // Apply sub-filter if set
+    if (_selectedSubFilter != null) {
+      if (_selectedFeeGroup == 'Term Fees') {
+        groupFiltered = groupFiltered.where((f) => f.demfeeterm == _selectedSubFilter).toList();
+      } else if (_selectedFeeGroup == 'Bus Fees' ||
+                 _selectedFeeGroup == 'Tuition Fees' ||
+                 _selectedFeeGroup == 'Hostel Fees') {
+        groupFiltered = groupFiltered.where((f) {
+          final date = f.duedate ?? f.createdat;
+          return DateFormat('MMMM yyyy').format(date) == _selectedSubFilter;
+        }).toList();
       }
     }
+
+    return groupFiltered;
   }
 
   void _clearAllFees(List<FeeModel> fees) {
     final cartNotifier = ref.read(cartProvider.notifier);
-    for (final fee in fees) {
-      cartNotifier.removeFee(fee.id);
+    // Remove all local selections from cart
+    for (final feeId in _localSelectedFeeIds) {
+      cartNotifier.removeFee(feeId);
+    }
+    setState(() {
+      _localSelectedFeeIds.clear();
+      _selectedFeeGroup = 'ALL FEES';
+      _selectedSubFilter = null;
+      _expandedGroup = null;
+      _showCartPreview = false;
+    });
+  }
+
+  /// Add all locally selected fees to the cart
+  void _addSelectedFeesToCart(List<FeeModel> allFees) {
+    final cartNotifier = ref.read(cartProvider.notifier);
+    final feesToAdd = allFees.where((f) => _localSelectedFeeIds.contains(f.id)).toList();
+    if (feesToAdd.isNotEmpty) {
+      cartNotifier.addFees(feesToAdd);
     }
   }
 
@@ -194,6 +252,14 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     final allPendingFees = ref.watch(pendingFeesProvider);
     final cartState = ref.watch(cartProvider);
 
+    // Initialize local selection from cart on first build
+    if (!_initializedFromCart && cartState.isNotEmpty) {
+      _localSelectedFeeIds.addAll(cartState.feeIds);
+      _initializedFromCart = true;
+    } else if (!_initializedFromCart) {
+      _initializedFromCart = true;
+    }
+
     // Get filtered fees based on selection
     final filteredFees = _getFilteredFees(allPendingFees);
 
@@ -201,11 +267,11 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     final feeGroupOptions = _getFeeGroupOptions(allPendingFees);
 
     // Separate filtered fees by category for display
-    final termFees = filteredFees.where((f) => !_isBusFee(f.demfeetype) && !_isTuitionFee(f.demfeetype) && !_isHostelFee(f.demfeetype) && !_isExamFee(f.demfeetype)).toList();
-    final busFees = filteredFees.where((f) => _isBusFee(f.demfeetype)).toList();
-    final tuitionFees = filteredFees.where((f) => _isTuitionFee(f.demfeetype)).toList();
-    final hostelFees = filteredFees.where((f) => _isHostelFee(f.demfeetype)).toList();
-    final examFees = filteredFees.where((f) => _isExamFee(f.demfeetype)).toList();
+    final termFees = filteredFees.where((f) => !_isBusFee(f) && !_isTuitionFee(f) && !_isHostelFee(f) && !_isExamFee(f) && !_isExtraFee(f)).toList();
+    final busFees = filteredFees.where((f) => _isBusFee(f)).toList();
+    final tuitionFees = filteredFees.where((f) => _isTuitionFee(f)).toList();
+    final hostelFees = filteredFees.where((f) => _isHostelFee(f)).toList();
+    final examFees = filteredFees.where((f) => _isExamFee(f)).toList();
 
     // Group term fees by term
     final Map<String, List<FeeModel>> feesByTerm = {};
@@ -215,9 +281,34 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       feesByTerm[term]!.add(fee);
     }
 
-    // Calculate selected amount from filtered fees
-    final selectedFees = filteredFees.where((f) => cartState.containsFee(f.id)).toList();
+    // Calculate selected amount from ALL fees (not just filtered) so switching groups doesn't hide totals
+    final selectedFees = allPendingFees.where((f) => _localSelectedFeeIds.contains(f.id)).toList();
     final selectedAmount = selectedFees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
+
+    // Check if term fees are selected out of order (e.g., II TERM selected without I TERM)
+    // Group ALL term fees (not just filtered) by term for validation
+    final allTermFees = allPendingFees.where((f) => !_isBusFee(f) && !_isTuitionFee(f) && !_isHostelFee(f) && !_isExamFee(f) && !_isExtraFee(f)).toList();
+    final Map<String, List<FeeModel>> allFeesByTerm = {};
+    for (final fee in allTermFees) {
+      allFeesByTerm.putIfAbsent(fee.demfeeterm, () => []);
+      allFeesByTerm[fee.demfeeterm]!.add(fee);
+    }
+    final allSortedTerms = allFeesByTerm.keys.toList()..sort((a, b) {
+      final aDate = allFeesByTerm[a]!.first.duedate ?? allFeesByTerm[a]!.first.createdat;
+      final bDate = allFeesByTerm[b]!.first.duedate ?? allFeesByTerm[b]!.first.createdat;
+      return aDate.compareTo(bDate);
+    });
+    bool hasTermOutOfOrder = false;
+    for (int i = 1; i < allSortedTerms.length; i++) {
+      final currentTermFees = allFeesByTerm[allSortedTerms[i]]!;
+      final previousTermFees = allFeesByTerm[allSortedTerms[i - 1]]!;
+      final currentHasSelection = currentTermFees.any((f) => _localSelectedFeeIds.contains(f.id));
+      final previousFullySelected = previousTermFees.every((f) => _localSelectedFeeIds.contains(f.id));
+      if (currentHasSelection && !previousFullySelected) {
+        hasTermOutOfOrder = true;
+        break;
+      }
+    }
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
@@ -262,7 +353,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           ),
           // Bottom Bar
           if (selectedAmount > 0)
-            _buildBottomBar(context, selectedFees.length, selectedAmount),
+            _buildBottomBar(context, selectedFees.length, selectedAmount, allFees: allPendingFees, hasTermOutOfOrder: hasTermOutOfOrder),
         ],
       ),
     );
@@ -407,6 +498,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             if (_isDropdownOpen) {
               setState(() {
                 _isDropdownOpen = false;
+                _expandedGroup = null;
               });
             }
           },
@@ -417,20 +509,37 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               _buildFeeGroupFilter(feeGroupOptions, filteredFees),
               const SizedBox(height: 16),
 
-              // Term Fee Cards (separate cards for each term)
-              ...sortedTerms.map((term) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildTermCard(term, feesByTerm[term]!, cartState),
-              )),
+              // Term Fee Cards (sequential: select forward 1→2→3, unselect backward 3→2→1)
+              ...sortedTerms.asMap().entries.map((entry) {
+                final index = entry.key;
+                final term = entry.value;
+                final currentTermHasSelection = feesByTerm[term]!
+                    .any((f) => _localSelectedFeeIds.contains(f.id));
+                final currentTermFullySelected = feesByTerm[term]!
+                    .every((f) => _localSelectedFeeIds.contains(f.id));
+                // Can check: previous term fully selected AND current not fully selected
+                final canCheck = !currentTermFullySelected && (index == 0
+                    || feesByTerm[sortedTerms[index - 1]]!
+                        .every((f) => _localSelectedFeeIds.contains(f.id)));
+                // Can uncheck: current has selection AND no later terms have selections
+                final noLaterTermsSelected = !sortedTerms.skip(index + 1).any((laterTerm) =>
+                    feesByTerm[laterTerm]!.any((f) => _localSelectedFeeIds.contains(f.id)));
+                final canUncheck = currentTermHasSelection && noLaterTermsSelected;
+                final isTermEnabled = canCheck || canUncheck;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildTermCard(term, feesByTerm[term]!, cartState, isEnabled: isTermEnabled),
+                );
+              }),
 
-              // Tuition fees card (grouped together)
+              // Tuition fees card
               if (tuitionFees.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: _buildTuitionFeesCard(tuitionFees, cartState),
                 ),
 
-              // Hostel fees card (grouped together like van fees)
+              // Hostel fees card
               if (hostelFees.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -444,7 +553,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                   child: _buildExamFeesCard(examFees, cartState),
                 ),
 
-              // Bus fees card (all bus fees in one card)
+              // Bus fees card
               if (busFees.isNotEmpty)
                 _buildBusFeesCard(busFees, cartState),
             ],
@@ -508,12 +617,17 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          _selectedFeeGroup,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimaryC(context),
+                        Flexible(
+                          child: Text(
+                            _selectedSubFilter != null
+                                ? '$_selectedFeeGroup > $_selectedSubFilter'
+                                : _selectedFeeGroup,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimaryC(context),
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Icon(
@@ -528,35 +642,38 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               ),
               const SizedBox(width: 12),
               // Clear Button
-              GestureDetector(
-                onTap: () => _clearAllFees(filteredFees),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6B7280),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.clear_all_rounded,
-                        size: 18,
-                        color: Colors.white,
-                      ),
-                      SizedBox(width: 6),
-                      Text(
-                        'Clear',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+              Builder(builder: (context) {
+                final hasSelection = _localSelectedFeeIds.isNotEmpty || _selectedFeeGroup != 'ALL FEES';
+                return GestureDetector(
+                  onTap: hasSelection ? () => _clearAllFees(filteredFees) : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: hasSelection ? AppColors.iconButtonBg(context) : AppColors.borderC(context),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.filter_list_rounded,
+                          size: 18,
+                          color: hasSelection ? Colors.white : AppColors.textHintC(context),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          'Clear',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: hasSelection ? Colors.white : AppColors.textHintC(context),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              }),
             ],
           ),
         ],
@@ -567,6 +684,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
   Widget _buildFloatingDropdown(List<String> options, List<FeeModel> allFees, List<FeeModel> filteredFees, CartState cartState) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
+      constraints: const BoxConstraints(maxHeight: 400),
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
@@ -575,81 +693,170 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             ? []
             : [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 20, offset: const Offset(0, 8))],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Fee Group Options
-          ...options.asMap().entries.map((entry) {
-            final index = entry.key;
-            final option = entry.value;
-            final isSelected = _selectedFeeGroup == option;
-            final isFirst = index == 0;
-            final isLast = index == options.length - 1;
-            return GestureDetector(
-              onTap: () {
-                // Auto-select fees for this group
-                _selectFeesForGroup(option, allFees);
-                setState(() {
-                  _selectedFeeGroup = option;
-                  _isDropdownOpen = false;
-                });
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary.withValues(alpha: 0.08) : AppColors.cardBg(context),
-                  border: isLast
-                      ? null
-                      : Border(
-                          bottom: BorderSide(color: AppColors.borderC(context), width: 1),
-                        ),
-                  borderRadius: isFirst && isLast
-                      ? BorderRadius.circular(15)
-                      : isFirst
-                          ? const BorderRadius.only(
-                              topLeft: Radius.circular(11),
-                              topRight: Radius.circular(11),
-                            )
-                          : isLast
-                              ? const BorderRadius.only(
-                                  bottomLeft: Radius.circular(11),
-                                  bottomRight: Radius.circular(11),
-                                )
-                              : null,
-                ),
-                child: Row(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ...options.asMap().entries.map((entry) {
+                final index = entry.key;
+                final option = entry.value;
+                final isGroupSelected = _selectedFeeGroup == option && _selectedSubFilter == null;
+                final isGroupActive = _selectedFeeGroup == option;
+                final subOptions = _getSubOptions(option, allFees);
+                final hasSubOptions = subOptions.isNotEmpty;
+                final isExpanded = _expandedGroup == option;
+                final isLast = index == options.length - 1;
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: Text(
-                        option,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                          color: isSelected ? AppColors.primary : AppColors.textPrimaryC(context),
-                        ),
+                    // Main group row
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isGroupSelected
+                            ? AppColors.primary.withValues(alpha: 0.08)
+                            : AppColors.cardBg(context),
+                        border: (isLast && !isExpanded)
+                            ? null
+                            : Border(
+                                bottom: BorderSide(color: AppColors.borderC(context), width: 1),
+                              ),
+                      ),
+                      child: Row(
+                        children: [
+                          // Group name — tapping selects ALL fees in group
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedFeeGroup = option;
+                                  _selectedSubFilter = null;
+                                  _expandedGroup = null;
+                                  _isDropdownOpen = false;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                color: Colors.transparent,
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        option,
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: isGroupActive ? FontWeight.w600 : FontWeight.w500,
+                                          color: isGroupActive ? AppColors.primary : AppColors.textPrimaryC(context),
+                                        ),
+                                      ),
+                                    ),
+                                    if (isGroupSelected)
+                                      const Icon(Icons.check_rounded, size: 20, color: AppColors.primary),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Expand chevron for groups with sub-options
+                          if (hasSubOptions)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _expandedGroup = isExpanded ? null : option;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                color: Colors.transparent,
+                                child: Icon(
+                                  isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                                  size: 22,
+                                  color: AppColors.textSecondaryC(context),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    if (isSelected)
-                      const Icon(
-                        Icons.check_rounded,
-                        size: 20,
-                        color: AppColors.primary,
-                      ),
+                    // Sub-options (shown when expanded) with sequential enforcement
+                    if (isExpanded)
+                      ...subOptions.asMap().entries.map((subEntry) {
+                        final subIndex = subEntry.key;
+                        final sub = subEntry.value;
+                        final isSubSelected = _selectedFeeGroup == option && _selectedSubFilter == sub;
+                        final isLastSub = sub == subOptions.last;
+                        // Sequential: can only select sub-option if previous sub-option's fees are fully selected
+                        final bool isSubEnabled;
+                        if (subIndex == 0) {
+                          isSubEnabled = true;
+                        } else {
+                          final prevSub = subOptions[subIndex - 1];
+                          final prevFees = _getFeesForSubOption(option, prevSub, allFees);
+                          isSubEnabled = prevFees.every((f) => _localSelectedFeeIds.contains(f.id));
+                        }
+                        return GestureDetector(
+                          onTap: isSubEnabled ? () {
+                            setState(() {
+                              _selectedFeeGroup = option;
+                              _selectedSubFilter = sub;
+                              _expandedGroup = null;
+                              _isDropdownOpen = false;
+                            });
+                          } : null,
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isSubSelected
+                                  ? AppColors.primary.withValues(alpha: 0.06)
+                                  : AppColors.scaffoldBg(context),
+                              border: (isLastSub && isLast)
+                                  ? null
+                                  : Border(
+                                      bottom: BorderSide(
+                                        color: AppColors.borderC(context).withValues(alpha: 0.5),
+                                        width: 0.5,
+                                      ),
+                                    ),
+                            ),
+                            child: Row(
+                              children: [
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: Text(
+                                    sub,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: isSubSelected ? FontWeight.w600 : FontWeight.w400,
+                                      color: !isSubEnabled
+                                          ? AppColors.textHintC(context)
+                                          : isSubSelected ? AppColors.primary : AppColors.textSecondaryC(context),
+                                    ),
+                                  ),
+                                ),
+                                if (isSubSelected)
+                                  const Icon(Icons.check_rounded, size: 18, color: AppColors.primary),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
                   ],
-                ),
-              ),
-            );
-          }),
-        ],
+                );
+              }),
+            ],
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildTermCard(String term, List<FeeModel> fees, CartState cartState) {
+  Widget _buildTermCard(String term, List<FeeModel> fees, CartState cartState, {bool isEnabled = true}) {
     final academicYear = fees.isNotEmpty ? fees.first.demfeeyear : '2025-2026';
     final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
-    final allSelected = fees.every((f) => cartState.containsFee(f.id));
+    final allSelected = fees.every((f) => _localSelectedFeeIds.contains(f.id));
     final monthRange = _getTermMonthRange(fees);
 
     // Calculate fee status for badge color
@@ -670,22 +877,26 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
         return a.createdat.compareTo(b.createdat);
       });
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBg(context),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: Theme.of(context).brightness == Brightness.dark
-            ? []
-            : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+    return IgnorePointer(
+      ignoring: !isEnabled,
+      child: Opacity(
+        opacity: isEnabled ? 1.0 : 0.6,
+        child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.cardBg(context),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: Theme.of(context).brightness == Brightness.dark
+              ? []
+              : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Column(
@@ -751,17 +962,18 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                 GestureDetector(
                   onTap: () {
                     final cartNotifier = ref.read(cartProvider.notifier);
-                    if (allSelected) {
-                      for (final fee in fees) {
-                        cartNotifier.removeFee(fee.id);
-                      }
-                    } else {
-                      for (final fee in fees) {
-                        if (!cartState.containsFee(fee.id)) {
-                          cartNotifier.addFee(fee);
+                    setState(() {
+                      if (allSelected) {
+                        for (final fee in fees) {
+                          _localSelectedFeeIds.remove(fee.id);
+                          cartNotifier.removeFee(fee.id);
+                        }
+                      } else {
+                        for (final fee in fees) {
+                          _localSelectedFeeIds.add(fee.id);
                         }
                       }
-                    }
+                    });
                   },
                   child: Container(
                     width: 22,
@@ -814,8 +1026,24 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             // Divider
             Container(height: 1, color: AppColors.borderC(context)),
 
-            // Fee Items with individual checkboxes
-            ...sortedFees.map((fee) => _buildFeeRow(fee, cartState)),
+            // Fee Items with individual checkboxes (sequential: forward select, backward unselect)
+            ...sortedFees.asMap().entries.map((entry) {
+              final i = entry.key;
+              final fee = entry.value;
+              final isCurrentSelected = _localSelectedFeeIds.contains(fee.id);
+              final canCheckRow = !isCurrentSelected && (i == 0
+                  || _localSelectedFeeIds.contains(sortedFees[i - 1].id));
+              final noLaterRowsSelected = !sortedFees.skip(i + 1).any((f) => _localSelectedFeeIds.contains(f.id));
+              final canUncheckRow = isCurrentSelected && noLaterRowsSelected;
+              final isRowEnabled = canCheckRow || canUncheckRow;
+              return IgnorePointer(
+                ignoring: !isRowEnabled,
+                child: Opacity(
+                  opacity: isRowEnabled ? 1.0 : 0.5,
+                  child: _buildFeeRow(fee, cartState),
+                ),
+              );
+            }),
 
             // Total Row
             Container(
@@ -846,6 +1074,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           ],
         ),
       ),
+      ),
+      ),
     );
   }
 
@@ -874,7 +1104,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
   Widget _buildTuitionFeesCard(List<FeeModel> fees, CartState cartState) {
     final academicYear = fees.isNotEmpty ? fees.first.demfeeyear : '2025-2026';
     final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
-    final allSelected = fees.every((f) => cartState.containsFee(f.id));
+    final allSelected = fees.every((f) => _localSelectedFeeIds.contains(f.id));
     final monthRange = _getTuitionFeesMonthRange(fees);
 
     // Calculate fee status for badge color
@@ -972,17 +1202,18 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                 GestureDetector(
                   onTap: () {
                     final cartNotifier = ref.read(cartProvider.notifier);
-                    if (allSelected) {
-                      for (final fee in fees) {
-                        cartNotifier.removeFee(fee.id);
-                      }
-                    } else {
-                      for (final fee in fees) {
-                        if (!cartState.containsFee(fee.id)) {
-                          cartNotifier.addFee(fee);
+                    setState(() {
+                      if (allSelected) {
+                        for (final fee in fees) {
+                          _localSelectedFeeIds.remove(fee.id);
+                          cartNotifier.removeFee(fee.id);
+                        }
+                      } else {
+                        for (final fee in fees) {
+                          _localSelectedFeeIds.add(fee.id);
                         }
                       }
-                    }
+                    });
                   },
                   child: Container(
                     width: 22,
@@ -1036,7 +1267,23 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             Container(height: 1, color: AppColors.borderC(context)),
 
             // Fee Items
-            ...sortedFees.map((fee) => _buildTuitionFeeRow(fee)),
+            ...sortedFees.asMap().entries.map((entry) {
+              final i = entry.key;
+              final fee = entry.value;
+              final isCurrentSelected = _localSelectedFeeIds.contains(fee.id);
+              final canCheckRow = !isCurrentSelected && (i == 0
+                  || _localSelectedFeeIds.contains(sortedFees[i - 1].id));
+              final noLaterRowsSelected = !sortedFees.skip(i + 1).any((f) => _localSelectedFeeIds.contains(f.id));
+              final canUncheckRow = isCurrentSelected && noLaterRowsSelected;
+              final isRowEnabled = canCheckRow || canUncheckRow;
+              return IgnorePointer(
+                ignoring: !isRowEnabled,
+                child: Opacity(
+                  opacity: isRowEnabled ? 1.0 : 0.5,
+                  child: _buildTuitionFeeRow(fee),
+                ),
+              );
+            }),
 
             // Total Row
             Container(
@@ -1303,7 +1550,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     final academicYear = fees.isNotEmpty ? fees.first.demfeeyear : '2025-2026';
     final monthRange = _getHostelFeesMonthRange(fees);
     final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
-    final allSelected = fees.every((f) => cartState.containsFee(f.id));
+    final allSelected = fees.every((f) => _localSelectedFeeIds.contains(f.id));
 
     // Calculate fee status for badge color
     final now = DateTime.now();
@@ -1396,17 +1643,18 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                 GestureDetector(
                   onTap: () {
                     final cartNotifier = ref.read(cartProvider.notifier);
-                    if (allSelected) {
-                      for (final fee in fees) {
-                        cartNotifier.removeFee(fee.id);
-                      }
-                    } else {
-                      for (final fee in fees) {
-                        if (!cartState.containsFee(fee.id)) {
-                          cartNotifier.addFee(fee);
+                    setState(() {
+                      if (allSelected) {
+                        for (final fee in fees) {
+                          _localSelectedFeeIds.remove(fee.id);
+                          cartNotifier.removeFee(fee.id);
+                        }
+                      } else {
+                        for (final fee in fees) {
+                          _localSelectedFeeIds.add(fee.id);
                         }
                       }
-                    }
+                    });
                   },
                   child: Container(
                     width: 24,
@@ -1459,8 +1707,24 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             // Divider
             Container(height: 1, color: AppColors.borderC(context)),
 
-            // Fee Items (no individual checkboxes)
-            ...sortedFees.map((fee) => _buildHostelFeeRow(fee)),
+            // Fee Items (sequential: forward select, backward unselect)
+            ...sortedFees.asMap().entries.map((entry) {
+              final i = entry.key;
+              final fee = entry.value;
+              final isCurrentSelected = _localSelectedFeeIds.contains(fee.id);
+              final canCheckRow = !isCurrentSelected && (i == 0
+                  || _localSelectedFeeIds.contains(sortedFees[i - 1].id));
+              final noLaterRowsSelected = !sortedFees.skip(i + 1).any((f) => _localSelectedFeeIds.contains(f.id));
+              final canUncheckRow = isCurrentSelected && noLaterRowsSelected;
+              final isRowEnabled = canCheckRow || canUncheckRow;
+              return IgnorePointer(
+                ignoring: !isRowEnabled,
+                child: Opacity(
+                  opacity: isRowEnabled ? 1.0 : 0.5,
+                  child: _buildHostelFeeRow(fee),
+                ),
+              );
+            }),
 
             // Total Row
             Container(
@@ -1621,6 +1885,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     final academicYear = fees.isNotEmpty ? fees.first.demfeeyear : '2025-2026';
     final monthRange = _getExamFeesMonthRange(fees);
     final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
+    final allSelected = fees.every((f) => _localSelectedFeeIds.contains(f.id));
 
     final now = DateTime.now();
     final hasOverdue = fees.any((f) => f.dueDate.isBefore(now));
@@ -1638,7 +1903,23 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
         return a.createdat.compareTo(b.createdat);
       });
 
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        final cartNotifier = ref.read(cartProvider.notifier);
+        setState(() {
+          if (allSelected) {
+            for (final fee in fees) {
+              _localSelectedFeeIds.remove(fee.id);
+              cartNotifier.removeFee(fee.id);
+            }
+          } else {
+            for (final fee in fees) {
+              _localSelectedFeeIds.add(fee.id);
+            }
+          }
+        });
+      },
+      child: Container(
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(16),
@@ -1704,6 +1985,23 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(width: 12),
+                // Checkbox
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: BoxDecoration(
+                    color: allSelected ? AppColors.primary : AppColors.cardBg(context),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: allSelected ? AppColors.primary : AppColors.borderC(context),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: allSelected
+                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                      : null,
+                ),
               ],
             ),
             const SizedBox(height: 16),
@@ -1734,7 +2032,23 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               height: 1,
               color: AppColors.borderC(context),
             ),
-            ...sortedFees.map((fee) => _buildExamFeeRow(fee)),
+            ...sortedFees.asMap().entries.map((entry) {
+              final i = entry.key;
+              final fee = entry.value;
+              final isCurrentSelected = _localSelectedFeeIds.contains(fee.id);
+              final canCheckRow = !isCurrentSelected && (i == 0
+                  || _localSelectedFeeIds.contains(sortedFees[i - 1].id));
+              final noLaterRowsSelected = !sortedFees.skip(i + 1).any((f) => _localSelectedFeeIds.contains(f.id));
+              final canUncheckRow = isCurrentSelected && noLaterRowsSelected;
+              final isRowEnabled = canCheckRow || canUncheckRow;
+              return IgnorePointer(
+                ignoring: !isRowEnabled,
+                child: Opacity(
+                  opacity: isRowEnabled ? 1.0 : 0.5,
+                  child: _buildExamFeeRow(fee),
+                ),
+              );
+            }),
             Container(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(
@@ -1762,6 +2076,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -1801,13 +2116,19 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                   width: 28,
                   height: 28,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                    color: const Color(0xFF06B6D4).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
-                    Icons.assignment_outlined,
-                    size: 16,
-                    color: Color(0xFFEF4444),
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/school Icons/exam.svg',
+                      width: 16,
+                      height: 16,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFF06B6D4),
+                        BlendMode.srcIn,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -1883,7 +2204,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
   Widget _buildBusFeesCard(List<FeeModel> fees, CartState cartState) {
     final academicYear = fees.isNotEmpty ? fees.first.demfeeyear : '2025-2026';
     final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
-    final allSelected = fees.every((f) => cartState.containsFee(f.id));
+    final allSelected = fees.every((f) => _localSelectedFeeIds.contains(f.id));
     final sortedFees = _getSortedBusFees(fees);
 
     // Calculate fee status for badge color
@@ -1898,17 +2219,18 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     return GestureDetector(
       onTap: () {
         final cartNotifier = ref.read(cartProvider.notifier);
-        if (allSelected) {
-          for (final fee in fees) {
-            cartNotifier.removeFee(fee.id);
-          }
-        } else {
-          for (final fee in fees) {
-            if (!cartState.containsFee(fee.id)) {
-              cartNotifier.addFee(fee);
+        setState(() {
+          if (allSelected) {
+            for (final fee in fees) {
+              _localSelectedFeeIds.remove(fee.id);
+              cartNotifier.removeFee(fee.id);
+            }
+          } else {
+            for (final fee in fees) {
+              _localSelectedFeeIds.add(fee.id);
             }
           }
-        }
+        });
       },
       child: Container(
         decoration: BoxDecoration(
@@ -2038,8 +2360,24 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
               // Divider
               Container(height: 1, color: AppColors.borderC(context)),
 
-              // Bus Fee Items
-              ...sortedFees.map((fee) => _buildBusFeeRow(fee, cartState)),
+              // Bus Fee Items (sequential: forward select, backward unselect)
+              ...sortedFees.asMap().entries.map((entry) {
+                final i = entry.key;
+                final fee = entry.value;
+                final isCurrentSelected = _localSelectedFeeIds.contains(fee.id);
+                final canCheckRow = !isCurrentSelected && (i == 0
+                    || _localSelectedFeeIds.contains(sortedFees[i - 1].id));
+                final noLaterRowsSelected = !sortedFees.skip(i + 1).any((f) => _localSelectedFeeIds.contains(f.id));
+                final canUncheckRow = isCurrentSelected && noLaterRowsSelected;
+                final isRowEnabled = canCheckRow || canUncheckRow;
+                return IgnorePointer(
+                  ignoring: !isRowEnabled,
+                  child: Opacity(
+                    opacity: isRowEnabled ? 1.0 : 0.5,
+                    child: _buildBusFeeRow(fee, cartState),
+                  ),
+                );
+              }),
 
               // Total Row
               Container(
@@ -2092,24 +2430,16 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           Expanded(
             child: Row(
               children: [
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: SvgPicture.asset(
-                    'assets/school Icons/van.svg',
-                    width: 16,
-                    height: 16,
-                    colorFilter: const ColorFilter.mode(
-                      Color(0xFFF59E0B),
-                      BlendMode.srcIn,
-                    ),
+                SvgPicture.asset(
+                  'assets/school Icons/van.svg',
+                  width: 16,
+                  height: 16,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFFF59E0B),
+                    BlendMode.srcIn,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2179,9 +2509,11 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     );
   }
 
-  Widget _buildBottomBar(BuildContext context, int selectedCount, double selectedAmount) {
+  Widget _buildBottomBar(BuildContext context, int selectedCount, double selectedAmount, {required List<FeeModel> allFees, bool hasTermOutOfOrder = false}) {
+    final cartState = ref.watch(cartProvider);
+    final groupIcons = _getUniqueGroupIcons(cartState.items);
+
     return Container(
-      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
         borderRadius: const BorderRadius.only(
@@ -2194,73 +2526,244 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '$selectedCount fee${selectedCount > 1 ? 's' : ''} selected',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondaryC(context),
+            // Cart preview bar — only shown after "Add to Cart" is clicked
+            if (_showCartPreview && cartState.isNotEmpty)
+              GestureDetector(
+                onTap: () => context.push(Routes.cart),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: AppColors.borderC(context), width: 0.5),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₹ ${NumberFormat('#,##,###').format(selectedAmount.toInt())}',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
-                  ),
-                ),
-              ],
-            ),
-            GestureDetector(
-              onTap: selectedAmount > 0 ? () => context.go(Routes.cart) : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: selectedAmount > 0
-                        ? [AppColors.primary, AppColors.primary600]
-                        : [AppColors.primary.withValues(alpha: 0.5), AppColors.primary600.withValues(alpha: 0.5)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: selectedAmount > 0
-                      ? [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.4),
-                            blurRadius: 16,
-                            offset: const Offset(0, 6),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Cart',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimaryC(context),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      // Fee group icons
+                      Expanded(
+                        child: Row(
+                          children: [
+                            ...groupIcons.take(4).map((icon) => Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: icon['bgColor'] as Color,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: SvgPicture.asset(
+                                    icon['svgPath'] as String,
+                                    width: 16,
+                                    height: 16,
+                                    colorFilter: ColorFilter.mode(
+                                      icon['iconColor'] as Color,
+                                      BlendMode.srcIn,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )),
+                          ],
+                        ),
+                      ),
+                      // Count badge
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF59E0B),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${cartState.itemCount}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
                           ),
-                        ]
-                      : [],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Proceed to Pay',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+              ),
+            // Bottom action row
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$selectedCount fee${selectedCount > 1 ? 's' : ''} selected',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondaryC(context),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹ ${NumberFormat('#,##,###').format(selectedAmount.toInt())}',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimaryC(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Button changes based on state
+                  if (_showCartPreview)
+                    GestureDetector(
+                      onTap: () => context.push(Routes.cart),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [AppColors.primary, AppColors.primary600],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'View List',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    GestureDetector(
+                      onTap: (selectedAmount > 0 && !hasTermOutOfOrder)
+                          ? () {
+                              _addSelectedFeesToCart(allFees);
+                              setState(() => _showCartPreview = true);
+                            }
+                          : null,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: (selectedAmount > 0 && !hasTermOutOfOrder)
+                                ? [AppColors.primary, AppColors.primary600]
+                                : [AppColors.primary.withValues(alpha: 0.5), AppColors.primary600.withValues(alpha: 0.5)],
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: (selectedAmount > 0 && !hasTermOutOfOrder)
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.4),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SvgPicture.asset(
+                              'assets/icons/Cart.svg',
+                              width: 20,
+                              height: 20,
+                              colorFilter: const ColorFilter.mode(
+                                Colors.white,
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Add to Queue',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
-                  ],
-                ),
+                ],
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  List<Map<String, dynamic>> _getUniqueGroupIcons(List<FeeModel> items) {
+    final seen = <String>{};
+    final icons = <Map<String, dynamic>>[];
+    for (final fee in items) {
+      final type = fee.demfeetype.toLowerCase();
+      String groupKey;
+      String svgPath;
+      Color bgColor;
+      Color iconColor;
+      if (type.contains('bus') || type.contains('transport') || type.contains('van')) {
+        groupKey = 'van';
+        svgPath = 'assets/school Icons/van.svg';
+        bgColor = const Color(0xFFFEF3C7);
+        iconColor = const Color(0xFFF59E0B);
+      } else if (type.contains('hostel')) {
+        groupKey = 'hostel';
+        svgPath = 'assets/school Icons/book.svg';
+        bgColor = const Color(0xFFDBEAFE);
+        iconColor = const Color(0xFF3B82F6);
+      } else if (type.contains('exam')) {
+        groupKey = 'exam';
+        svgPath = 'assets/school Icons/exam.svg';
+        bgColor = const Color(0xFFFEE2E2);
+        iconColor = const Color(0xFFEF4444);
+      } else {
+        groupKey = 'school';
+        svgPath = 'assets/school Icons/school.svg';
+        bgColor = const Color(0xFFDCFCE7);
+        iconColor = const Color(0xFF22C55E);
+      }
+      if (!seen.contains(groupKey)) {
+        seen.add(groupKey);
+        icons.add({'svgPath': svgPath, 'bgColor': bgColor, 'iconColor': iconColor});
+      }
+    }
+    return icons;
   }
 
   Widget _buildEmptyState() {

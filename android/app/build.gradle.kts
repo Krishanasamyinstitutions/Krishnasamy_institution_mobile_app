@@ -30,8 +30,16 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        // Using debug keystore for testing. Replace with a production keystore for Play Store release.
+        getByName("debug") {
+            // Uses default debug keystore automatically
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

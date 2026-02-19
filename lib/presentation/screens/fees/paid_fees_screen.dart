@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/fee_model.dart';
-import '../../providers/fee_provider.dart';
+import '../../../data/models/payment_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/payment_provider.dart';
 
@@ -15,21 +15,8 @@ class PaidFeesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final paidFees = ref.watch(paidFeesProvider);
+    final paidPaymentsAsync = ref.watch(paidFeesByPaymentProvider);
     final notificationCount = ref.watch(notificationCountProvider);
-
-    // Group paid fees by pay_id (payment transaction)
-    final byPayment = <int?, List<FeeModel>>{};
-    for (final fee in paidFees) {
-      byPayment.putIfAbsent(fee.payId, () => []).add(fee);
-    }
-
-    // Sort payment groups: newest first (higher pay_id = newer)
-    final sortedPayIds = byPayment.keys.toList()
-      ..sort((a, b) => (b ?? 0).compareTo(a ?? 0));
-
-    // Calculate total paid
-    final totalPaid = paidFees.fold(0.0, (sum, f) => sum + f.paidamount);
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
@@ -58,22 +45,43 @@ class PaidFeesScreen extends ConsumerWidget {
 
           // Content
           Expanded(
-            child: paidFees.isEmpty
-                ? _buildEmptyState(context)
-                : ListView(
-                    padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                    children: [
-                      // Total paid summary
-                      _buildTotalSummary(context, totalPaid, sortedPayIds.length),
-                      const SizedBox(height: 20),
+            child: paidPaymentsAsync.when(
+              loading: () => const Center(
+                child: CircularProgressIndicator(),
+              ),
+              error: (e, s) => Center(
+                child: Text(
+                  'Error loading paid fees',
+                  style: TextStyle(color: AppColors.textSecondaryC(context)),
+                ),
+              ),
+              data: (groups) {
+                if (groups.isEmpty) return _buildEmptyState(context);
 
-                      // Payment accordion items
-                      ...sortedPayIds.map((payId) => _PaymentAccordion(
-                        payId: payId,
-                        fees: byPayment[payId]!,
-                      )),
-                    ],
-                  ),
+                // Sort payment groups: newest first (higher pay_id = newer)
+                final sortedPayIds = groups.keys.toList()
+                  ..sort((a, b) => b.compareTo(a));
+
+                // Calculate total paid from payment records
+                final totalPaid = groups.values
+                    .fold(0.0, (sum, g) => sum + g.payment.transtotalamount);
+
+                return ListView(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                  children: [
+                    // Total paid summary
+                    _buildTotalSummary(context, totalPaid, sortedPayIds.length),
+                    const SizedBox(height: 20),
+
+                    // Payment accordion items
+                    ...sortedPayIds.map((payId) => _PaymentAccordion(
+                      payment: groups[payId]!.payment,
+                      fees: groups[payId]!.fees,
+                    )),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -264,20 +272,20 @@ class PaidFeesScreen extends ConsumerWidget {
 }
 
 /// Accordion widget for a single payment transaction group
-class _PaymentAccordion extends ConsumerStatefulWidget {
-  final int? payId;
+class _PaymentAccordion extends StatefulWidget {
+  final PaymentModel payment;
   final List<FeeModel> fees;
 
   const _PaymentAccordion({
-    required this.payId,
+    required this.payment,
     required this.fees,
   });
 
   @override
-  ConsumerState<_PaymentAccordion> createState() => _PaymentAccordionState();
+  State<_PaymentAccordion> createState() => _PaymentAccordionState();
 }
 
-class _PaymentAccordionState extends ConsumerState<_PaymentAccordion>
+class _PaymentAccordionState extends State<_PaymentAccordion>
     with SingleTickerProviderStateMixin {
   bool _isExpanded = false;
   late AnimationController _controller;
@@ -319,7 +327,11 @@ class _PaymentAccordionState extends ConsumerState<_PaymentAccordion>
 
   @override
   Widget build(BuildContext context) {
-    final totalPaid = widget.fees.fold(0.0, (sum, f) => sum + f.paidamount);
+    final payment = widget.payment;
+    final paymentNumber = payment.paymentNumber;
+    final paymentDate = payment.paidAt ?? payment.createdAt;
+    final paymentMethod = payment.paymethod ?? '';
+    final totalPaid = payment.transtotalamount;
     final isGroupPayment = widget.fees.length > 1;
 
     // Determine fee group names
@@ -330,23 +342,20 @@ class _PaymentAccordionState extends ConsumerState<_PaymentAccordion>
     }
     final isMixedGroups = feeGroups.length > 1;
 
-    // Payment title
-    final title = isGroupPayment
-        ? (isMixedGroups ? 'Combined Payment' : PaidFeesScreen.toTitleCase(feeGroups.first))
-        : PaidFeesScreen.toTitleCase(widget.fees.first.feeTypeName);
+    // Payment title — use receipt number when available
+    final title = paymentNumber.isNotEmpty
+        ? paymentNumber
+        : isGroupPayment
+            ? (isMixedGroups ? 'Payment' : PaidFeesScreen.toTitleCase(feeGroups.first))
+            : widget.fees.isNotEmpty
+                ? PaidFeesScreen.toTitleCase(widget.fees.first.feeTypeName)
+                : 'Payment';
 
     final subtitle = isGroupPayment
         ? '${widget.fees.length} fees paid together'
-        : widget.fees.first.demfeeterm.isNotEmpty
+        : widget.fees.isNotEmpty && widget.fees.first.demfeeterm.isNotEmpty
             ? '${widget.fees.first.demfeeterm} \u{2022} ${widget.fees.first.demfeeyear}'
             : 'Individual payment';
-
-    // Fetch payment details
-    final paymentAsync = widget.payId != null ? ref.watch(paymentByIdProvider(widget.payId!)) : null;
-    final payment = paymentAsync?.valueOrNull;
-    final paymentNumber = payment?.paymentNumber ?? '';
-    final paymentDate = payment?.paidAt ?? payment?.createdAt;
-    final paymentMethod = payment?.paymethod ?? '';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -422,15 +431,14 @@ class _PaymentAccordionState extends ConsumerState<_PaymentAccordion>
                           ),
                         ),
                         const SizedBox(height: 2),
-                        if (paymentDate != null)
-                          Text(
-                            DateFormat('dd MMM yyyy').format(paymentDate),
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w400,
-                              color: AppColors.textHintC(context),
-                            ),
+                        Text(
+                          DateFormat('dd MMM yyyy').format(paymentDate),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.textHintC(context),
                           ),
+                        ),
                       ],
                     ),
                     const SizedBox(width: 8),
@@ -513,48 +521,48 @@ class _PaymentAccordionState extends ConsumerState<_PaymentAccordion>
                     ),
 
                   // Fee items
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                    child: Column(
-                      children: widget.fees.map((fee) => _buildFeeItem(context, fee)).toList(),
+                  if (widget.fees.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: Column(
+                        children: widget.fees.map((fee) => _buildFeeItem(context, fee)).toList(),
+                      ),
                     ),
-                  ),
 
                   // View Receipt button
-                  if (widget.payId != null)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                      child: GestureDetector(
-                        onTap: () => context.push('${Routes.transactionDetails}/${widget.payId}'),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.receipt_long_outlined,
-                                size: 16,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                    child: GestureDetector(
+                      onTap: () => context.push('${Routes.transactionDetails}/${payment.payId}'),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.receipt_long_outlined,
+                              size: 16,
+                              color: AppColors.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'View Receipt',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
                                 color: AppColors.primary,
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                'View Receipt',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
             ),

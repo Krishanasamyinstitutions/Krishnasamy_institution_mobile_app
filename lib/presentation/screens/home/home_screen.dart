@@ -155,7 +155,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       children: [
         // Profile Avatar
         GestureDetector(
-          onTap: () => context.push(Routes.switchStudent),
+          onTap: () => context.go(Routes.profile),
           child: Container(
             width: 44,
             height: 44,
@@ -214,41 +214,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-              Row(
-                children: [
-                  Text(
-                    'Adm No: ',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textSecondaryC(context),
+              RichText(
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Adm No: ',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondaryC(context),
+                      ),
                     ),
-                  ),
-                  Text(
-                    admissionNumber,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimaryC(context),
+                    TextSpan(
+                      text: admissionNumber,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimaryC(context),
+                      ),
                     ),
-                  ),
-                  Text(
-                    ' | Class: ',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textSecondaryC(context),
+                    TextSpan(
+                      text: ' | Class: ',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondaryC(context),
+                      ),
                     ),
-                  ),
-                  Text(
-                    className,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimaryC(context),
+                    TextSpan(
+                      text: className,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimaryC(context),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -794,7 +798,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(height: 12),
             ...dueSoonGroups.map((group) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _buildFeeGroupCard(context, group, AppColors.warning, filterStatus: 'dueSoon'),
+              child: _buildFeeGroupCard(context, group, AppColors.warning, filterStatus: 'dueSoon', isDisabled: hasOverdue),
             )),
           ],
         ],
@@ -851,7 +855,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildFeeGroupCard(BuildContext context, FeeGroupSummary group, Color statusColor, {required String filterStatus}) {
+  Widget _buildFeeGroupCard(BuildContext context, FeeGroupSummary group, Color statusColor, {required String filterStatus, bool isDisabled = false}) {
     final isOverdue = group.isOverdue;
     final now = DateTime.now();
     String timeInfo = '';
@@ -893,8 +897,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       groupIcon = Icons.receipt_rounded;
     }
 
-    return GestureDetector(
-      onTap: () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(group.groupName)}&status=$filterStatus'),
+    return Opacity(
+      opacity: isDisabled ? 0.5 : 1.0,
+      child: GestureDetector(
+      onTap: isDisabled ? null : () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(group.groupName)}&status=$filterStatus'),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -942,12 +948,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Text(
-                        '${group.itemCount} ${group.itemCount == 1 ? 'fee' : 'fees'}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.textSecondaryC(context),
+                      Flexible(
+                        child: Text(
+                          group.periodText,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.textSecondaryC(context),
+                          ),
                         ),
                       ),
                       if (timeInfo.isNotEmpty) ...[
@@ -996,6 +1005,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

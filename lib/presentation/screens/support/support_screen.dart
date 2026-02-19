@@ -32,7 +32,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
     {
       'question': 'Will I receive a receipt after payment?',
       'answer':
-          'Yes, you will receive a digital receipt via email immediately after successful payment completion.',
+          'Yes, you can download and share the payment receipt from the payment history section after successful payment.',
     },
     {
       'question': 'What happens if I miss a payment due date?',

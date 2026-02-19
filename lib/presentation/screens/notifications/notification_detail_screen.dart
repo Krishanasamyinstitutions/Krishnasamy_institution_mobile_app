@@ -486,7 +486,7 @@ class _NotificationDetailScreenState
         buttonColor = const Color(0xFF10B981);
         onTap = () {
           if (payId != null) {
-            context.push('/payment-history/$payId');
+            context.go('/payment-history/$payId');
           } else {
             context.go('/payment-history');
           }

@@ -293,7 +293,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   // Transaction Details
-                  _buildDetailRow(context, 'Payment No', payment.paymentNumber),
+                  _buildDetailRow(context, 'Receipt No', payment.paymentNumber),
                   const SizedBox(height: 16),
                   _buildDetailRow(context, 'Student', studentName),
                   const SizedBox(height: 16),
@@ -440,11 +440,9 @@ class TransactionDetailsScreen extends ConsumerWidget {
         // Share Button
         Expanded(
           child: GestureDetector(
-            onTap: isPaid
-                ? () async {
-                    await _handleDownloadOrShare(context, ref, payment, isShare: true);
-                  }
-                : null,
+            onTap: () async {
+              await _handleDownloadOrShare(context, ref, payment, isShare: true);
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(

@@ -20,6 +20,7 @@ final selectedStudentProvider = StateNotifierProvider<SelectedStudentNotifier, S
 /// Notifier that handles student selection with persistence
 class SelectedStudentNotifier extends StateNotifier<StudentModel?> {
   final Ref _ref;
+  bool _manuallySelected = false;
 
   SelectedStudentNotifier(this._ref) : super(null) {
     _loadSavedStudent();
@@ -33,6 +34,13 @@ class SelectedStudentNotifier extends StateNotifier<StudentModel?> {
 
       if (savedStudentId != null) {
         debugPrint('Loading saved student ID: $savedStudentId');
+
+        // If user already selected a student manually, don't overwrite
+        if (_manuallySelected) {
+          debugPrint('Student already selected manually, skipping saved load');
+          return;
+        }
+
         final client = _ref.read(supabaseClientProvider);
 
         final response = await client
@@ -41,6 +49,12 @@ class SelectedStudentNotifier extends StateNotifier<StudentModel?> {
             .eq('stu_id', savedStudentId)
             .eq('activestatus', 1)
             .maybeSingle();
+
+        // Check again after async gap — user may have selected during DB fetch
+        if (_manuallySelected) {
+          debugPrint('Student was selected during load, skipping');
+          return;
+        }
 
         if (response != null) {
           state = StudentModel.fromJson(response);
@@ -64,6 +78,8 @@ class SelectedStudentNotifier extends StateNotifier<StudentModel?> {
 
   /// Select a student
   Future<void> selectStudent(StudentModel student) async {
+    _manuallySelected = true;
+
     // Clear cart when switching students
     final currentStudentId = state?.stuId;
     if (currentStudentId != null && currentStudentId != student.stuId) {

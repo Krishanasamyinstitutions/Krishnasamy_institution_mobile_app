@@ -128,7 +128,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
 
     if (isLoggedIn) {
-      context.go(Routes.studentSelection);
+      // Check if there's a saved student — go directly to home
+      final savedStudentId = prefs.getInt('selected_student_id');
+      if (savedStudentId != null) {
+        context.go(Routes.home);
+      } else {
+        context.go(Routes.studentSelection);
+      }
     } else if (hasSeenOnboarding) {
       context.go(Routes.welcome);
     } else {

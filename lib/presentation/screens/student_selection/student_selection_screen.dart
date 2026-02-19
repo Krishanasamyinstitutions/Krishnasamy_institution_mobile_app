@@ -310,14 +310,12 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
             Container(
               width: 48,
               height: 48,
-              decoration: BoxDecoration(
-                gradient: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
-                    ? null
-                    : const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [AppColors.primary, AppColors.primary600],
-                      ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.primary, AppColors.primary600],
+                ),
                 shape: BoxShape.circle,
               ),
               clipBehavior: Clip.antiAlias,
@@ -327,11 +325,21 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
                       fit: BoxFit.cover,
                       width: 48,
                       height: 48,
+                      placeholder: (context, url) => Center(
+                        child: Text(
+                          _getInitials(student.stuname),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                       errorWidget: (context, url, error) => Center(
                         child: Text(
-                          student.stuname.isNotEmpty ? student.stuname[0].toUpperCase() : 'S',
+                          _getInitials(student.stuname),
                           style: const TextStyle(
-                            fontSize: 20,
+                            fontSize: 18,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
@@ -340,9 +348,9 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
                     )
                   : Center(
                       child: Text(
-                        student.stuname.isNotEmpty ? student.stuname[0].toUpperCase() : 'S',
+                        _getInitials(student.stuname),
                         style: const TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -427,6 +435,15 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
     );
   }
 
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'S';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
   Widget _buildContinueButton() {
     final isEnabled = _selectedStudentId != null;
 
@@ -436,13 +453,14 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
         onTap: isEnabled
             ? () async {
                 final studentsAsync = ref.read(studentsByParentProvider);
-                studentsAsync.whenData((students) async {
+                final students = studentsAsync.valueOrNull;
+                if (students != null) {
                   final selectedStudent = students.firstWhere(
                     (s) => s.stuId == _selectedStudentId,
                   );
                   await ref.read(selectedStudentProvider.notifier).selectStudent(selectedStudent);
-                });
-                context.go(Routes.home);
+                }
+                if (mounted) context.go(Routes.home);
               }
             : null,
         child: Container(

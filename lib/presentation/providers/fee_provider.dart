@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../data/models/fee_model.dart';
 import 'auth_provider.dart';
 import 'student_provider.dart';
@@ -442,6 +443,7 @@ class FeeGroupSummary {
   final int itemCount;
   final DateTime? nearestDueDate;
   final bool isOverdue;
+  final String periodText;
 
   FeeGroupSummary({
     required this.groupName,
@@ -449,8 +451,53 @@ class FeeGroupSummary {
     required this.itemCount,
     this.nearestDueDate,
     required this.isOverdue,
+    this.periodText = '',
   });
 }
+
+/// Compute period text from a list of fees
+/// Term-based fees (demfeeterm contains "TERM") show term range: "I Term to III Term"
+/// Monthly fees show month range: "Jan to Aug"
+String _computePeriodText(List<FeeModel> fees) {
+  if (fees.isEmpty) return '';
+
+  // Check if these are term-based fees
+  final hasTerms = fees.any((f) => f.demfeeterm.toUpperCase().contains('TERM'));
+
+  if (hasTerms) {
+    // Get unique terms, sorted by duedate
+    final sortedFees = [...fees]..sort((a, b) {
+      final aDate = a.duedate ?? a.createdat;
+      final bDate = b.duedate ?? b.createdat;
+      return aDate.compareTo(bDate);
+    });
+    final seenTerms = <String>{};
+    final orderedNums = <String>[];
+    for (final f in sortedFees) {
+      if (f.demfeeterm.toUpperCase().contains('TERM') && seenTerms.add(f.demfeeterm)) {
+        // Extract the roman numeral part (e.g., "I" from "I TERM")
+        final num = f.demfeeterm.toUpperCase().replaceAll('TERM', '').trim();
+        orderedNums.add(num);
+      }
+    }
+    if (orderedNums.isEmpty) return '${fees.length} ${fees.length == 1 ? 'fee' : 'fees'}';
+    if (orderedNums.length == 1) return 'Term ${orderedNums.first}';
+    return 'Term ${orderedNums.first} - ${orderedNums.last}';
+  }
+
+  // Monthly fees - show month range from duedate
+  final dates = fees.map((f) => f.duedate).whereType<DateTime>().toList();
+  if (dates.isEmpty) return '${fees.length} ${fees.length == 1 ? 'fee' : 'fees'}';
+  dates.sort();
+  final earliest = dates.first;
+  final latest = dates.last;
+  final fmt = DateFormat('MMM');
+  if (earliest.year == latest.year && earliest.month == latest.month) {
+    return fmt.format(earliest);
+  }
+  return '${fmt.format(earliest)} to ${fmt.format(latest)}';
+}
+
 
 /// Get overdue fees grouped by fee group
 final overdueByGroupProvider = Provider<List<FeeGroupSummary>>((ref) {
@@ -484,6 +531,7 @@ final overdueByGroupProvider = Provider<List<FeeGroupSummary>>((ref) {
       itemCount: fees.length,
       nearestDueDate: nearest,
       isOverdue: true,
+      periodText: _computePeriodText(fees),
     );
   }).toList()..sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
 });
@@ -520,6 +568,7 @@ final dueSoonByGroupProvider = Provider<List<FeeGroupSummary>>((ref) {
       itemCount: fees.length,
       nearestDueDate: nearest,
       isOverdue: false,
+      periodText: _computePeriodText(fees),
     );
   }).toList()..sort((a, b) => a.nearestDueDate!.compareTo(b.nearestDueDate!));
 });

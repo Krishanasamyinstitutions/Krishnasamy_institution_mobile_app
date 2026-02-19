@@ -173,14 +173,12 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
             Container(
               width: 52,
               height: 52,
-              decoration: BoxDecoration(
-                gradient: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
-                    ? null
-                    : const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [AppColors.primary, AppColors.primary600],
-                      ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.primary, AppColors.primary600],
+                ),
                 shape: BoxShape.circle,
               ),
               clipBehavior: Clip.antiAlias,
@@ -190,6 +188,16 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                       fit: BoxFit.cover,
                       width: 52,
                       height: 52,
+                      placeholder: (context, url) => Center(
+                        child: Text(
+                          _getInitials(student.name),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                       errorWidget: (context, url, error) => Center(
                         child: Text(
                           _getInitials(student.name),
@@ -346,28 +354,27 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
     if (_selectedStudentId == null) return;
 
     final studentsAsync = ref.read(studentsByParentProvider);
-    studentsAsync.whenData((students) async {
-      final selectedStudent = students.firstWhere(
-        (s) => s.stuId == _selectedStudentId,
+    final students = studentsAsync.valueOrNull;
+    if (students == null) return;
+
+    final selectedStudent = students.firstWhere(
+      (s) => s.stuId == _selectedStudentId,
+    );
+
+    await ref.read(selectedStudentProvider.notifier).selectStudent(selectedStudent);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Switched to ${selectedStudent.name}'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+        ),
       );
-
-      await ref.read(selectedStudentProvider.notifier).selectStudent(selectedStudent);
-
-      if (mounted) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Switched to ${selectedStudent.name}'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-        // Navigate to home
-        context.go(Routes.home);
-      }
-    });
+      context.go(Routes.home);
+    }
   }
 
   String _getInitials(String name) {
