@@ -108,6 +108,9 @@ const TABLES_UPSERT = {
   feedemand: 'dem_id',
   payment: 'pay_id',
   paymentdetails: 'pyd_id',
+  sequence: 'seq_id',
+  institution: 'ins_id',
+  students: 'stu_id',
 };
 
 // Tables that use trigger-based auto-increment (not GENERATED ALWAYS AS IDENTITY)
@@ -343,6 +346,24 @@ async function main() {
     if (!isDryRun && hasTrigger) {
       await localPool.query(`ALTER TABLE public.${tableName} ENABLE TRIGGER ALL`);
       console.log(`  [TRIGGER] Re-enabled triggers for ${tableName}`);
+    }
+
+    // Delete stale local rows not present in Supabase (for UPSERT tables)
+    const upsertPk = TABLES_UPSERT[tableName];
+    if (!isDryRun && upsertPk && data.length > 0) {
+      try {
+        const sourceIds = data.map(row => row[upsertPk]);
+        const placeholders = sourceIds.map((_, i) => `$${i + 1}`).join(', ');
+        const delResult = await localPool.query(
+          `DELETE FROM public.${tableName} WHERE "${upsertPk}" NOT IN (${placeholders})`,
+          sourceIds
+        );
+        if (delResult.rowCount > 0) {
+          console.log(`  [CLEANUP] Deleted ${delResult.rowCount} stale rows from ${tableName}`);
+        }
+      } catch (delError) {
+        console.warn(`  [WARN] Cleanup failed for ${tableName}: ${delError.message}`);
+      }
     }
 
     if (result.count === 0) {
