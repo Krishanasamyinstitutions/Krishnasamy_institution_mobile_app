@@ -4,11 +4,15 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/extensions.dart';
 import '../../../data/models/fee_model.dart';
 import '../../../data/models/notification_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/student_provider.dart';
+import '../../widgets/common/breadcrumb_bar.dart';
+import '../../widgets/common/desktop_detail_scaffold.dart';
 
 class NotificationDetailScreen extends ConsumerStatefulWidget {
   final String notificationId;
@@ -54,112 +58,97 @@ class _NotificationDetailScreenState
       );
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg(context),
-      body: Column(
+    return DesktopDetailScaffold(
+      isNested: true,
+      header: Column(
         children: [
-          // Header with white SafeArea and subtle shadow
-          Container(
-            color: AppColors.headerBg(context),
-            child: SafeArea(
-              bottom: false,
-              child: Container(
+          const SizedBox(height: 16),
+          _buildHeader(context),
+          const SizedBox(height: 16),
+        ],
+      ),
+      toolbar: BreadcrumbBar(
+        parentLabel: 'Notifications',
+        parentRoute: Routes.notifications,
+        currentLabel: notification.title,
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 24),
+              // Type Badge
+              _buildTypeBadge(notification.type),
+              const SizedBox(height: 16),
+              // Title
+              Text(
+                notification.title,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimaryC(context),
+                  height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Date & Time
+              Row(
+                children: [
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 16,
+                    color: AppColors.textHintC(context),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _formatDateTime(notification.createdAt),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: AppColors.textSecondaryC(context),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+              // Message Card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.headerBg(context),
+                  color: AppColors.cardBg(context),
+                  borderRadius: BorderRadius.circular(12),
                   boxShadow: AppColors.cardShadow(context),
                 ),
                 child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildHeader(context),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 24),
-                    // Type Badge
-                    _buildTypeBadge(notification.type),
-                    const SizedBox(height: 16),
-                    // Title
+                    // Icon
+                    _buildNotificationIcon(notification.type),
+                    const SizedBox(height: 20),
+                    // Message
                     Text(
-                      notification.title,
+                      notification.body,
                       style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
                         color: AppColors.textPrimaryC(context),
-                        height: 1.3,
+                        height: 1.7,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    // Date & Time
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.schedule_rounded,
-                          size: 16,
-                          color: AppColors.textHintC(context),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _formatDateTime(notification.createdAt),
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            color: AppColors.textSecondaryC(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    // Message Card
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBg(context),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: AppColors.cardShadow(context),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Icon
-                          _buildNotificationIcon(notification.type),
-                          const SizedBox(height: 20),
-                          // Message
-                          Text(
-                            notification.body,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w400,
-                              color: AppColors.textPrimaryC(context),
-                              height: 1.7,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    // Action Button (if applicable)
-                    if (_hasAction(notification.type))
-                      _buildActionButton(notification),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
-            ),
+              const SizedBox(height: 32),
+              // Action Button (if applicable)
+              if (_hasAction(notification.type))
+                _buildActionButton(notification),
+              const SizedBox(height: 24),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -168,7 +157,6 @@ class _NotificationDetailScreenState
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Back Button - Dark theme
           GestureDetector(
@@ -188,18 +176,47 @@ class _NotificationDetailScreenState
             ),
           ),
           // Title
-          Text(
-            'Notification',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimaryC(context),
+          Expanded(
+            child: Text(
+              'Notification',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimaryC(context),
+              ),
             ),
           ),
-          // Placeholder for symmetry
-          const SizedBox(width: 44),
+          // Student chip (desktop) or placeholder (mobile)
+          if (context.isDesktop)
+            _buildStudentChip(context)
+          else
+            const SizedBox(width: 44),
         ],
       ),
+    );
+  }
+
+  Widget _buildStudentChip(BuildContext context) {
+    final student = ref.watch(selectedStudentProvider);
+    if (student == null) return const SizedBox(width: 44);
+    final parts = student.name.trim().split(' ').where((p) => p.isNotEmpty).toList();
+    final initials = parts.take(2).map((p) => p[0]).join().toUpperCase();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 16,
+          backgroundColor: AppColors.primary,
+          backgroundImage: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
+              ? NetworkImage(student.photoUrl!) : null,
+          child: (student.photoUrl == null || student.photoUrl!.isEmpty)
+              ? Text(initials, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))
+              : null,
+        ),
+        const SizedBox(width: 8),
+        Text(student.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimaryC(context))),
+      ],
     );
   }
 
@@ -456,6 +473,99 @@ class _NotificationDetailScreenState
     }
   }
 
+  Future<void> _handlePayFees(List<dynamic> demIds,
+      {bool isUpcoming = false}) async {
+    // Block upcoming fee payment if overdue fees exist
+    if (isUpcoming) {
+      final notifications =
+          ref.read(notificationsProvider).valueOrNull ?? [];
+      final hasOverdue =
+          notifications.any((n) => n.id == 'fee_overdue_summary');
+      if (hasOverdue) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Please clear your overdue fees first before paying upcoming fees.'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+    }
+
+    if (demIds.isEmpty) {
+      context.go(Routes.cart);
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final client = ref.read(supabaseClientProvider);
+
+      final fees = await client
+          .from('feedemand')
+          .select('*')
+          .inFilter('dem_id', demIds)
+          .eq('activestatus', 1);
+
+      final feeModels =
+          (fees as List).map((f) => FeeModel.fromJson(f)).toList();
+      final unpaidFees = feeModels
+          .where((f) => f.balancedue > 0 && f.paidstatus != 'P')
+          .toList();
+
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+
+      if (unpaidFees.isEmpty) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            icon: const Icon(Icons.check_circle,
+                color: Color(0xFF2DBE60), size: 48),
+            title: const Text('All Paid'),
+            content:
+                const Text('All fees have already been paid. Great job!'),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      } else {
+        final cartNotifier = ref.read(cartProvider.notifier);
+        cartNotifier.clearCart();
+        cartNotifier.addFees(unpaidFees);
+        if (mounted) context.go(Routes.cart);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   bool _hasAction(NotificationType type) {
     return type == NotificationType.feeReminder ||
         type == NotificationType.dueDateApproaching ||
@@ -478,7 +588,11 @@ class _NotificationDetailScreenState
         buttonText = 'Pay Now';
         buttonIcon = Icons.payment_rounded;
         buttonColor = AppColors.accent;
-        onTap = () => context.go('/home');
+        final demIds = notification.data?['dem_ids'] as List<dynamic>? ?? [];
+        onTap = () => _handlePayFees(
+              demIds,
+              isUpcoming: notification.id == 'fee_upcoming_summary',
+            );
         break;
       case NotificationType.paymentSuccess:
         buttonText = 'View Receipt';
@@ -486,7 +600,7 @@ class _NotificationDetailScreenState
         buttonColor = const Color(0xFF10B981);
         onTap = () {
           if (payId != null) {
-            context.push('/payment-history/$payId');
+            context.go('/payment-history/$payId');
           } else {
             context.go('/payment-history');
           }

@@ -6,6 +6,8 @@ import 'package:pinput/pinput.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/common/auth_desktop_wrapper.dart';
+import '../../widgets/common/screen_illustrations.dart';
 
 class ForgotPasswordOtpScreen extends ConsumerStatefulWidget {
   final String mobile;
@@ -151,22 +153,23 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
-      body: SafeArea(
+      body: AuthDesktopWrapper(
+        headline: 'Verify Your Identity',
+        subtitle: 'Enter the code sent to your phone',
+        centerContent: ScreenIllustrations.otpVerification(size: 360, isDark: true),
+        onBack: () => context.pop(),
+        child: SafeArea(
           child: Column(
             children: [
               Expanded(
-                child: SingleChildScrollView(
+                child: Center(
+                  child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 16),
-
-                        // Back Button
-                        _buildBackButton(),
-
-                        const SizedBox(height: 24),
 
                         // Header with title and illustration
                         _buildHeader(),
@@ -220,6 +223,7 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
                     ),
                   ),
                 ),
+                ),
               ),
               // Back to Sign In Link at bottom
               Padding(
@@ -229,64 +233,29 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
             ],
           ),
         ),
-    );
-  }
-
-  Widget _buildBackButton() {
-    return GestureDetector(
-      onTap: () => context.pop(),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.iconButtonBg(context),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.arrow_back_rounded,
-          size: 20,
-          color: Colors.white,
-        ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title and subtitle
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Verify OTP',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Enter the 6-digit code sent to\n+91 ${widget.mobile}',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.textSecondaryC(context),
-                ),
-              ),
-            ],
+        Text(
+          'Verify OTP',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
           ),
         ),
-        // Illustration
-        SizedBox(
-          width: 120,
-          height: 120,
-          child: Image.asset(
-            'assets/Authendication gif/Sign up.gif',
-            fit: BoxFit.contain,
+        const SizedBox(height: 8),
+        Text(
+          'Enter the 6-digit code sent to\n+91 ${widget.mobile}',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            color: AppColors.textSecondaryC(context),
           ),
         ),
       ],

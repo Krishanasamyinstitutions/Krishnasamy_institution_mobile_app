@@ -7,9 +7,13 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../../core/utils/extensions.dart';
+import '../../widgets/common/breadcrumb_bar.dart';
+import '../../widgets/common/desktop_detail_scaffold.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   final bool isStandalone;
@@ -25,6 +29,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   bool _isProcessing = false;
   int? _currentPayId;
   int? _currentCarId;
+  String? _currentOrderId;
   List<FeeModel>? _currentPaymentItems;
 
   @override
@@ -46,41 +51,22 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final cartState = ref.watch(cartProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg(context),
-      body: Column(
-          children: [
-            // Header with white SafeArea and subtle shadow
-            Container(
-              color: AppColors.headerBg(context),
-              child: SafeArea(
-                bottom: false,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.headerBg(context),
-                    boxShadow: AppColors.cardShadow(context),
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildHeader(context, ref, cartState),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Content
-            Expanded(
-              child: cartState.isEmpty
-                  ? _buildEmptyState(context)
-                  : _buildCartContent(context, ref, cartState),
-            ),
-            // Bottom payment bar
-            if (cartState.isNotEmpty)
-              _buildBottomBar(context, ref, cartState),
-          ],
-        ),
+    return DesktopDetailScaffold(
+      isNested: true,
+      header: Column(
+        children: [
+          const SizedBox(height: 16),
+          _buildHeader(context, ref, cartState),
+          const SizedBox(height: 16),
+        ],
+      ),
+      toolbar: const BreadcrumbBar(currentLabel: 'Payment Summary'),
+      body: cartState.isEmpty
+          ? _buildEmptyState(context)
+          : _buildCartContent(context, ref, cartState),
+      bottomBar: cartState.isNotEmpty
+          ? _buildBottomBar(context, ref, cartState)
+          : null,
     );
   }
 
@@ -174,8 +160,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Clear Cart?'),
-        content: const Text('Are you sure you want to remove all items from your cart?'),
+        title: const Text('Clear Queue?'),
+        content: const Text('Are you sure you want to remove all items from your queue?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -223,7 +209,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Your Cart is Empty',
+            'Your Queue is Empty',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -234,7 +220,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: Text(
-              'Select fees from the pending section to add them to your cart',
+              'Select fees from the pending section to add them to your queue',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
@@ -293,6 +279,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         category = 'Tuition Fees';
       } else if (_isHostelFee(fee.demfeetype)) {
         category = 'Hostel Fees';
+      } else if (_isExamFee(fee)) {
+        category = 'Exam Fees';
       } else {
         category = '${fee.demfeeterm} (${fee.demfeeyear})';
       }
@@ -307,7 +295,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         int getCategoryOrder(String cat) {
           if (cat == 'Tuition Fees') return 100;
           if (cat == 'Hostel Fees') return 101;
-          if (cat == 'Bus Fees') return 102;
+          if (cat == 'Exam Fees') return 102;
+          if (cat == 'Bus Fees') return 103;
           return 0; // Term fees first
         }
         final orderA = getCategoryOrder(a);
@@ -317,18 +306,33 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       });
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.all(16),
       children: [
-        // Fee Category Cards
-        ...sortedCategories.map((category) {
+        // Fee Category Cards (sequential: can only remove last term first, backward order)
+        ...sortedCategories.asMap().entries.map((entry) {
+          final index = entry.key;
+          final category = entry.value;
           final fees = feesByCategory[category]!;
+          // Check if this category can be removed (no later categories in cart)
+          // Only enforce sequential removal for term categories (order < 100)
+          int getCatOrder(String cat) {
+            if (cat == 'Tuition Fees') return 100;
+            if (cat == 'Hostel Fees') return 101;
+            if (cat == 'Exam Fees') return 102;
+            if (cat == 'Bus Fees') return 103;
+            return 0; // Term fees
+          }
+          final isTermCategory = getCatOrder(category) == 0;
+          // For term categories: can only remove if no later term categories exist
+          final noLaterTerms = !sortedCategories.skip(index + 1).any((c) => getCatOrder(c) == 0);
+          final canRemove = !isTermCategory || noLaterTerms;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: _buildCategoryCard(context, ref, category, fees),
+            child: _buildCategoryCard(context, ref, category, fees, canRemove: canRemove),
           );
         }),
 
-        SizedBox(height: 70 + MediaQuery.of(context).padding.bottom + 20), // Space for bottom bar
+        const SizedBox(height: 24), // Space for bottom bar
       ],
     );
   }
@@ -348,43 +352,56 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     return lowerType.contains('hostel');
   }
 
+  bool _isExamFee(FeeModel fee) {
+    final lowerType = fee.demfeetype.toLowerCase();
+    final lowerGroup = fee.feeGroupName.toLowerCase();
+    return lowerType.contains('exam') || lowerGroup.contains('exam');
+  }
+
   Map<String, dynamic> _getCategoryStyle(String category) {
     if (category == 'Bus Fees') {
       return {
         'color': const Color(0xFFF59E0B),
-        'icon': Icons.directions_bus,
+        'svgPath': 'assets/school Icons/van.svg',
         'showMonth': true,
       };
     } else if (category == 'Tuition Fees') {
       return {
         'color': const Color(0xFF8B5CF6),
-        'icon': Icons.menu_book_rounded,
+        'svgPath': 'assets/school Icons/school.svg',
         'showMonth': true,
       };
     } else if (category == 'Hostel Fees') {
       return {
         'color': const Color(0xFF3B82F6),
-        'icon': Icons.hotel_rounded,
+        'svgPath': 'assets/school Icons/school.svg',
         'showMonth': true,
+      };
+    } else if (category == 'Exam Fees') {
+      return {
+        'color': const Color(0xFF06B6D4),
+        'svgPath': 'assets/school Icons/exam.svg',
+        'showMonth': false,
       };
     } else {
       return {
         'color': AppColors.success,
-        'icon': Icons.school_rounded,
+        'svgPath': 'assets/school Icons/school.svg',
         'showMonth': false,
       };
     }
   }
 
-  Widget _buildCategoryCard(BuildContext context, WidgetRef ref, String category, List<FeeModel> fees) {
+  Widget _buildCategoryCard(BuildContext context, WidgetRef ref, String category, List<FeeModel> fees, {bool canRemove = true}) {
     final totalAmount = fees.fold<double>(0, (sum, fee) => sum + fee.balancedue);
     final categoryStyle = _getCategoryStyle(category);
-    final isBus = category.toLowerCase().contains('bus') || category.toLowerCase().contains('transport');
+    final svgPath = categoryStyle['svgPath'] as String;
 
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderC(context)),
         boxShadow: AppColors.cardShadow(context),
       ),
       child: Column(
@@ -404,26 +421,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isBus)
-                        SvgPicture.asset(
-                          'assets/school Icons/van.svg',
-                          width: 14,
-                          height: 14,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
-                            BlendMode.srcIn,
-                          ),
-                        )
-                      else
-                        SvgPicture.asset(
-                          'assets/school Icons/school.svg',
-                          width: 14,
-                          height: 14,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
-                            BlendMode.srcIn,
-                          ),
+                      SvgPicture.asset(
+                        svgPath,
+                        width: 14,
+                        height: 14,
+                        colorFilter: const ColorFilter.mode(
+                          Colors.white,
+                          BlendMode.srcIn,
                         ),
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         category,
@@ -448,18 +454,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 const SizedBox(width: 12),
                 // Remove Button
                 GestureDetector(
-                  onTap: () => _showRemoveGroupDialog(context, ref, category, fees),
-                  child: Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: const Icon(
-                      Icons.close_rounded,
-                      size: 16,
-                      color: AppColors.error,
+                  onTap: canRemove ? () => _showRemoveGroupDialog(context, ref, category, fees) : null,
+                  child: Opacity(
+                    opacity: canRemove ? 1.0 : 0.3,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: AppColors.error,
+                      ),
                     ),
                   ),
                 ),
@@ -630,8 +639,76 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildBottomBar(BuildContext context, WidgetRef ref, CartState cartState) {
-    return Container(
+    final bottomContent = Padding(
       padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Total Amount',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondaryC(context),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '₹ ${NumberFormat('#,##,###').format(cartState.totalAmount.toInt())}',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimaryC(context),
+                ),
+              ),
+            ],
+          ),
+          GestureDetector(
+            onTap: () => _handleProceedToPayment(context, ref),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, AppColors.primary600],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Pay Now',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // On desktop, DesktopDetailScaffold wraps in a card — return just the inner content
+    if (context.isDesktop) return bottomContent;
+
+    // On mobile, keep existing decoration
+    return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
         borderRadius: const BorderRadius.only(
@@ -650,67 +727,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Total Amount',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondaryC(context),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₹ ${NumberFormat('#,##,###').format(cartState.totalAmount.toInt())}',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
-                  ),
-                ),
-              ],
-            ),
-            GestureDetector(
-              onTap: () => _handleProceedToPayment(context, ref),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primary600],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Pay Now',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: bottomContent,
       ),
     );
   }
@@ -779,23 +796,50 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         return;
       }
 
+      // Step 3: Create Razorpay order via Edge Function
+      final amountInPaise = (cartState.totalAmount * 100).toInt();
+
+      final orderId = await createRazorpayOrder(
+        ref: ref,
+        payId: payId,
+        amountInPaise: amountInPaise,
+        receipt: 'PAY-$payId',
+      );
+
+      if (orderId == null) {
+        // Roll back payment since we can't proceed without an order
+        await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
+        if (context.mounted) Navigator.pop(context);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to create payment order: ${lastOrderCreationError ?? "Unknown error"}. Please try again.'),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        setState(() => _isProcessing = false);
+        return;
+      }
+
       // Store payment info for callbacks
       _currentPayId = payId;
       _currentCarId = carId;
+      _currentOrderId = orderId;
       _currentPaymentItems = List.from(cartState.items);
 
       // Dismiss loading
       if (context.mounted) Navigator.pop(context);
 
-      // Step 3: Open Razorpay checkout
-      final amountInPaise = (cartState.totalAmount * 100).toInt();
-
+      // Step 4: Open Razorpay checkout with order_id
       _razorpay.open({
         'key': 'rzp_test_RQsgJgVFwM7kov',
         'amount': amountInPaise,
         'currency': 'INR',
         'name': 'TBS School',
         'description': 'School Fees Payment',
+        'order_id': orderId,
         'prefill': {
           'name': student.stuname,
           'contact': student.stumobile,
@@ -834,6 +878,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final items = _currentPaymentItems;
 
     if (payId == null || carId == null || items == null) return;
+
+    // Immediately clear to prevent duplicate callback execution
+    _currentPayId = null;
+    _currentCarId = null;
+    _currentOrderId = null;
+    _currentPaymentItems = null;
 
     // Show processing dialog
     if (mounted) {
@@ -886,20 +936,36 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         ),
       );
     }
-
-    _currentPayId = null;
-    _currentCarId = null;
-    _currentPaymentItems = null;
   }
 
   void _handlePaymentError(PaymentFailureResponse response) async {
     debugPrint('Payment Error: ${response.code} - ${response.message}');
 
+    // Extract payment_id from Razorpay error response
+    String? razorpayPaymentId = response.error?['id']?.toString();
+    String? errorReason = response.error?['error_description']?.toString()
+        ?? response.error?['description']?.toString();
+    debugPrint('Razorpay error map: ${response.error}');
+
+    // If SDK didn't provide payment_id, fetch it from Razorpay API via order_id
+    final orderId = _currentOrderId;
+    if (razorpayPaymentId == null && orderId != null) {
+      debugPrint('Payment ID not in error response, fetching from Razorpay API for order: $orderId');
+      razorpayPaymentId = await _fetchPaymentIdFromOrder(orderId);
+    }
+    debugPrint('Final paymentId: $razorpayPaymentId, errorReason: $errorReason');
+
     final payId = _currentPayId;
     final carId = _currentCarId;
 
     if (payId != null && carId != null) {
-      await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
+      await handlePaymentFailure(
+        ref: ref,
+        payId: payId,
+        carId: carId,
+        payReference: razorpayPaymentId,
+        errorReason: errorReason,
+      );
     }
 
     if (mounted) {
@@ -914,7 +980,31 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     _currentPayId = null;
     _currentCarId = null;
+    _currentOrderId = null;
     _currentPaymentItems = null;
+  }
+
+  /// Fetches the Razorpay payment ID by order_id via Edge Function
+  Future<String?> _fetchPaymentIdFromOrder(String orderId) async {
+    try {
+      final client = ref.read(supabaseClientProvider);
+      final response = await client.functions.invoke(
+        'get-razorpay-payment',
+        body: {'order_id': orderId},
+      );
+
+      if (response.status == 200) {
+        final data = response.data as Map<String, dynamic>;
+        final paymentId = data['payment_id'] as String?;
+        debugPrint('Fetched payment ID from Razorpay API: $paymentId');
+        return paymentId;
+      }
+      debugPrint('Edge function returned status ${response.status}');
+      return null;
+    } catch (e) {
+      debugPrint('Error fetching payment ID from Razorpay: $e');
+      return null;
+    }
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {

@@ -374,24 +374,47 @@ Future<int?> initiatePayment({
       debugPrint('Removed ${paidDemIds.length} already-paid fees from payment');
     }
 
-    // 2. Fetch sequence to generate payment number
-    final sequence = await client
-        .from('sequence')
-        .select('seq_id, sequid, seqwidth, seqcurno')
-        .limit(1)
-        .single();
+    // 2. Check if these fees are already being paid on another device
+    try {
+      final lockedFees = await client.rpc('check_fees_locked', params: {
+        'p_dem_ids': items.map((f) => f.demId).toList(),
+      });
+      if ((lockedFees as List).isNotEmpty) {
+        lastPaymentError = 'These fees are already being processed on another device. Please wait.';
+        return null;
+      }
+    } catch (e) {
+      // RPC not deployed yet - skip check (non-critical safety feature)
+      debugPrint('check_fees_locked RPC not available: $e');
+    }
 
-    final seqId = sequence['seq_id'] as int;
-    final sequid = sequence['sequid'] as String; // e.g. "FC25/00001"
-    final seqWidth = sequence['seqwidth'] as int; // e.g. 5
-    final seqCurNo = (sequence['seqcurno'] as num).toInt();
-    final newSeqNo = seqCurNo + 1;
+    // 3. Generate payment number atomically (prevents duplicate paynumber on concurrent devices)
+    String payNumber;
+    try {
+      final rpcResult = await client.rpc('generate_payment_number');
+      payNumber = rpcResult as String;
+    } catch (e) {
+      // Fallback: non-atomic sequence generation (if RPC not deployed yet)
+      debugPrint('generate_payment_number RPC not available, using fallback: $e');
+      final sequence = await client
+          .from('sequence')
+          .select('seq_id, sequid, seqwidth, seqcurno')
+          .limit(1)
+          .single();
 
-    // Extract prefix from sequid (everything before the numeric part)
-    final prefix = sequid.replaceAll(RegExp(r'\d+$'), ''); // "FC25/"
-    final payNumber = '$prefix${newSeqNo.toString().padLeft(seqWidth, '0')}';
+      final sequid = sequence['sequid'] as String;
+      final seqWidth = sequence['seqwidth'] as int;
+      final seqCurNo = (sequence['seqcurno'] as num).toInt();
+      final newSeqNo = seqCurNo + 1;
+      final prefix = sequid.replaceAll(RegExp(r'\d+$'), '');
+      payNumber = '$prefix${newSeqNo.toString().padLeft(seqWidth, '0')}';
 
-    // 3. Create payment record with paynumber (paystatus = 'I' for Initiated)
+      await client.from('sequence').update({
+        'seqcurno': newSeqNo,
+      }).eq('seq_id', sequence['seq_id'] as int);
+    }
+
+    // 4. Create payment record with paynumber (paystatus = 'I' for Initiated)
     final payResponse = await client.from('payment').insert({
       'ins_id': student.insId,
       'inscode': student.inscode,
@@ -408,7 +431,7 @@ Future<int?> initiatePayment({
 
     final payId = payResponse['pay_id'] as int;
 
-    // 3. Insert paymentdetails + update shoppingcart + increment sequence in parallel
+    // 5. Insert paymentdetails + update shoppingcart in parallel
     final payDetailRows = items.map((fee) => {
       'pay_id': payId,
       'dem_id': fee.demId,
@@ -424,9 +447,6 @@ Future<int?> initiatePayment({
       client.from('shoppingcart').update({
         'carinitiated': 'I',
       }).eq('car_id', carId),
-      client.from('sequence').update({
-        'seqcurno': newSeqNo,
-      }).eq('seq_id', seqId),
     ]);
 
     debugPrint('Payment initiated: pay_id=$payId, paynumber=$payNumber, ${items.length} detail rows');
@@ -434,6 +454,57 @@ Future<int?> initiatePayment({
   } catch (e, stackTrace) {
     lastPaymentError = e.toString();
     debugPrint('Error initiating payment: $e');
+    debugPrint('Stack trace: $stackTrace');
+    return null;
+  }
+}
+
+/// Step 3: Create Razorpay order via Supabase Edge Function.
+/// Returns the order_id string on success, null on failure.
+String? lastOrderCreationError;
+
+Future<String?> createRazorpayOrder({
+  required WidgetRef ref,
+  required int payId,
+  required int amountInPaise,
+  required String receipt,
+  String currency = 'INR',
+}) async {
+  lastOrderCreationError = null;
+  final client = ref.read(supabaseClientProvider);
+
+  try {
+    final response = await client.functions.invoke(
+      'create-razorpay-order',
+      body: {
+        'amount': amountInPaise,
+        'currency': currency,
+        'pay_id': payId,
+        'receipt': receipt,
+      },
+    );
+
+    if (response.status != 200) {
+      lastOrderCreationError =
+          'Edge function returned status ${response.status}';
+      debugPrint('Razorpay order creation failed: ${response.data}');
+      return null;
+    }
+
+    final data = response.data as Map<String, dynamic>;
+    final orderId = data['order_id'] as String?;
+
+    if (orderId == null || orderId.isEmpty) {
+      lastOrderCreationError = 'No order_id in response';
+      debugPrint('Razorpay order response missing order_id: $data');
+      return null;
+    }
+
+    debugPrint('Razorpay order created: $orderId for pay_id=$payId');
+    return orderId;
+  } catch (e, stackTrace) {
+    lastOrderCreationError = e.toString();
+    debugPrint('Error creating Razorpay order: $e');
     debugPrint('Stack trace: $stackTrace');
     return null;
   }
@@ -462,7 +533,7 @@ Future<bool> handlePaymentSuccess({
 
     final demandsFuture = client
         .from('feedemand')
-        .select('dem_id, paidamount, feeamount, conamount')
+        .select('dem_id, paidamount, feeamount, conamount, balancedue')
         .inFilter('dem_id', items.map((f) => f.demId).toList())
         .eq('activestatus', 1);
 
@@ -486,10 +557,9 @@ Future<bool> handlePaymentSuccess({
       final demId = demand['dem_id'] as int;
       final paidAmount = paidMap[demId] ?? 0;
       final currentPaid = (demand['paidamount'] as num?)?.toDouble() ?? 0;
-      final feeAmount = (demand['feeamount'] as num?)?.toDouble() ?? 0;
-      final conAmount = (demand['conamount'] as num?)?.toDouble() ?? 0;
+      final currentBalance = (demand['balancedue'] as num?)?.toDouble() ?? 0;
       final newPaid = currentPaid + paidAmount;
-      final newBalance = feeAmount - conAmount - newPaid;
+      final newBalance = currentBalance - paidAmount;
 
       feedemandOps.add(client.from('feedemand').update({
         'paidamount': newPaid,
@@ -522,6 +592,7 @@ Future<bool> handlePaymentSuccess({
     ref.read(cartProvider.notifier).clearCart();
     ref.invalidate(feesProvider);
     ref.invalidate(paymentsProvider);
+    ref.invalidate(paidFeesByPaymentProvider);
     ref.invalidate(notificationsProvider);
 
     debugPrint('Payment success: pay_id=$payId, feedemand updated, carts cleaned');
@@ -545,16 +616,25 @@ Future<bool> handlePaymentFailure({
   required WidgetRef ref,
   required int payId,
   required int carId,
+  String? payReference,
+  String? errorReason,
 }) async {
   final client = ref.read(supabaseClientProvider);
 
   try {
+    // Build update map - always set paymethod since payment was attempted via Razorpay
+    final paymentUpdate = <String, dynamic>{
+      'paystatus': 'F',
+      'paymethod': 'razorpay',
+      'paydate': DateTime.now().toIso8601String(),
+    };
+    if (payReference != null) {
+      paymentUpdate['payreference'] = payReference;
+    }
+
     // Mark payment as failed and reset cart in parallel
     await Future.wait([
-      client.from('payment').update({
-        'paystatus': 'F',
-        'paydate': DateTime.now().toIso8601String(),
-      }).eq('pay_id', payId),
+      client.from('payment').update(paymentUpdate).eq('pay_id', payId),
       client.from('shoppingcart').update({
         'carinitiated': 'N',
       }).eq('car_id', carId),
@@ -717,6 +797,108 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
       debugPrint('Error restoring cart from database: $e');
       ref.read(cartProvider.notifier).restoreCart([], student.stuId);
     }
+  }
+});
+
+/// A completed payment with its fee details
+class PaidPaymentGroup {
+  final PaymentModel payment;
+  final List<FeeModel> fees;
+
+  PaidPaymentGroup({required this.payment, required this.fees});
+}
+
+/// Paid fee groups sourced from payment + paymentdetails + feedemand tables.
+/// More reliable than filtering feedemand by paidstatus (which can be stale).
+final paidFeesByPaymentProvider = FutureProvider<Map<int, PaidPaymentGroup>>((ref) async {
+  final student = ref.watch(selectedStudentProvider);
+  final client = ref.watch(supabaseClientProvider);
+
+  if (student == null) return {};
+
+  try {
+    // 1. Get all completed payments
+    final payments = await client
+        .from('payment')
+        .select('*')
+        .eq('stu_id', student.stuId)
+        .eq('paystatus', 'C')
+        .eq('activestatus', 1)
+        .order('createdat', ascending: false);
+
+    if ((payments as List).isEmpty) return {};
+
+    final paymentModels = payments.map((p) => PaymentModel.fromJson(p)).toList();
+    final payIds = paymentModels.map((p) => p.payId).toList();
+
+    // 2. Get all payment details for these payments
+    final details = await client
+        .from('paymentdetails')
+        .select('*')
+        .inFilter('pay_id', payIds)
+        .eq('activestatus', 1);
+
+    final detailModels = (details as List)
+        .map((d) => PaymentDetailModel.fromJson(d))
+        .toList();
+
+    // Group details by pay_id
+    final detailsByPayId = <int, List<PaymentDetailModel>>{};
+    for (final detail in detailModels) {
+      detailsByPayId.putIfAbsent(detail.payId, () => []).add(detail);
+    }
+
+    // 3. Get all feedemand records for the dem_ids (for fee names/terms)
+    final allDemIds = detailModels.map((d) => d.demId).toSet().toList();
+    if (allDemIds.isEmpty) {
+      final result = <int, PaidPaymentGroup>{};
+      for (final payment in paymentModels) {
+        result[payment.payId] = PaidPaymentGroup(payment: payment, fees: []);
+      }
+      return result;
+    }
+
+    List<FeeModel> feeModels;
+    try {
+      final fees = await client
+          .from('feedemand')
+          .select('*, feetype(*, feegroup(*))')
+          .inFilter('dem_id', allDemIds);
+      feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
+    } catch (e) {
+      final fees = await client
+          .from('feedemand')
+          .select('*')
+          .inFilter('dem_id', allDemIds);
+      feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
+    }
+
+    // Map dem_id -> FeeModel
+    final feeMap = <int, FeeModel>{};
+    for (final fee in feeModels) {
+      feeMap[fee.demId] = fee;
+    }
+
+    // 4. Build result: each payment with its fee details
+    final result = <int, PaidPaymentGroup>{};
+    for (final payment in paymentModels) {
+      final payDetails = detailsByPayId[payment.payId] ?? [];
+      final fees = payDetails
+          .where((d) => feeMap.containsKey(d.demId))
+          .map((d) {
+            final fee = feeMap[d.demId]!;
+            // Use the amount from paymentdetails (actual paid amount for this payment)
+            return fee.copyWith(paidamount: d.transtotalamount);
+          })
+          .toList();
+
+      result[payment.payId] = PaidPaymentGroup(payment: payment, fees: fees);
+    }
+
+    return result;
+  } catch (e) {
+    debugPrint('Error fetching paid fee groups: $e');
+    return {};
   }
 });
 

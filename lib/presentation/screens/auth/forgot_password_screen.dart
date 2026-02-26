@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/common/auth_desktop_wrapper.dart';
+import '../../widgets/common/screen_illustrations.dart';
 
 class CountryCode {
   final String flag;
@@ -256,11 +257,17 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
-      body: SafeArea(
+      body: AuthDesktopWrapper(
+        headline: 'Forgot Password?',
+        subtitle: "Don't worry, we'll help you reset it",
+        centerContent: ScreenIllustrations.forgotPassword(size: 360, isDark: true),
+        onBack: () => context.pop(),
+        child: SafeArea(
           child: Column(
             children: [
               Expanded(
-                child: SingleChildScrollView(
+                child: Center(
+                  child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Form(
@@ -269,11 +276,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 16),
-
-                          // Back Button
-                          _buildBackButton(),
-
-                          const SizedBox(height: 24),
 
                           // Header with title and illustration
                           _buildHeader(),
@@ -292,6 +294,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                     ),
                   ),
                 ),
+                ),
               ),
               // Back to Sign In Link at bottom
               Padding(
@@ -301,64 +304,29 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             ],
           ),
         ),
-    );
-  }
-
-  Widget _buildBackButton() {
-    return GestureDetector(
-      onTap: () => context.pop(),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.iconButtonBg(context),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.arrow_back_rounded,
-          size: 20,
-          color: Colors.white,
-        ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Title and subtitle
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Forgot Password',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Enter your mobile number to reset your password',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.textSecondaryC(context),
-                ),
-              ),
-            ],
+        Text(
+          'Forgot Password',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
           ),
         ),
-        // Illustration
-        SizedBox(
-          width: 120,
-          height: 120,
-          child: Image.asset(
-            'assets/Authendication gif/Sign up.gif',
-            fit: BoxFit.contain,
+        const SizedBox(height: 8),
+        Text(
+          'Enter your mobile number to reset your password',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            color: AppColors.textSecondaryC(context),
           ),
         ),
       ],
@@ -519,15 +487,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              SvgPicture.asset(
-                'assets/school Icons/shield-tick.svg',
-                width: 22,
-                height: 22,
-                colorFilter: const ColorFilter.mode(
-                  Colors.white,
-                  BlendMode.srcIn,
-                ),
-              ),
+              const Icon(Icons.send_rounded, size: 22, color: Colors.white),
             ],
           ],
         ),

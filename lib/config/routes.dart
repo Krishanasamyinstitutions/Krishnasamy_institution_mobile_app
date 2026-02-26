@@ -26,6 +26,7 @@ import '../presentation/screens/support/support_screen.dart';
 import '../presentation/screens/cart/cart_screen.dart';
 import '../presentation/screens/fees/all_pending_fees_screen.dart';
 import '../presentation/screens/fees/pay_all_fees_screen.dart';
+import '../presentation/screens/fees/paid_fees_screen.dart';
 import '../presentation/widgets/common/main_scaffold.dart';
 import '../presentation/providers/auth_provider.dart' show parentAuthStateProvider;
 import '../presentation/providers/student_provider.dart';
@@ -56,6 +57,8 @@ class Routes {
   static const cartStandalone = '/cart-standalone';
   static const allPendingFees = '/all-pending-fees';
   static const payAllFees = '/pay-all-fees';
+  static const paidFees = '/paid-fees';
+  static const transactionDetails = '/transaction';
   static const homeTest = '/home-test';
 }
 
@@ -191,44 +194,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const StudentSelectionScreen(),
       ),
 
-      // Switch Student (for profile page)
-      GoRoute(
-        path: Routes.switchStudent,
-        builder: (context, state) => const SwitchStudentScreen(),
-      ),
-
-      // Support Screen (standalone without bottom nav)
-      GoRoute(
-        path: Routes.support,
-        builder: (context, state) => const SupportScreen(),
-      ),
-
       // Standalone Cart Screen (without bottom nav, with back button)
       GoRoute(
         path: Routes.cartStandalone,
         builder: (context, state) => const CartScreen(isStandalone: true),
-      ),
-
-      // All Pending Fees Screen (accordion view)
-      GoRoute(
-        path: Routes.allPendingFees,
-        builder: (context, state) {
-          final feeGroup = state.uri.queryParameters['group'];
-          final filterStatus = state.uri.queryParameters['status'];
-          return AllPendingFeesScreen(filterGroup: feeGroup, filterStatus: filterStatus);
-        },
-      ),
-
-      // Pay All Fees Screen (all fees pre-selected)
-      GoRoute(
-        path: Routes.payAllFees,
-        builder: (context, state) => const PayAllFeesScreen(),
-      ),
-
-      // Cart Screen (standalone without bottom nav)
-      GoRoute(
-        path: Routes.cart,
-        builder: (context, state) => const CartScreen(),
       ),
 
       // TESTING: Home Screen Copy (new design)
@@ -276,7 +245,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: ':paymentId',
                 builder: (context, state) {
                   final paymentId = state.pathParameters['paymentId']!;
-                  return TransactionDetailsScreen(paymentId: paymentId);
+                  return TransactionDetailsScreen(paymentId: paymentId, isNested: true);
                 },
               ),
             ],
@@ -291,7 +260,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: ':notificationId',
                 builder: (context, state) {
                   final notificationId = state.pathParameters['notificationId']!;
-                  final notification = state.extra as NotificationModel?;
+                  final extra = state.extra;
+                  final notification = extra is NotificationModel
+                      ? extra
+                      : extra is Map<String, dynamic>
+                          ? NotificationModel.fromJson(extra)
+                          : null;
                   return NotificationDetailScreen(
                     notificationId: notificationId,
                     notification: notification,
@@ -305,6 +279,43 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: ProfileScreen(),
             ),
+          ),
+
+          // Drill-down routes (rendered inside MainScaffold)
+          GoRoute(
+            path: Routes.support,
+            builder: (context, state) => const SupportScreen(),
+          ),
+          GoRoute(
+            path: Routes.cart,
+            builder: (context, state) => const CartScreen(),
+          ),
+          GoRoute(
+            path: Routes.allPendingFees,
+            builder: (context, state) {
+              final feeGroup = state.uri.queryParameters['group'];
+              final filterStatus = state.uri.queryParameters['status'];
+              return AllPendingFeesScreen(filterGroup: feeGroup, filterStatus: filterStatus);
+            },
+          ),
+          GoRoute(
+            path: Routes.payAllFees,
+            builder: (context, state) => const PayAllFeesScreen(),
+          ),
+          GoRoute(
+            path: Routes.paidFees,
+            builder: (context, state) => const PaidFeesScreen(),
+          ),
+          GoRoute(
+            path: Routes.switchStudent,
+            builder: (context, state) => const SwitchStudentScreen(),
+          ),
+          GoRoute(
+            path: '${Routes.transactionDetails}/:paymentId',
+            builder: (context, state) {
+              final paymentId = state.pathParameters['paymentId']!;
+              return TransactionDetailsScreen(paymentId: paymentId, isNested: true);
+            },
           ),
         ],
       ),

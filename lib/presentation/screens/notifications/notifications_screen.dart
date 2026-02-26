@@ -4,7 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_sizes.dart';
+import '../../../core/utils/extensions.dart';
 import '../../../data/models/notification_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -17,49 +17,80 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  int _currentPage = 0;
+
   @override
   Widget build(BuildContext context) {
     final notificationsAsync = ref.watch(notificationsProvider);
-    final readIdsLoaded = ref.watch(readNotificationsProvider) != null;
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
       body: Column(
         children: [
-            // Fixed Header with white SafeArea and subtle shadow
-            Container(
-              color: AppColors.headerBg(context),
-              child: SafeArea(
-                bottom: false,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.headerBg(context),
-                    boxShadow: AppColors.cardShadow(context),
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildHeader(context),
-                      const SizedBox(height: 16),
-                    ],
+            // Desktop: no header | Mobile: shadow header
+            if (!context.isDesktop)
+              Container(
+                color: AppColors.headerBg(context),
+                child: SafeArea(
+                  bottom: false,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.headerBg(context),
+                      boxShadow: AppColors.cardShadow(context),
+                    ),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+                        _buildHeader(context),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
+            // Fee reminder banners
+            _buildFeeReminderBanners(context, ref),
             Expanded(
-              child: !readIdsLoaded
-                ? const Center(child: CircularProgressIndicator())
-                : notificationsAsync.when(
+              child: notificationsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, stack) => Center(child: Text('Error: $error')),
                 data: (notifications) {
-                  if (notifications.isEmpty) {
+                  // Filter out fee summary cards — they're shown as banners above
+                  final regularNotifications = notifications
+                      .where((n) => n.id != 'fee_overdue_summary' && n.id != 'fee_upcoming_summary')
+                      .toList();
+
+                  if (regularNotifications.isEmpty) {
                     return _buildEmptyState();
                   }
-                  final groupedNotifications = _groupNotificationsByDate(notifications);
-                  final bottomPadding = 70 + MediaQuery.of(context).padding.bottom + 20;
+                  const int pageSize = 10;
+                  final totalPages = (regularNotifications.length / pageSize).ceil();
+                  final paged = regularNotifications
+                      .skip(_currentPage * pageSize)
+                      .take(pageSize)
+                      .toList();
+
+                  if (context.isDesktop) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBg(context),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: AppColors.cardShadow(context),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        children: [
+                          Expanded(child: _buildDesktopNotificationTable(paged)),
+                          _buildPaginationControls(totalPages),
+                        ],
+                      ),
+                    );
+                  }
+
+                  // Mobile: show all notifications in a scrollable list (no pagination)
+                  final groupedNotifications = _groupNotificationsByDate(regularNotifications);
                   return ListView.builder(
-                    padding: EdgeInsets.only(left: 24, right: 24, bottom: bottomPadding),
+                    padding: const EdgeInsets.only(left: 24, right: 24, bottom: 8),
                     itemCount: groupedNotifications.length,
                     itemBuilder: (context, index) {
                       final group = groupedNotifications[index];
@@ -71,6 +102,241 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             ),
           ],
         ),
+    );
+  }
+
+  Widget _buildDesktopNotificationTable(List<NotificationModel> notifications) {
+    return Column(
+      children: [
+        // Header row
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          color: AppColors.scaffoldBg(context),
+          child: Row(
+            children: [
+              const SizedBox(width: 60), // icon (48) + gap (12)
+              Expanded(
+                flex: 3,
+                child: Text(
+                  'Title',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondaryC(context),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              Expanded(
+                flex: 4,
+                child: Text(
+                  'Message',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondaryC(context),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 140,
+                child: Text(
+                  'Date',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondaryC(context),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 36), // unread indicator column
+            ],
+          ),
+        ),
+        Divider(height: 1, color: AppColors.borderC(context)),
+        // Data rows
+        Expanded(
+          child: ListView.separated(
+            padding: EdgeInsets.zero,
+            itemCount: notifications.length,
+            separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.borderC(context)),
+            itemBuilder: (context, index) =>
+                _buildDesktopNotificationRow(notifications[index]),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopNotificationRow(NotificationModel notification) {
+    final isUnread = !notification.isRead;
+
+    return InkWell(
+      onTap: () async {
+        if (isUnread) {
+          ref.read(notificationActionsProvider.notifier).markAsRead(notification.id);
+        }
+        await context.push('/notifications/${notification.id}', extra: notification);
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        color: isUnread
+            ? AppColors.primary.withValues(alpha: 0.04)
+            : Colors.transparent,
+        child: Row(
+          children: [
+            _buildNotificationIcon(notification.type, isUnread),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 3,
+              child: Text(
+                notification.title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
+                  color: AppColors.textPrimaryC(context),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Expanded(
+              flex: 4,
+              child: Text(
+                notification.body,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondaryC(context),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            SizedBox(
+              width: 140,
+              child: Text(
+                _getTimestamp(notification.createdAt),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textHintC(context),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 36,
+              child: isUnread
+                  ? Center(
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.4),
+                              blurRadius: 6,
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaginationControls(int totalPages) {
+    if (totalPages <= 1) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildPageButton(
+            icon: Icons.chevron_left,
+            enabled: _currentPage > 0,
+            onTap: () => setState(() => _currentPage--),
+          ),
+          const SizedBox(width: 8),
+          for (int i = 0; i < totalPages; i++) ...[
+            if (i == 0 ||
+                i == totalPages - 1 ||
+                (i >= _currentPage - 1 && i <= _currentPage + 1))
+              GestureDetector(
+                onTap: () => setState(() => _currentPage = i),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    color: i == _currentPage ? AppColors.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: i != _currentPage
+                        ? Border.all(color: AppColors.borderC(context))
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '${i + 1}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: i == _currentPage
+                            ? Colors.white
+                            : AppColors.textSecondaryC(context),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else if ((i == 1 && _currentPage > 2) ||
+                (i == totalPages - 2 && _currentPage < totalPages - 3))
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  '…',
+                  style: TextStyle(color: AppColors.textHintC(context)),
+                ),
+              ),
+          ],
+          const SizedBox(width: 8),
+          _buildPageButton(
+            icon: Icons.chevron_right,
+            enabled: _currentPage < totalPages - 1,
+            onTap: () => setState(() => _currentPage++),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPageButton({
+    required IconData icon,
+    required bool enabled,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: enabled ? onTap : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          border: Border.all(color: AppColors.borderC(context)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: enabled ? AppColors.textPrimaryC(context) : AppColors.textHintC(context),
+        ),
+      ),
     );
   }
 
@@ -190,6 +456,142 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 
+  Widget _buildFeeReminderBanners(BuildContext context, WidgetRef ref) {
+    final notificationsAsync = ref.watch(notificationsProvider);
+    final notifications = notificationsAsync.valueOrNull ?? [];
+
+    final overdueNotification = notifications
+        .where((n) => n.id == 'fee_overdue_summary')
+        .toList();
+    final upcomingNotification = notifications
+        .where((n) => n.id == 'fee_upcoming_summary')
+        .toList();
+
+    if (overdueNotification.isEmpty && upcomingNotification.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          if (overdueNotification.isNotEmpty)
+            _buildReminderBanner(
+              context: context,
+              icon: Icons.warning_rounded,
+              iconBgColor: AppColors.errorLight,
+              iconColor: AppColors.error,
+              borderColor: AppColors.error.withValues(alpha: 0.3),
+              bgColor: AppColors.errorLight.withValues(alpha: 0.5),
+              title: overdueNotification.first.title,
+              message: overdueNotification.first.body,
+              actionLabel: 'Pay Now',
+              onAction: () => context.go(Routes.home),
+            ),
+          if (overdueNotification.isNotEmpty && upcomingNotification.isNotEmpty)
+            const SizedBox(height: 10),
+          if (upcomingNotification.isNotEmpty)
+            _buildReminderBanner(
+              context: context,
+              icon: Icons.schedule_rounded,
+              iconBgColor: AppColors.warningLight,
+              iconColor: AppColors.warningDark,
+              borderColor: AppColors.warning.withValues(alpha: 0.3),
+              bgColor: AppColors.warningLight.withValues(alpha: 0.5),
+              title: upcomingNotification.first.title,
+              message: upcomingNotification.first.body,
+              actionLabel: 'View Fees',
+              onAction: () => context.go(Routes.home),
+            ),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReminderBanner({
+    required BuildContext context,
+    required IconData icon,
+    required Color iconBgColor,
+    required Color iconColor,
+    required Color borderColor,
+    required Color bgColor,
+    required String title,
+    required String message,
+    required String actionLabel,
+    required VoidCallback onAction,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor, width: 1.5),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: iconBgColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 22, color: iconColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimaryC(context),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textSecondaryC(context),
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: onAction,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: iconColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      actionLabel,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildNotificationGroup(_NotificationGroup group) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,8 +616,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildNotificationCard(NotificationModel notification) {
-    final readIds = ref.watch(readNotificationsProvider) ?? {};
-    final isUnread = !readIds.contains(notification.id);
+    final isUnread = !notification.isRead;
 
     return GestureDetector(
       onTap: () async {
@@ -425,6 +826,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       ),
     );
   }
+
 }
 
 class _NotificationGroup {
