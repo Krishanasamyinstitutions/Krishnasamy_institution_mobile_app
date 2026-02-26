@@ -153,8 +153,8 @@ class AppColors {
   static const Color shadowDark = Color(0x26000000);
 
   // Card shadow with color tint
-  static const Color shadowBlue = Color(0x1A22C55E);
-  static const Color shadowPurple = Color(0x1A22C55E);
+  static const Color shadowBlue = Color(0x1A3B82F6);
+  static const Color shadowPurple = Color(0x1A8B5CF6);
   static const Color shadowPink = Color(0x1AEC4899);
   static const Color shadowGreen = Color(0x1A10B981);
 

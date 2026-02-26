@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../data/models/fee_model.dart';
 import 'auth_provider.dart';
 import 'student_provider.dart';
@@ -105,9 +106,10 @@ final paidFeesProvider = Provider<List<FeeModel>>((ref) {
 /// Calculate fee summary for selected student
 final feeSummaryProvider = FutureProvider<FeeSummary>((ref) async {
   final fees = await ref.watch(feesProvider.future);
+  final student = ref.watch(selectedStudentProvider);
+  final client = ref.watch(supabaseClientProvider);
 
   double totalDue = 0;
-  double totalPaid = 0;
   double totalPending = 0;
   int pendingCount = 0;
   int overdueCount = 0;
@@ -115,7 +117,6 @@ final feeSummaryProvider = FutureProvider<FeeSummary>((ref) async {
 
   for (final fee in fees) {
     totalDue += fee.feeamount - fee.conamount;
-    totalPaid += fee.paidamount;
     totalPending += fee.balancedue;
 
     if (fee.paidstatus == 'U') {
@@ -132,6 +133,26 @@ final feeSummaryProvider = FutureProvider<FeeSummary>((ref) async {
       if (fee.duedate != null && fee.duedate!.isBefore(DateTime.now())) {
         overdueCount++;
       }
+    }
+  }
+
+  // Fetch total paid from completed payments (source of truth)
+  double totalPaid = 0;
+  if (student != null) {
+    try {
+      final payments = await client
+          .from('payment')
+          .select('transtotalamount')
+          .eq('stu_id', student.stuId)
+          .eq('paystatus', 'C')
+          .eq('activestatus', 1);
+      for (final p in (payments as List)) {
+        totalPaid += (p['transtotalamount'] as num?)?.toDouble() ?? 0;
+      }
+    } catch (e) {
+      // Fallback: derive from fee demands
+      debugPrint('feeSummaryProvider: payment query failed, using feedemand fallback: $e');
+      totalPaid = totalDue - totalPending;
     }
   }
 
@@ -411,28 +432,31 @@ final pendingFeesByGroupProvider = Provider<Map<String, double>>((ref) {
   return sortedGrouped;
 });
 
-/// Get overdue fees (past due date)
+/// Get overdue fees (past due date).
+/// Uses dueDate getter (falls back to createdat if duedate is null)
+/// to match All Pending Fees screen behaviour.
 final overdueFeesProvider = Provider<List<FeeModel>>((ref) {
   final pendingFees = ref.watch(pendingFeesProvider);
   final now = DateTime.now();
   return pendingFees
-      .where((f) => f.duedate != null && f.duedate!.isBefore(now))
+      .where((f) => f.dueDate.isBefore(now))
       .toList()
-    ..sort((a, b) => a.duedate!.compareTo(b.duedate!));
+    ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
 });
 
-/// Get fees due soon (within next 30 days)
+/// Get fees due soon (due date is in the future AND within next 30 days).
+/// Uses dueDate getter (falls back to createdat if duedate is null)
+/// to match All Pending Fees screen behaviour.
 final dueSoonFeesProvider = Provider<List<FeeModel>>((ref) {
   final pendingFees = ref.watch(pendingFeesProvider);
   final now = DateTime.now();
   final thirtyDaysLater = now.add(const Duration(days: 30));
   return pendingFees
       .where((f) =>
-          f.duedate != null &&
-          f.duedate!.isAfter(now) &&
-          f.duedate!.isBefore(thirtyDaysLater))
+          !f.dueDate.isBefore(now) &&
+          f.dueDate.isBefore(thirtyDaysLater))
       .toList()
-    ..sort((a, b) => a.duedate!.compareTo(b.duedate!));
+    ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
 });
 
 /// Group summary model for activity display
@@ -442,6 +466,7 @@ class FeeGroupSummary {
   final int itemCount;
   final DateTime? nearestDueDate;
   final bool isOverdue;
+  final String periodText;
 
   FeeGroupSummary({
     required this.groupName,
@@ -449,8 +474,53 @@ class FeeGroupSummary {
     required this.itemCount,
     this.nearestDueDate,
     required this.isOverdue,
+    this.periodText = '',
   });
 }
+
+/// Compute period text from a list of fees
+/// Term-based fees (demfeeterm contains "TERM") show term range: "I Term to III Term"
+/// Monthly fees show month range: "Jan to Aug"
+String _computePeriodText(List<FeeModel> fees) {
+  if (fees.isEmpty) return '';
+
+  // Check if these are term-based fees
+  final hasTerms = fees.any((f) => f.demfeeterm.toUpperCase().contains('TERM'));
+
+  if (hasTerms) {
+    // Get unique terms, sorted by duedate
+    final sortedFees = [...fees]..sort((a, b) {
+      final aDate = a.duedate ?? a.createdat;
+      final bDate = b.duedate ?? b.createdat;
+      return aDate.compareTo(bDate);
+    });
+    final seenTerms = <String>{};
+    final orderedNums = <String>[];
+    for (final f in sortedFees) {
+      if (f.demfeeterm.toUpperCase().contains('TERM') && seenTerms.add(f.demfeeterm)) {
+        // Extract the roman numeral part (e.g., "I" from "I TERM")
+        final num = f.demfeeterm.toUpperCase().replaceAll('TERM', '').trim();
+        orderedNums.add(num);
+      }
+    }
+    if (orderedNums.isEmpty) return '${fees.length} ${fees.length == 1 ? 'fee' : 'fees'}';
+    if (orderedNums.length == 1) return 'Term ${orderedNums.first}';
+    return 'Term ${orderedNums.first} - ${orderedNums.last}';
+  }
+
+  // Monthly fees - show month range from duedate
+  final dates = fees.map((f) => f.duedate).whereType<DateTime>().toList();
+  if (dates.isEmpty) return '${fees.length} ${fees.length == 1 ? 'fee' : 'fees'}';
+  dates.sort();
+  final earliest = dates.first;
+  final latest = dates.last;
+  final fmt = DateFormat('MMM');
+  if (earliest.year == latest.year && earliest.month == latest.month) {
+    return fmt.format(earliest);
+  }
+  return '${fmt.format(earliest)} to ${fmt.format(latest)}';
+}
+
 
 /// Get overdue fees grouped by fee group
 final overdueByGroupProvider = Provider<List<FeeGroupSummary>>((ref) {
@@ -477,13 +547,14 @@ final overdueByGroupProvider = Provider<List<FeeGroupSummary>>((ref) {
   return grouped.entries.map((entry) {
     final fees = entry.value;
     final total = fees.fold(0.0, (sum, f) => sum + f.balancedue);
-    final nearest = fees.map((f) => f.duedate).whereType<DateTime>().reduce((a, b) => a.isBefore(b) ? a : b);
+    final nearest = fees.map((f) => f.dueDate).reduce((a, b) => a.isBefore(b) ? a : b);
     return FeeGroupSummary(
       groupName: entry.key,
       totalAmount: total,
       itemCount: fees.length,
       nearestDueDate: nearest,
       isOverdue: true,
+      periodText: _computePeriodText(fees),
     );
   }).toList()..sort((a, b) => b.totalAmount.compareTo(a.totalAmount));
 });
@@ -513,13 +584,14 @@ final dueSoonByGroupProvider = Provider<List<FeeGroupSummary>>((ref) {
   return grouped.entries.map((entry) {
     final fees = entry.value;
     final total = fees.fold(0.0, (sum, f) => sum + f.balancedue);
-    final nearest = fees.map((f) => f.duedate).whereType<DateTime>().reduce((a, b) => a.isBefore(b) ? a : b);
+    final nearest = fees.map((f) => f.dueDate).reduce((a, b) => a.isBefore(b) ? a : b);
     return FeeGroupSummary(
       groupName: entry.key,
       totalAmount: total,
       itemCount: fees.length,
       nearestDueDate: nearest,
       isOverdue: false,
+      periodText: _computePeriodText(fees),
     );
   }).toList()..sort((a, b) => a.nearestDueDate!.compareTo(b.nearestDueDate!));
 });

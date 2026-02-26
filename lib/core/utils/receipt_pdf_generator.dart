@@ -69,7 +69,7 @@ Future<pw.Document> generateReceiptPdf({
                 // Payment Info
                 pw.Expanded(
                   child: _buildInfoBox('Payment Details', [
-                    _infoRow('Payment No', payment.paymentNumber),
+                    _infoRow('Receipt No', payment.paymentNumber),
                     _infoRow('Date', dateStr),
                     _infoRow('Method', payment.paymethod ?? '-'),
                     if (payment.payreference != null)

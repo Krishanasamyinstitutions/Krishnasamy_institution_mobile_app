@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/extensions.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/student_model.dart';
 import '../../providers/student_provider.dart';
+import '../../widgets/common/breadcrumb_bar.dart';
+import '../../widgets/common/desktop_detail_scaffold.dart';
 
 class SwitchStudentScreen extends ConsumerStatefulWidget {
   const SwitchStudentScreen({super.key});
@@ -32,104 +35,72 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
     final studentsAsync = ref.watch(studentsByParentProvider);
     final currentStudent = ref.watch(selectedStudentProvider);
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FB),
-      body: Column(
-        children: [
-          // Header with white SafeArea and subtle shadow
-          Container(
-            color: Colors.white,
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.04),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildHeader(context),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Content
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: Column(
-                children: [
-                  const SizedBox(height: 24),
-                  Expanded(
-                    child: studentsAsync.when(
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (error, stack) => Center(child: Text('Error: $error')),
-                      data: (students) => _buildStudentList(students, currentStudent),
-                    ),
-                  ),
-                  _buildSwitchButton(),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ),
-        ],
+    return DesktopDetailScaffold(
+      isNested: true,
+      header: _buildHeader(context),
+      toolbar: const BreadcrumbBar(
+        parentLabel: 'Profile',
+        parentRoute: Routes.profile,
+        currentLabel: 'Switch Student',
       ),
+      body: studentsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => Center(child: Text('Error: $error')),
+        data: (students) => _buildStudentList(students, currentStudent),
+      ),
+      bottomBar: _buildSwitchButton(),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
         children: [
-          // Back Button - Dark theme
-          GestureDetector(
-            onTap: () => context.pop(),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: const BoxDecoration(
-                color: Color(0xFF1F2937),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                size: 20,
-                color: Colors.white,
+          if (!context.isDesktop)
+            GestureDetector(
+              onTap: () {
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                } else {
+                  context.go(Routes.profile);
+                }
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                margin: const EdgeInsets.only(right: 14),
+                decoration: BoxDecoration(
+                  color: AppColors.scaffoldBg(context),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderC(context)),
+                ),
+                child: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  size: 18,
+                  color: AppColors.textPrimaryC(context),
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          // Title & Subtitle
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Switch Student',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: context.isDesktop ? 20 : 22,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1F2937),
+                    color: AppColors.textPrimaryC(context),
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'Select a different student',
+                  'Select a different student profile',
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF6B7280),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.textSecondaryC(context),
                   ),
                 ),
               ],
@@ -142,7 +113,9 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
 
   Widget _buildStudentList(List<StudentModel> students, StudentModel? currentStudent) {
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: context.isDesktop
+          ? const EdgeInsets.all(24)
+          : const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       itemCount: students.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
@@ -165,19 +138,13 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            width: 2,
+            color: isSelected ? AppColors.primary : AppColors.borderC(context),
+            width: isSelected ? 2 : 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          boxShadow: AppColors.cardShadow(context),
         ),
         child: Row(
           children: [
@@ -185,14 +152,12 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
             Container(
               width: 52,
               height: 52,
-              decoration: BoxDecoration(
-                gradient: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
-                    ? null
-                    : const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [AppColors.primary, AppColors.primary600],
-                      ),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.primary, AppColors.primary600],
+                ),
                 shape: BoxShape.circle,
               ),
               clipBehavior: Clip.antiAlias,
@@ -202,6 +167,16 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                       fit: BoxFit.cover,
                       width: 52,
                       height: 52,
+                      placeholder: (context, url) => Center(
+                        child: Text(
+                          _getInitials(student.name),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                       errorWidget: (context, url, error) => Center(
                         child: Text(
                           _getInitials(student.name),
@@ -235,10 +210,10 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                       Expanded(
                         child: Text(
                           student.name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF1F2937),
+                            color: AppColors.textPrimaryC(context),
                           ),
                         ),
                       ),
@@ -263,10 +238,10 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                   const SizedBox(height: 6),
                   Text(
                     'Adm No: ${student.admissionNumber} | Class: ${student.className}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF6B7280),
+                      color: AppColors.textSecondaryC(context),
                     ),
                   ),
                 ],
@@ -281,7 +256,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 shape: BoxShape.circle,
                 color: isSelected ? AppColors.primary : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : const Color(0xFFD1D5DB),
+                  color: isSelected ? AppColors.primary : AppColors.borderC(context),
                   width: 2,
                 ),
               ),
@@ -304,7 +279,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
     final isNewSelection = _selectedStudentId != null && _selectedStudentId != currentStudent?.stuId;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: GestureDetector(
         onTap: isNewSelection ? _handleSwitch : null,
         child: Container(
@@ -316,7 +291,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                     colors: [AppColors.primary, AppColors.primary600],
                   )
                 : null,
-            color: isNewSelection ? null : const Color(0xFFE5E7EB),
+            color: isNewSelection ? null : AppColors.borderC(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: isNewSelection
                 ? [
@@ -336,7 +311,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: isNewSelection ? Colors.white : const Color(0xFF9CA3AF),
+                  color: isNewSelection ? Colors.white : AppColors.textHintC(context),
                 ),
               ),
               if (isNewSelection) ...[
@@ -358,28 +333,27 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
     if (_selectedStudentId == null) return;
 
     final studentsAsync = ref.read(studentsByParentProvider);
-    studentsAsync.whenData((students) async {
-      final selectedStudent = students.firstWhere(
-        (s) => s.stuId == _selectedStudentId,
+    final students = studentsAsync.valueOrNull;
+    if (students == null) return;
+
+    final selectedStudent = students.firstWhere(
+      (s) => s.stuId == _selectedStudentId,
+    );
+
+    await ref.read(selectedStudentProvider.notifier).selectStudent(selectedStudent);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Switched to ${selectedStudent.name}'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+        ),
       );
-
-      await ref.read(selectedStudentProvider.notifier).selectStudent(selectedStudent);
-
-      if (mounted) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Switched to ${selectedStudent.name}'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-        // Navigate to home
-        context.go(Routes.home);
-      }
-    });
+      context.go(Routes.home);
+    }
   }
 
   String _getInitials(String name) {

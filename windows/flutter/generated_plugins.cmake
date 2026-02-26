@@ -4,9 +4,11 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
+  awesome_notifications
   connectivity_plus
   flutter_secure_storage_windows
   printing
+  share_plus
   smart_auth
   url_launcher_windows
 )
