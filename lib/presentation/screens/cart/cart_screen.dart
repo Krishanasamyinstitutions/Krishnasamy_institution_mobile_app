@@ -11,6 +11,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../../core/utils/extensions.dart';
+import '../../widgets/common/breadcrumb_bar.dart';
+import '../../widgets/common/desktop_detail_scaffold.dart';
 
 class CartScreen extends ConsumerStatefulWidget {
   final bool isStandalone;
@@ -48,41 +51,22 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final cartState = ref.watch(cartProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg(context),
-      body: Column(
-          children: [
-            // Header with white SafeArea and subtle shadow
-            Container(
-              color: AppColors.headerBg(context),
-              child: SafeArea(
-                bottom: false,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.headerBg(context),
-                    boxShadow: AppColors.cardShadow(context),
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildHeader(context, ref, cartState),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            // Content
-            Expanded(
-              child: cartState.isEmpty
-                  ? _buildEmptyState(context)
-                  : _buildCartContent(context, ref, cartState),
-            ),
-            // Bottom payment bar
-            if (cartState.isNotEmpty)
-              _buildBottomBar(context, ref, cartState),
-          ],
-        ),
+    return DesktopDetailScaffold(
+      isNested: true,
+      header: Column(
+        children: [
+          const SizedBox(height: 16),
+          _buildHeader(context, ref, cartState),
+          const SizedBox(height: 16),
+        ],
+      ),
+      toolbar: const BreadcrumbBar(currentLabel: 'Payment Summary'),
+      body: cartState.isEmpty
+          ? _buildEmptyState(context)
+          : _buildCartContent(context, ref, cartState),
+      bottomBar: cartState.isNotEmpty
+          ? _buildBottomBar(context, ref, cartState)
+          : null,
     );
   }
 
@@ -322,7 +306,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       });
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.all(16),
       children: [
         // Fee Category Cards (sequential: can only remove last term first, backward order)
         ...sortedCategories.asMap().entries.map((entry) {
@@ -417,6 +401,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderC(context)),
         boxShadow: AppColors.cardShadow(context),
       ),
       child: Column(
@@ -654,8 +639,76 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildBottomBar(BuildContext context, WidgetRef ref, CartState cartState) {
-    return Container(
+    final bottomContent = Padding(
       padding: const EdgeInsets.all(20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Total Amount',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondaryC(context),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '₹ ${NumberFormat('#,##,###').format(cartState.totalAmount.toInt())}',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimaryC(context),
+                ),
+              ),
+            ],
+          ),
+          GestureDetector(
+            onTap: () => _handleProceedToPayment(context, ref),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, AppColors.primary600],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.4),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Pay Now',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // On desktop, DesktopDetailScaffold wraps in a card — return just the inner content
+    if (context.isDesktop) return bottomContent;
+
+    // On mobile, keep existing decoration
+    return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
         borderRadius: const BorderRadius.only(
@@ -674,67 +727,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Total Amount',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textSecondaryC(context),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₹ ${NumberFormat('#,##,###').format(cartState.totalAmount.toInt())}',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
-                  ),
-                ),
-              ],
-            ),
-            GestureDetector(
-              onTap: () => _handleProceedToPayment(context, ref),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primary600],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.4),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Pay Now',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
+        child: bottomContent,
       ),
     );
   }

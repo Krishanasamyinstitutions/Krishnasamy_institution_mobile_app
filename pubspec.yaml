@@ -58,6 +58,9 @@ dependencies:
   flutter_feather_icons: ^2.0.0+1
   iconsax: ^0.0.8
 
+  # Notifications & Background Tasks
+  awesome_notifications: ^0.10.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

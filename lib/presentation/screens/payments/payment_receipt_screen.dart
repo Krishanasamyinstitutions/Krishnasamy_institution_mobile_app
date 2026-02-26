@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
@@ -8,6 +9,9 @@ import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../../core/utils/extensions.dart';
+import '../../widgets/common/breadcrumb_bar.dart';
+import '../../widgets/common/desktop_detail_scaffold.dart';
 
 class PaymentReceiptScreen extends ConsumerWidget {
   final String paymentId;
@@ -19,9 +23,9 @@ class PaymentReceiptScreen extends ConsumerWidget {
     final paymentAsync = ref.watch(paymentByIdProvider(int.tryParse(paymentId) ?? 0));
     final selectedStudent = ref.watch(selectedStudentProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg(context),
-      appBar: AppBar(
+    return DesktopDetailScaffold(
+      isNested: false,
+      mobileAppBar: AppBar(
         title: const Text('Payment Receipt'),
         actions: [
           IconButton(
@@ -32,6 +36,12 @@ class PaymentReceiptScreen extends ConsumerWidget {
           ),
         ],
       ),
+      header: _buildDesktopHeader(context, ref),
+      toolbar: BreadcrumbBar(
+        parentLabel: 'Payment History',
+        parentRoute: Routes.paymentHistory,
+        currentLabel: 'Payment Receipt',
+      ),
       body: paymentAsync.when(
         loading: () => const LoadingIndicator(),
         error: (error, _) => Center(child: Text('Error: $error')),
@@ -41,7 +51,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: AppSizes.s4),
+            padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.symmetric(horizontal: 16, vertical: AppSizes.s4),
             child: Column(
               children: [
                 _buildReceiptCard(context, payment, selectedStudent?.name ?? ''),
@@ -60,6 +70,53 @@ class PaymentReceiptScreen extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildDesktopHeader(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppColors.primary),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              'Payment Receipt',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimaryC(context),
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              // TODO: Implement share
+            },
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.share_rounded, size: 18, color: AppColors.primary),
+            ),
+          ),
+        ],
       ),
     );
   }

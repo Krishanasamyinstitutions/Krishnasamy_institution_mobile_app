@@ -5,11 +5,15 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
+import '../../../core/utils/extensions.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/student_provider.dart';
+import '../../widgets/common/breadcrumb_bar.dart';
+import '../../widgets/common/desktop_detail_scaffold.dart';
 
 class PayAllFeesScreen extends ConsumerStatefulWidget {
   const PayAllFeesScreen({super.key});
@@ -122,7 +126,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
 
   /// Get sub-options for a fee group (terms or months)
   List<String> _getSubOptions(String group, List<FeeModel> allFees) {
-    if (group == 'ALL FEES' || group == 'Extra Fees' || group == 'Exam Fees') {
+    if (group == 'ALL FEES' || group == 'Extra Fees') {
       return [];
     }
 
@@ -136,6 +140,12 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       // Return unique term names sorted
       final terms = groupFees.map((f) => f.demfeeterm).toSet().toList()
         ..sort();
+      return terms;
+    }
+
+    if (group == 'Exam Fees') {
+      final examFees = allFees.where((f) => _isExamFee(f)).toList();
+      final terms = examFees.map((f) => f.demfeeterm).toSet().toList()..sort();
       return terms;
     }
 
@@ -170,6 +180,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       return allFees.where((f) =>
         !_isBusFee(f) && !_isTuitionFee(f) && !_isHostelFee(f) && !_isExtraFee(f) && !_isExamFee(f)
         && f.demfeeterm == subOption).toList();
+    } else if (group == 'Exam Fees') {
+      return allFees.where((f) => _isExamFee(f) && f.demfeeterm == subOption).toList();
     } else if (group == 'Bus Fees') {
       return allFees.where((f) => _isBusFee(f) && DateFormat('MMMM yyyy').format(f.duedate ?? f.createdat) == subOption).toList();
     } else if (group == 'Tuition Fees') {
@@ -310,52 +322,33 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       }
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg(context),
-      body: Column(
+    return DesktopDetailScaffold(
+      isNested: true,
+      header: Column(
         children: [
-          // Header with white SafeArea and subtle shadow
-          Container(
-            color: AppColors.headerBg(context),
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.headerBg(context),
-                  boxShadow: AppColors.cardShadow(context),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildHeader(context),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Content
-          Expanded(
-            child: allPendingFees.isEmpty
-                ? _buildEmptyState()
-                : _buildContent(
-                    context,
-                    feeGroupOptions,
-                    allPendingFees,
-                    filteredFees,
-                    feesByTerm,
-                    busFees,
-                    tuitionFees,
-                    hostelFees,
-                    examFees,
-                    cartState,
-                  ),
-          ),
-          // Bottom Bar
-          if (selectedAmount > 0)
-            _buildBottomBar(context, selectedFees.length, selectedAmount, allFees: allPendingFees, hasTermOutOfOrder: hasTermOutOfOrder),
+          const SizedBox(height: 16),
+          _buildHeader(context),
+          const SizedBox(height: 16),
         ],
       ),
+      toolbar: const BreadcrumbBar(currentLabel: 'Pay All Fees'),
+      body: allPendingFees.isEmpty
+          ? _buildEmptyState()
+          : _buildContent(
+              context,
+              feeGroupOptions,
+              allPendingFees,
+              filteredFees,
+              feesByTerm,
+              busFees,
+              tuitionFees,
+              hostelFees,
+              examFees,
+              cartState,
+            ),
+      bottomBar: selectedAmount > 0
+          ? _buildBottomBar(context, selectedFees.length, selectedAmount, allFees: allPendingFees, hasTermOutOfOrder: hasTermOutOfOrder)
+          : null,
     );
   }
 
@@ -365,7 +358,6 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Back Button
           GestureDetector(
@@ -394,14 +386,23 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           ),
 
           // Title
-          Text(
-            'Pay All Fees',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimaryC(context),
+          Expanded(
+            child: Text(
+              'Pay All Fees',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimaryC(context),
+              ),
             ),
           ),
+
+          // Student chip (desktop only)
+          if (context.isDesktop) ...[
+            _buildStudentChip(context),
+            const SizedBox(width: 12),
+          ],
 
           // Notification Icon - Dark theme with badge
           GestureDetector(
@@ -458,6 +459,29 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     );
   }
 
+  Widget _buildStudentChip(BuildContext context) {
+    final student = ref.watch(selectedStudentProvider);
+    if (student == null) return const SizedBox.shrink();
+    final parts = student.name.trim().split(' ').where((p) => p.isNotEmpty).toList();
+    final initials = parts.take(2).map((p) => p[0]).join().toUpperCase();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 16,
+          backgroundColor: AppColors.primary,
+          backgroundImage: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
+              ? NetworkImage(student.photoUrl!) : null,
+          child: (student.photoUrl == null || student.photoUrl!.isEmpty)
+              ? Text(initials, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))
+              : null,
+        ),
+        const SizedBox(width: 8),
+        Text(student.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimaryC(context))),
+      ],
+    );
+  }
+
   Widget _buildContent(
     BuildContext context,
     List<String> feeGroupOptions,
@@ -503,7 +527,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             }
           },
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.all(16),
             children: [
               // Fee Group Filter Card
               _buildFeeGroupFilter(feeGroupOptions, filteredFees),
@@ -1026,24 +1050,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
             // Divider
             Container(height: 1, color: AppColors.borderC(context)),
 
-            // Fee Items with individual checkboxes (sequential: forward select, backward unselect)
-            ...sortedFees.asMap().entries.map((entry) {
-              final i = entry.key;
-              final fee = entry.value;
-              final isCurrentSelected = _localSelectedFeeIds.contains(fee.id);
-              final canCheckRow = !isCurrentSelected && (i == 0
-                  || _localSelectedFeeIds.contains(sortedFees[i - 1].id));
-              final noLaterRowsSelected = !sortedFees.skip(i + 1).any((f) => _localSelectedFeeIds.contains(f.id));
-              final canUncheckRow = isCurrentSelected && noLaterRowsSelected;
-              final isRowEnabled = canCheckRow || canUncheckRow;
-              return IgnorePointer(
-                ignoring: !isRowEnabled,
-                child: Opacity(
-                  opacity: isRowEnabled ? 1.0 : 0.5,
-                  child: _buildFeeRow(fee, cartState),
-                ),
-              );
-            }),
+            // Fee Items
+            ...sortedFees.map((fee) => _buildFeeRow(fee, cartState)),
 
             // Total Row
             Container(
@@ -2513,6 +2521,219 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     final cartState = ref.watch(cartProvider);
     final groupIcons = _getUniqueGroupIcons(cartState.items);
 
+    final bottomContent = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Cart preview bar — only shown after "Add to Cart" is clicked
+        if (_showCartPreview && cartState.isNotEmpty)
+          GestureDetector(
+            onTap: () => context.push(Routes.cart),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: AppColors.borderC(context), width: 0.5),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    'Queue',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimaryC(context),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Fee group icons
+                  Expanded(
+                    child: Row(
+                      children: [
+                        ...groupIcons.take(4).map((icon) => Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: icon['bgColor'] as Color,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: icon['iconData'] != null
+                                  ? Icon(
+                                      icon['iconData'] as IconData,
+                                      size: 16,
+                                      color: icon['iconColor'] as Color,
+                                    )
+                                  : SvgPicture.asset(
+                                      icon['svgPath'] as String,
+                                      width: 16,
+                                      height: 16,
+                                      colorFilter: ColorFilter.mode(
+                                        icon['iconColor'] as Color,
+                                        BlendMode.srcIn,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        )),
+                      ],
+                    ),
+                  ),
+                  // Count badge
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: groupIcons.isNotEmpty
+                          ? groupIcons[0]['bgColor'] as Color
+                          : const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${cartState.itemCount}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: groupIcons.isNotEmpty
+                              ? groupIcons[0]['iconColor'] as Color
+                              : const Color(0xFFF59E0B),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        // Bottom action row
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$selectedCount fee${selectedCount > 1 ? 's' : ''} selected',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondaryC(context),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '₹ ${NumberFormat('#,##,###').format(selectedAmount.toInt())}',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimaryC(context),
+                    ),
+                  ),
+                ],
+              ),
+              // Button changes based on state
+              if (_showCartPreview)
+                GestureDetector(
+                  onTap: () => context.push(Routes.cart),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppColors.primary, AppColors.primary600],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.4),
+                          blurRadius: 16,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'View List',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                GestureDetector(
+                  onTap: (selectedAmount > 0 && !hasTermOutOfOrder)
+                      ? () {
+                          _addSelectedFeesToCart(allFees);
+                          setState(() => _showCartPreview = true);
+                        }
+                      : null,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: (selectedAmount > 0 && !hasTermOutOfOrder)
+                            ? [AppColors.primary, AppColors.primary600]
+                            : [AppColors.primary.withValues(alpha: 0.5), AppColors.primary600.withValues(alpha: 0.5)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: (selectedAmount > 0 && !hasTermOutOfOrder)
+                          ? [
+                              BoxShadow(
+                                color: AppColors.primary.withValues(alpha: 0.4),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ]
+                          : [],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/icons/Cart.svg',
+                          width: 20,
+                          height: 20,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Add to Queue',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    // On desktop, DesktopDetailScaffold wraps in a card — return just the inner content
+    if (context.isDesktop) return bottomContent;
+
+    // On mobile, keep existing decoration
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
@@ -2526,204 +2747,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Cart preview bar — only shown after "Add to Cart" is clicked
-            if (_showCartPreview && cartState.isNotEmpty)
-              GestureDetector(
-                onTap: () => context.push(Routes.cart),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: AppColors.borderC(context), width: 0.5),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(
-                        'Cart',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimaryC(context),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Fee group icons
-                      Expanded(
-                        child: Row(
-                          children: [
-                            ...groupIcons.take(4).map((icon) => Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: icon['bgColor'] as Color,
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: SvgPicture.asset(
-                                    icon['svgPath'] as String,
-                                    width: 16,
-                                    height: 16,
-                                    colorFilter: ColorFilter.mode(
-                                      icon['iconColor'] as Color,
-                                      BlendMode.srcIn,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            )),
-                          ],
-                        ),
-                      ),
-                      // Count badge
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFF59E0B),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Text(
-                            '${cartState.itemCount}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            // Bottom action row
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '$selectedCount fee${selectedCount > 1 ? 's' : ''} selected',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondaryC(context),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '₹ ${NumberFormat('#,##,###').format(selectedAmount.toInt())}',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimaryC(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Button changes based on state
-                  if (_showCartPreview)
-                    GestureDetector(
-                      onTap: () => context.push(Routes.cart),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [AppColors.primary, AppColors.primary600],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.4),
-                              blurRadius: 16,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'View List',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
-                          ],
-                        ),
-                      ),
-                    )
-                  else
-                    GestureDetector(
-                      onTap: (selectedAmount > 0 && !hasTermOutOfOrder)
-                          ? () {
-                              _addSelectedFeesToCart(allFees);
-                              setState(() => _showCartPreview = true);
-                            }
-                          : null,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: (selectedAmount > 0 && !hasTermOutOfOrder)
-                                ? [AppColors.primary, AppColors.primary600]
-                                : [AppColors.primary.withValues(alpha: 0.5), AppColors.primary600.withValues(alpha: 0.5)],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: (selectedAmount > 0 && !hasTermOutOfOrder)
-                              ? [
-                                  BoxShadow(
-                                    color: AppColors.primary.withValues(alpha: 0.4),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 6),
-                                  ),
-                                ]
-                              : [],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SvgPicture.asset(
-                              'assets/icons/Cart.svg',
-                              width: 20,
-                              height: 20,
-                              colorFilter: const ColorFilter.mode(
-                                Colors.white,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Add to Queue',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        child: bottomContent,
       ),
     );
   }
@@ -2744,14 +2768,14 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
         iconColor = const Color(0xFFF59E0B);
       } else if (type.contains('hostel')) {
         groupKey = 'hostel';
-        svgPath = 'assets/school Icons/book.svg';
-        bgColor = const Color(0xFFDBEAFE);
+        svgPath = '';
+        bgColor = const Color(0xFF3B82F6).withValues(alpha: 0.1);
         iconColor = const Color(0xFF3B82F6);
       } else if (type.contains('exam')) {
         groupKey = 'exam';
         svgPath = 'assets/school Icons/exam.svg';
-        bgColor = const Color(0xFFFEE2E2);
-        iconColor = const Color(0xFFEF4444);
+        bgColor = const Color(0xFF06B6D4).withValues(alpha: 0.1);
+        iconColor = const Color(0xFF06B6D4);
       } else {
         groupKey = 'school';
         svgPath = 'assets/school Icons/school.svg';
@@ -2760,7 +2784,12 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
       }
       if (!seen.contains(groupKey)) {
         seen.add(groupKey);
-        icons.add({'svgPath': svgPath, 'bgColor': bgColor, 'iconColor': iconColor});
+        icons.add({
+          'svgPath': svgPath,
+          'bgColor': bgColor,
+          'iconColor': iconColor,
+          'iconData': groupKey == 'hostel' ? Icons.hotel_outlined : null,
+        });
       }
     }
     return icons;

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/common/auth_desktop_wrapper.dart';
+import '../../widgets/common/screen_illustrations.dart';
 
 class SetPasswordScreen extends ConsumerStatefulWidget {
   final String mobile;
@@ -94,7 +96,12 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
-      body: SafeArea(
+      body: AuthDesktopWrapper(
+        headline: 'Set Your Password',
+        subtitle: 'Create a secure password for your account',
+        centerContent: ScreenIllustrations.setPassword(size: 360, isDark: true),
+        onBack: () => context.pop(),
+        child: SafeArea(
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -104,11 +111,6 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 16),
-
-                    // Back Button
-                    _buildBackButton(),
-
-                    const SizedBox(height: 24),
 
                     // Header
                     _buildHeader(),
@@ -140,64 +142,31 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
             ),
           ),
         ),
-    );
-  }
-
-  Widget _buildBackButton() {
-    return GestureDetector(
-      onTap: () => context.pop(),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.iconButtonBg(context),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(
-          Icons.arrow_back_rounded,
-          size: 20,
-          color: Colors.white,
-        ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.isResetPassword ? 'Reset Password' : 'Set Password',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                widget.isResetPassword
-                    ? 'Create a new password for your account'
-                    : 'Create a secure password for your account',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.textSecondaryC(context),
-                ),
-              ),
-            ],
+        Text(
+          widget.isResetPassword ? 'Reset Password' : 'Set Password',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
           ),
         ),
-        SizedBox(
-          width: 100,
-          height: 100,
-          child: Image.asset(
-            'assets/Authendication gif/Sign up.gif',
-            fit: BoxFit.contain,
+        const SizedBox(height: 8),
+        Text(
+          widget.isResetPassword
+              ? 'Create a new password for your account'
+              : 'Create a secure password for your account',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            color: AppColors.textSecondaryC(context),
           ),
         ),
       ],
