@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/extensions.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
@@ -30,7 +31,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final currentParent = ref.watch(currentParentProvider);
     final hasMultipleStudents = ref.watch(hasMultipleStudentsProvider);
 
-    final studentData = selectedStudent != null
+    final Map<String, String> studentData = selectedStudent != null
         ? {
             'name': selectedStudent.name,
             'class': selectedStudent.className,
@@ -56,11 +57,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             'parentName': 'N/A',
           };
 
+    if (context.isDesktop) {
+      return _buildDesktopProfile(context, studentData, hasMultipleStudents);
+    }
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
       body: Column(
         children: [
-          // Fixed Header with white SafeArea and subtle shadow
+          // Mobile: shadow header
           Container(
             color: AppColors.headerBg(context),
             child: SafeArea(
@@ -81,78 +86,177 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
 
-          // Scrollable content
+          // Mobile: single scroll column
           Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 24),
-
-                    // Student Profile Card - Compact version
-                    _buildStudentCard(studentData),
-
-                    const SizedBox(height: 20),
-
-                    // School Info Widget
-                    _buildSchoolInfoWidget(context),
-
-                    const SizedBox(height: 20),
-
-                    // Quick Actions Section
-                    _buildQuickActionsSection(context, hasMultipleStudents),
-
-                    const SizedBox(height: 24),
-
-                    // Personal Information Section
-                    _buildSectionTitle('Personal Information'),
-                    const SizedBox(height: 12),
-                    _buildInfoCard([
-                      _InfoItem(svgPath: 'assets/school Icons/personalcard.svg', label: 'Admission No', value: studentData['adminNo']!),
-                      _InfoItem(svgPath: 'assets/school Icons/star.svg', label: 'Class', value: studentData['class']!),
-                      _InfoItem(
-                        icon: studentData['gender'] == 'Male'
-                            ? Icons.male
-                            : studentData['gender'] == 'Female'
-                                ? Icons.female
-                                : null,
-                        svgPath: studentData['gender'] != 'Male' && studentData['gender'] != 'Female'
-                            ? 'assets/school Icons/gender-male-female-variant.svg'
-                            : null,
-                        label: 'Gender',
-                        value: studentData['gender']!,
-                      ),
-                      _InfoItem(svgPath: 'assets/school Icons/cake.svg', label: 'Date of Birth', value: studentData['dob']!),
-                      _InfoItem(svgPath: 'assets/school Icons/blood.svg', label: 'Blood Group', value: studentData['blood']!),
-                    ]),
-
-                    const SizedBox(height: 20),
-
-                    // Contact Information Section
-                    _buildSectionTitle('Contact Information'),
-                    const SizedBox(height: 12),
-                    _buildInfoCard([
-                      _InfoItem(svgPath: 'assets/school Icons/user.svg', label: 'Student In-Charge', value: studentData['parentName']!),
-                      _InfoItem(svgPath: 'assets/school Icons/mobile.svg', label: 'Mobile', value: studentData['mobile']!, isNotProvided: studentData['mobile'] == 'N/A'),
-                      _InfoItem(svgPath: 'assets/school Icons/sms.svg', label: 'Email', value: studentData['email']!),
-                      _InfoItem(svgPath: 'assets/school Icons/location.svg', label: 'Address', value: studentData['address']!, isNotProvided: studentData['address'] == 'N/A'),
-                    ]),
-
-                    const SizedBox(height: 24),
-
-                    // Logout Button
-                    _buildLogoutButton(context),
-
-                    const SizedBox(height: 24),
-                  ],
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      _buildStudentCard(studentData),
+                      const SizedBox(height: 20),
+                      _buildSchoolInfoWidget(context),
+                      const SizedBox(height: 20),
+                      _buildQuickActionsSection(context, hasMultipleStudents),
+                      const SizedBox(height: 24),
+                      _buildSectionTitle('Personal Information'),
+                      const SizedBox(height: 12),
+                      _buildInfoCard([
+                        _InfoItem(icon: Icons.badge_outlined, label: 'Admission No', value: studentData['adminNo']!),
+                        _InfoItem(icon: Icons.school_outlined, label: 'Class', value: studentData['class']!),
+                        _InfoItem(
+                          icon: studentData['gender'] == 'Male'
+                              ? Icons.male
+                              : studentData['gender'] == 'Female'
+                                  ? Icons.female
+                                  : Icons.wc_outlined,
+                          label: 'Gender',
+                          value: studentData['gender']!,
+                        ),
+                        _InfoItem(icon: Icons.cake_outlined, label: 'Date of Birth', value: studentData['dob']!),
+                        _InfoItem(icon: Icons.water_drop_outlined, label: 'Blood Group', value: studentData['blood']!),
+                      ]),
+                      const SizedBox(height: 20),
+                      _buildSectionTitle('Contact Information'),
+                      const SizedBox(height: 12),
+                      _buildInfoCard([
+                        _InfoItem(icon: Icons.person_outline_rounded, label: 'Student In-Charge', value: studentData['parentName']!),
+                        _InfoItem(icon: Icons.phone_android_rounded, label: 'Mobile', value: studentData['mobile']!, isNotProvided: studentData['mobile'] == 'N/A'),
+                        _InfoItem(icon: Icons.email_outlined, label: 'Email', value: studentData['email']!),
+                        _InfoItem(icon: Icons.location_on_outlined, label: 'Address', value: studentData['address']!, isNotProvided: studentData['address'] == 'N/A'),
+                      ]),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopProfile(
+      BuildContext context, Map<String, String> studentData, bool hasMultipleStudents) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Left column: Student card → Quick Actions → Personal Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStudentCard(studentData),
+                const SizedBox(height: 16),
+                _buildDesktopQuickActions(context, hasMultipleStudents),
+                const SizedBox(height: 16),
+                _buildDesktopSectionCard(
+                  context,
+                  title: 'Personal Information',
+                  child: _buildInfoCardContent([
+                    _InfoItem(icon: Icons.badge_outlined, label: 'Admission No', value: studentData['adminNo']!),
+                    _InfoItem(icon: Icons.school_outlined, label: 'Class', value: studentData['class']!),
+                    _InfoItem(
+                      icon: studentData['gender'] == 'Male'
+                          ? Icons.male
+                          : studentData['gender'] == 'Female'
+                              ? Icons.female
+                              : Icons.wc_outlined,
+                      label: 'Gender',
+                      value: studentData['gender']!,
+                    ),
+                    _InfoItem(icon: Icons.cake_outlined, label: 'Date of Birth', value: studentData['dob']!),
+                    _InfoItem(icon: Icons.water_drop_outlined, label: 'Blood Group', value: studentData['blood']!),
+                  ]),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Right column: School card → Contact Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildDesktopSchoolCard(context),
+                const SizedBox(height: 16),
+                _buildDesktopSectionCard(
+                  context,
+                  title: 'Contact Information',
+                  child: _buildInfoCardContent([
+                    _InfoItem(icon: Icons.person_outline_rounded, label: 'Student In-Charge', value: studentData['parentName']!),
+                    _InfoItem(icon: Icons.phone_android_rounded, label: 'Mobile', value: studentData['mobile']!, isNotProvided: studentData['mobile'] == 'N/A'),
+                    _InfoItem(icon: Icons.email_outlined, label: 'Email', value: studentData['email']!),
+                    _InfoItem(icon: Icons.location_on_outlined, label: 'Address', value: studentData['address']!, isNotProvided: studentData['address'] == 'N/A'),
+                  ]),
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  /// A floating card section with a title header for desktop profile.
+  Widget _buildDesktopSectionCard(BuildContext context, {required String title, required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimaryC(context),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
+            child: child,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Info card content without outer container (used inside _buildDesktopSectionCard).
+  Widget _buildInfoCardContent(List<_InfoItem> items) {
+    return Column(
+      children: items.asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+        final isLast = index == items.length - 1;
+        return Column(
+          children: [
+            _buildInfoRow(item),
+            if (!isLast) ...[
+              const SizedBox(height: 12),
+              Container(
+                height: 1,
+                color: AppColors.borderC(context),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ],
+        );
+      }).toList(),
     );
   }
 
@@ -293,6 +397,333 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopQuickActions(BuildContext context, bool hasMultipleStudents) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow(context),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Quick Actions',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimaryC(context),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                if (hasMultipleStudents) ...[
+                  Expanded(
+                    child: SizedBox(
+                      height: 44,
+                      child: ElevatedButton.icon(
+                        onPressed: () => context.push(Routes.switchStudent),
+                        icon: const Icon(Icons.swap_horiz_rounded, size: 20),
+                        label: const Text('Switch Student'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          textStyle: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: SizedBox(
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: () => context.push(Routes.support),
+                      icon: const Icon(Icons.support_agent_rounded, size: 20),
+                      label: const Text('Get Support'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopSchoolCard(BuildContext context) {
+    final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
+    final institution = institutionAsync.valueOrNull;
+    final schoolName = institution?.name ?? 'School';
+    final schoolAddress = institution?.shortAddress ?? 'Address not available';
+    final schoolEmail = institution?.email;
+    final schoolPhone = institution?.phone;
+    final schoolMotto = institution?.motto;
+    final logoUrl = institution?.logoUrl;
+    final hasLogo = logoUrl != null && logoUrl.isNotEmpty;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: AppColors.cardShadow(context),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBlue,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: hasLogo
+                        ? CachedNetworkImage(
+                            imageUrl: logoUrl,
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Center(
+                              child: Text(
+                                schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Center(
+                              child: Text(
+                                schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Center(
+                            child: Text(
+                              schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        schoolName,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimaryC(context),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: AppColors.textSecondaryC(context),
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              schoolAddress,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textSecondaryC(context),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (schoolMotto != null && schoolMotto.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.format_quote_rounded,
+                      size: 18,
+                      color: AppColors.primary.withValues(alpha: 0.5),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        schoolMotto,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          fontStyle: FontStyle.italic,
+                          color: AppColors.textSecondaryC(context),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (schoolEmail != null || schoolPhone != null) ...[
+              const SizedBox(height: 16),
+              Container(height: 1, color: AppColors.borderC(context)),
+              const SizedBox(height: 16),
+              if (schoolEmail != null && schoolEmail.isNotEmpty)
+                Padding(
+                  padding: EdgeInsets.only(bottom: schoolPhone != null && schoolPhone.isNotEmpty ? 12 : 0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.bgSecondary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Icon(
+                            Icons.email_outlined,
+                            size: 20,
+                            color: AppColors.textSecondaryC(context),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Email',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                                color: AppColors.textHintC(context),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              schoolEmail,
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textPrimaryC(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (schoolPhone != null && schoolPhone.isNotEmpty)
+                Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.bgSecondary,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: Icon(
+                          Icons.phone_outlined,
+                          size: 20,
+                          color: AppColors.textSecondaryC(context),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Phone',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w400,
+                              color: AppColors.textHintC(context),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            schoolPhone,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimaryC(context),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -450,7 +881,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             if (hasMultipleStudents) ...[
               Expanded(
                 child: _buildActionCard(
-                  svgPath: 'assets/school Icons/arrow-swap-horizontal.svg',
+                  icon: Icons.swap_horiz_rounded,
                   label: 'Switch Student',
                   bgColor: AppColors.cardBlue,
                   iconColor: AppColors.cardBlueDark,
@@ -746,53 +1177,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  Widget _buildLogoutButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showLogoutDialog(context),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.error, AppColors.error.withValues(alpha: 0.85)],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.error.withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Sign Out',
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 10),
-            SvgPicture.asset(
-              'assets/school Icons/logout.svg',
-              width: 22,
-              height: 22,
-              colorFilter: const ColorFilter.mode(
-                Colors.white,
-                BlendMode.srcIn,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showProfileImagePopup(BuildContext context, String name, String? photoUrl) {
     showDialog(
       context: context,
@@ -895,40 +1279,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Cancel',
-              style: TextStyle(color: AppColors.textSecondaryC(context)),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ref.read(authProvider.notifier).signOut();
-              context.go(Routes.welcome);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-            ),
-            child: const Text('Sign Out'),
-          ),
-        ],
       ),
     );
   }

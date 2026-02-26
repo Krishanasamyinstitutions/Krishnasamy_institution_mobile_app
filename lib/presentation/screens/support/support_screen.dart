@@ -4,9 +4,13 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/extensions.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/institution_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/student_provider.dart';
+import '../../widgets/common/breadcrumb_bar.dart';
+import '../../widgets/common/desktop_detail_scaffold.dart';
 
 class SupportScreen extends ConsumerStatefulWidget {
   const SupportScreen({super.key});
@@ -44,78 +48,59 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   @override
   Widget build(BuildContext context) {
     final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg(context),
-      body: Column(
-          children: [
-            // Header with white SafeArea and subtle shadow
-            Container(
-              color: AppColors.headerBg(context),
-              child: SafeArea(
-                bottom: false,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.headerBg(context),
-                    boxShadow: AppColors.cardShadow(context),
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 16),
-                      _buildHeader(context),
-                      const SizedBox(height: 16),
-                    ],
-                  ),
+    return DesktopDetailScaffold(
+      isNested: true,
+      header: Column(
+        children: [
+          const SizedBox(height: 16),
+          _buildHeader(context),
+          const SizedBox(height: 16),
+        ],
+      ),
+      toolbar: const BreadcrumbBar(currentLabel: 'Help & Support'),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 24),
+              // Contact School Card
+              _buildContactCard(institutionAsync),
+              const SizedBox(height: 24),
+              // FAQ's Title
+              Text(
+                "FAQ's",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimaryC(context),
                 ),
               ),
-            ),
-            // Scrollable Content
-            Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 24),
-                      // Contact School Card
-                      _buildContactCard(institutionAsync),
-                      const SizedBox(height: 24),
-                      // FAQ's Title
-                      Text(
-                        "FAQ's",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimaryC(context),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      // FAQ Items
-                      ..._faqs.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final faq = entry.value;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: _buildFaqItem(
-                            question: faq['question']!,
-                            answer: faq['answer']!,
-                            isOpen: _openFaqIndex == index,
-                            onToggle: () {
-                              setState(() {
-                                _openFaqIndex = _openFaqIndex == index ? -1 : index;
-                              });
-                            },
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 32),
-                    ],
+              const SizedBox(height: 12),
+              // FAQ Items
+              ..._faqs.asMap().entries.map((entry) {
+                final index = entry.key;
+                final faq = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildFaqItem(
+                    question: faq['question']!,
+                    answer: faq['answer']!,
+                    isOpen: _openFaqIndex == index,
+                    onToggle: () {
+                      setState(() {
+                        _openFaqIndex = _openFaqIndex == index ? -1 : index;
+                      });
+                    },
                   ),
-                ),
-              ),
-            ),
-          ],
+                );
+              }),
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
+      ),
     );
   }
 
@@ -170,6 +155,11 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               ],
             ),
           ),
+          // Student chip (desktop only)
+          if (context.isDesktop) ...[
+            _buildStudentChip(context),
+            const SizedBox(width: 12),
+          ],
           // Cart Icon - Dark theme
           GestureDetector(
             onTap: () => context.push(Routes.cart),
@@ -273,6 +263,29 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStudentChip(BuildContext context) {
+    final student = ref.watch(selectedStudentProvider);
+    if (student == null) return const SizedBox.shrink();
+    final parts = student.name.trim().split(' ').where((p) => p.isNotEmpty).toList();
+    final initials = parts.take(2).map((p) => p[0]).join().toUpperCase();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 16,
+          backgroundColor: AppColors.primary,
+          backgroundImage: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
+              ? NetworkImage(student.photoUrl!) : null,
+          child: (student.photoUrl == null || student.photoUrl!.isEmpty)
+              ? Text(initials, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))
+              : null,
+        ),
+        const SizedBox(width: 8),
+        Text(student.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimaryC(context))),
+      ],
     );
   }
 

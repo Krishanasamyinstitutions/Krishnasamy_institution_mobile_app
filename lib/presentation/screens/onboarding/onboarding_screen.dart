@@ -3,7 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
+import '../../../core/utils/extensions.dart';
 import '../../../config/routes.dart';
+import '../../widgets/common/desktop_left_panel.dart';
+import '../../widgets/common/screen_illustrations.dart';
 
 class OnboardingData {
   final int id;
@@ -152,90 +155,219 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top Navigation - Back Button
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: AppSizes.s4,
+      body: context.isDesktop
+          ? _buildDesktopLayout(isLastPage)
+          : _buildMobileLayout(isLastPage),
+    );
+  }
+
+  // ─── Mobile layout (existing design) ───────────────────────────────
+  Widget _buildMobileLayout(bool isLastPage) {
+    return SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            children: [
+              // Top Navigation - Back Button
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: AppSizes.s4,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildBackButton(),
+                    const SizedBox(width: 44),
+                  ],
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Back Button
-                  _buildBackButton(),
-                  // Empty space for balance
-                  const SizedBox(width: 44),
-                ],
+
+              // Main Content with PageView
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  onPageChanged: _onPageChanged,
+                  itemCount: _pages.length,
+                  itemBuilder: (context, index) {
+                    return FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: SlideTransition(
+                        position: _slideAnimation,
+                        child: _OnboardingPage(data: _pages[index]),
+                      ),
+                    );
+                  },
+                ),
               ),
-            ),
 
-            // Main Content with PageView
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                onPageChanged: _onPageChanged,
-                itemCount: _pages.length,
-                itemBuilder: (context, index) {
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: SlideTransition(
-                      position: _slideAnimation,
-                      child: _OnboardingPage(data: _pages[index]),
-                    ),
-                  );
-                },
+              // Pagination Dots
+              _buildPaginationDots(),
+
+              const SizedBox(height: AppSizes.s8),
+
+              // Bottom Navigation - Skip and Next
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildSkipButton(),
+                    _buildNextButton(isLastPage),
+                  ],
+                ),
               ),
-            ),
 
-            // Pagination Dots
-            _buildPaginationDots(),
-
-            const SizedBox(height: AppSizes.s8),
-
-            // Bottom Navigation - Skip and Next
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Skip Button
-                  _buildSkipButton(),
-                  // Next/Get Started Button
-                  _buildNextButton(isLastPage),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: AppSizes.s6),
-          ],
+              const SizedBox(height: AppSizes.s6),
+            ],
+          ),
         ),
       ),
     );
   }
 
+  // ─── Desktop layout (split-screen) ─────────────────────────────────
+  Widget _buildDesktopLayout(bool isLastPage) {
+    final currentData = _pages[_currentPage];
+
+    return Row(
+      children: [
+        // Left panel — dark branding with PageView
+        Expanded(
+          flex: 5,
+          child: DesktopLeftPanel(
+            headline: currentData.title,
+            subtitle: currentData.subtitle,
+            centerContent: SizedBox(
+              height: MediaQuery.of(context).size.height * 0.6,
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                itemCount: _pages.length,
+                itemBuilder: (context, index) {
+                  return Center(
+                    child: _buildOnboardIllustration(index, isDark: true),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+
+        // Right panel — text content + navigation
+        Expanded(
+          flex: 5,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 48,
+                  vertical: 40,
+                ),
+                child: Column(
+                  children: [
+                    // Top row — Skip
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _buildSkipButton(),
+                      ],
+                    ),
+
+                    const Spacer(),
+
+                    // Animated text content
+                    FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: SlideTransition(
+                        position: _slideAnimation,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              currentData.title,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimaryC(context),
+                                height: 1.3,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              currentData.subtitle,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              currentData.description,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppColors.textSecondaryC(context),
+                                height: 1.6,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // Pagination dots
+                    _buildPaginationDots(),
+
+                    const SizedBox(height: 32),
+
+                    // Full-width Next/Get Started button
+                    _buildDesktopNextButton(isLastPage),
+
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Shared widgets ────────────────────────────────────────────────
+
   Widget _buildBackButton() {
-    // Hide completely on first page
     if (_currentPage == 0) {
       return const SizedBox(width: 44, height: 44);
     }
 
-    return GestureDetector(
-      onTap: _previousPage,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.iconButtonBg(context),
-          shape: BoxShape.circle,
+    return TextButton.icon(
+      onPressed: _previousPage,
+      icon: Icon(
+        Icons.arrow_back_rounded,
+        size: 18,
+        color: AppColors.textSecondaryC(context),
+      ),
+      label: Text(
+        'Back',
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textSecondaryC(context),
         ),
-        child: const Icon(
-          Icons.arrow_back_rounded,
-          size: 20,
-          color: Colors.white,
-        ),
+      ),
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }
@@ -338,6 +470,61 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
+  Widget _buildDesktopNextButton(bool isLastPage) {
+    return GestureDetector(
+      onTap: _nextPage,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, AppColors.primary600],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.4),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              isLastPage ? 'Get Started' : 'Next',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Icon(
+              Icons.arrow_forward_rounded,
+              size: 20,
+              color: Colors.white,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Widget _buildOnboardIllustration(int index, {bool isDark = false}) {
+  final size = isDark ? 360.0 : 280.0;
+  switch (index) {
+    case 0:
+      return ScreenIllustrations.onboardPayment(size: size, isDark: isDark);
+    case 1:
+      return ScreenIllustrations.onboardSecurity(size: size, isDark: isDark);
+    case 2:
+      return ScreenIllustrations.onboardNotifications(size: size, isDark: isDark);
+    default:
+      return ScreenIllustrations.onboardPayment(size: size, isDark: isDark);
+  }
 }
 
 class _OnboardingPage extends StatelessWidget {
@@ -347,92 +534,69 @@ class _OnboardingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Title
-          Container(
-            padding: const EdgeInsets.all(8),
-            child: Text(
-              data.title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimaryC(context),
-                height: 1.27,
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Title
+            Container(
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                data.title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimaryC(context),
+                  height: 1.27,
+                ),
               ),
             ),
-          ),
 
-          const SizedBox(height: 30),
+            const SizedBox(height: 30),
 
-          // Image/Icon Container
-          AspectRatio(
-            aspectRatio: 1,
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 270, maxHeight: 270),
-              child: data.imagePath != null
-                  ? Image.asset(
-                      data.imagePath!,
-                      fit: BoxFit.contain,
-                    )
-                  : Container(
-                      decoration: BoxDecoration(
-                        color: data.backgroundColor,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Center(
-                        child: Icon(
-                          data.icon,
-                          size: 120,
-                          color: data.iconColor,
-                        ),
-                      ),
-                    ),
-            ),
-          ),
+            // Illustration
+            _buildOnboardIllustration(data.id - 1, isDark: false),
 
-          const SizedBox(height: 30),
+            const SizedBox(height: 30),
 
-          // Subtitle and Description
-          Container(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              children: [
-                // Subtitle (blue)
-                Text(
-                  data.subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // Description
-                SizedBox(
-                  width: 261,
-                  child: Text(
-                    data.description,
+            // Subtitle and Description
+            Container(
+              padding: const EdgeInsets.all(8),
+              child: Column(
+                children: [
+                  Text(
+                    data.subtitle,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: AppColors.textSecondaryC(context),
-                      height: 1.43,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 10),
+
+                  SizedBox(
+                    width: 261,
+                    child: Text(
+                      data.description,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.textSecondaryC(context),
+                        height: 1.43,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

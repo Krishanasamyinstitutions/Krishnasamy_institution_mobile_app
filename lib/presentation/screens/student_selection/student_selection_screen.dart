@@ -6,6 +6,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/student_model.dart';
 import '../../providers/student_provider.dart';
+import '../../widgets/common/auth_desktop_wrapper.dart';
+import '../../widgets/common/screen_illustrations.dart';
 
 class StudentSelectionScreen extends ConsumerStatefulWidget {
   const StudentSelectionScreen({super.key});
@@ -110,118 +112,53 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
     }
     return Scaffold(
       backgroundColor: AppColors.scaffoldBg(context),
-      body: Column(
-        children: [
-          // Header with white SafeArea and subtle shadow
-          Container(
-            color: AppColors.headerBg(context),
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.headerBg(context),
-                  boxShadow: AppColors.cardShadow(context),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildTopNavigation(),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Content
-          Expanded(
-            child: SafeArea(
-              top: false,
+      body: AuthDesktopWrapper(
+        headline: 'Select Student',
+        subtitle: 'Choose a student to continue',
+        centerContent: ScreenIllustrations.studentSelection(size: 360, isDark: true),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               child: Column(
                 children: [
-                  const SizedBox(height: 24),
                   _buildHeader(),
                   const SizedBox(height: 32),
-                  Expanded(
-                    child: _buildStudentList(),
-                  ),
+                  _buildStudentList(),
+                  const SizedBox(height: 32),
                   _buildContinueButton(),
-                  const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildTopNavigation() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          GestureDetector(
-            onTap: () => context.pop(),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.iconButtonBg(context),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                size: 20,
-                color: Colors.white,
-              ),
-            ),
-          ),
-          const SizedBox(width: 44),
-        ],
-      ),
-    );
-  }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Select Student',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Choose a student to continue',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textSecondaryC(context),
-                  ),
-                ),
-              ],
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          'Select Student',
+          style: TextStyle(
+            fontSize: 28,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
           ),
-          Image.asset(
-            'assets/images/select_student_illustration.png',
-            width: 120,
-            height: 100,
-            fit: BoxFit.contain,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Choose a student to continue',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w400,
+            color: AppColors.textSecondaryC(context),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -265,15 +202,13 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
           );
         }
 
-        return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          itemCount: students.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
-          itemBuilder: (context, index) {
-            final student = students[index];
-            final isSelected = _selectedStudentId == student.stuId;
-            return _buildStudentCard(student, isSelected, index);
-          },
+        return Column(
+          children: [
+            for (int index = 0; index < students.length; index++) ...[
+              if (index > 0) const SizedBox(height: 12),
+              _buildStudentCard(students[index], _selectedStudentId == students[index].stuId, index),
+            ],
+          ],
         );
       },
     );

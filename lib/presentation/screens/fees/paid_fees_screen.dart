@@ -5,10 +5,15 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/utils/extensions.dart';
 import '../../../data/models/fee_model.dart';
 import '../../../data/models/payment_model.dart';
+import '../../../data/models/student_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/payment_provider.dart';
+import '../../providers/student_provider.dart';
+import '../../widgets/common/breadcrumb_bar.dart';
+import '../../widgets/common/desktop_detail_scaffold.dart';
 
 class PaidFeesScreen extends ConsumerWidget {
   const PaidFeesScreen({super.key});
@@ -17,78 +22,59 @@ class PaidFeesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final paidPaymentsAsync = ref.watch(paidFeesByPaymentProvider);
     final notificationCount = ref.watch(notificationCountProvider);
+    final student = context.isDesktop ? ref.watch(selectedStudentProvider) : null;
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg(context),
-      body: Column(
+    return DesktopDetailScaffold(
+      isNested: true,
+      header: Column(
         children: [
-          // Header
-          Container(
-            color: AppColors.headerBg(context),
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.headerBg(context),
-                  boxShadow: AppColors.cardShadow(context),
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 16),
-                    _buildHeader(context, notificationCount),
-                    const SizedBox(height: 16),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Content
-          Expanded(
-            child: paidPaymentsAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(),
-              ),
-              error: (e, s) => Center(
-                child: Text(
-                  'Error loading paid fees',
-                  style: TextStyle(color: AppColors.textSecondaryC(context)),
-                ),
-              ),
-              data: (groups) {
-                if (groups.isEmpty) return _buildEmptyState(context);
-
-                // Sort payment groups: newest first (higher pay_id = newer)
-                final sortedPayIds = groups.keys.toList()
-                  ..sort((a, b) => b.compareTo(a));
-
-                // Calculate total paid from payment records
-                final totalPaid = groups.values
-                    .fold(0.0, (sum, g) => sum + g.payment.transtotalamount);
-
-                return ListView(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                  children: [
-                    // Total paid summary
-                    _buildTotalSummary(context, totalPaid, sortedPayIds.length),
-                    const SizedBox(height: 20),
-
-                    // Payment accordion items
-                    ...sortedPayIds.map((payId) => _PaymentAccordion(
-                      payment: groups[payId]!.payment,
-                      fees: groups[payId]!.fees,
-                    )),
-                  ],
-                );
-              },
-            ),
-          ),
+          const SizedBox(height: 16),
+          _buildHeader(context, notificationCount, student),
+          const SizedBox(height: 16),
         ],
+      ),
+      toolbar: const BreadcrumbBar(currentLabel: 'Paid Fees'),
+      body: paidPaymentsAsync.when(
+        loading: () => const Center(
+          child: CircularProgressIndicator(),
+        ),
+        error: (e, s) => Center(
+          child: Text(
+            'Error loading paid fees',
+            style: TextStyle(color: AppColors.textSecondaryC(context)),
+          ),
+        ),
+        data: (groups) {
+          if (groups.isEmpty) return _buildEmptyState(context);
+
+          // Sort payment groups: newest first (higher pay_id = newer)
+          final sortedPayIds = groups.keys.toList()
+            ..sort((a, b) => b.compareTo(a));
+
+          // Calculate total paid from payment records
+          final totalPaid = groups.values
+              .fold(0.0, (sum, g) => sum + g.payment.transtotalamount);
+
+          return ListView(
+            padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.fromLTRB(24, 20, 24, 24),
+            children: [
+              // Total paid summary
+              _buildTotalSummary(context, totalPaid, sortedPayIds.length),
+              const SizedBox(height: 20),
+
+              // Payment accordion items
+              ...sortedPayIds.map((payId) => _PaymentAccordion(
+                payment: groups[payId]!.payment,
+                fees: groups[payId]!.fees,
+              )),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, int notificationCount) {
+  Widget _buildHeader(BuildContext context, int notificationCount, StudentModel? student) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -130,6 +116,11 @@ class PaidFeesScreen extends ConsumerWidget {
               ),
             ),
           ),
+          // Student chip (desktop only)
+          if (student != null) ...[
+            _buildStudentChip(context, student),
+            const SizedBox(width: 12),
+          ],
           // Notification Icon
           GestureDetector(
             onTap: () => context.go(Routes.notifications),
@@ -182,6 +173,27 @@ class PaidFeesScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStudentChip(BuildContext context, StudentModel student) {
+    final parts = student.name.trim().split(' ').where((p) => p.isNotEmpty).toList();
+    final initials = parts.take(2).map((p) => p[0]).join().toUpperCase();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(
+          radius: 16,
+          backgroundColor: AppColors.primary,
+          backgroundImage: (student.photoUrl != null && student.photoUrl!.isNotEmpty)
+              ? NetworkImage(student.photoUrl!) : null,
+          child: (student.photoUrl == null || student.photoUrl!.isEmpty)
+              ? Text(initials, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))
+              : null,
+        ),
+        const SizedBox(width: 8),
+        Text(student.name, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimaryC(context))),
+      ],
     );
   }
 

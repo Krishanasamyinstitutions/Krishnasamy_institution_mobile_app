@@ -16,64 +16,67 @@ import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../../core/utils/extensions.dart';
+import '../../widgets/common/breadcrumb_bar.dart';
+import '../../widgets/common/desktop_detail_scaffold.dart';
 
 class TransactionDetailsScreen extends ConsumerWidget {
   final String paymentId;
+  final bool isNested;
 
-  const TransactionDetailsScreen({super.key, required this.paymentId});
+  const TransactionDetailsScreen({super.key, required this.paymentId, this.isNested = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final paymentAsync = ref.watch(paymentByIdProvider(int.tryParse(paymentId) ?? 0));
     final selectedStudent = ref.watch(selectedStudentProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg(context),
-      body: SafeArea(
-        child: paymentAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, _) => Center(child: Text('Error: $error')),
-          data: (payment) {
-            if (payment == null) {
-              return const Center(child: Text('Payment not found'));
-            }
+    return DesktopDetailScaffold(
+      isNested: isNested,
+      header: Column(
+        children: [
+          const SizedBox(height: 8),
+          _buildHeader(context, ref),
+          const SizedBox(height: 12),
+        ],
+      ),
+      toolbar: BreadcrumbBar(
+        parentLabel: 'Payment History',
+        parentRoute: Routes.paymentHistory,
+        currentLabel: 'Transaction Details',
+      ),
+      body: paymentAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(child: Text('Error: $error')),
+        data: (payment) {
+          if (payment == null) {
+            return const Center(child: Text('Payment not found'));
+          }
 
-            final isPaid = payment.status == PaymentStatus.success;
+          final isPaid = payment.status == PaymentStatus.success;
 
-            return Column(
+          return SingleChildScrollView(
+            padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
               children: [
-                const SizedBox(height: 8),
-                // Header
-                _buildHeader(context, ref),
-                const SizedBox(height: 12),
-                // Main Content
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      children: [
-                        // Transaction Card
-                        _buildTransactionCard(
-                          context,
-                          payment,
-                          selectedStudent?.name ?? '',
-                          selectedStudent?.className ?? '',
-                          selectedStudent?.admissionNumber ?? '',
-                          payment.transtotalamount,
-                          payment.yrlabel ?? 'Fee Payment',
-                          isPaid,
-                        ),
-                        const SizedBox(height: 24),
-                        // Action Buttons
-                        _buildActionButtons(context, ref, payment, isPaid),
-                      ],
-                    ),
-                  ),
+                // Transaction Card
+                _buildTransactionCard(
+                  context,
+                  payment,
+                  selectedStudent?.name ?? '',
+                  selectedStudent?.className ?? '',
+                  selectedStudent?.admissionNumber ?? '',
+                  payment.transtotalamount,
+                  payment.yrlabel ?? 'Fee Payment',
+                  isPaid,
                 ),
+                const SizedBox(height: 24),
+                // Action Buttons
+                _buildActionButtons(context, ref, payment, isPaid),
               ],
-            );
-          },
-        ),
+            ),
+          );
+        },
       ),
     );
   }

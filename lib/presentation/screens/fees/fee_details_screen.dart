@@ -7,6 +7,9 @@ import '../../../data/models/fee_model.dart';
 import '../../providers/fee_provider.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/loading_indicator.dart';
+import '../../../core/utils/extensions.dart';
+import '../../widgets/common/breadcrumb_bar.dart';
+import '../../widgets/common/desktop_detail_scaffold.dart';
 
 class FeeDetailsScreen extends ConsumerWidget {
   final String feeId;
@@ -17,11 +20,13 @@ class FeeDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feesAsync = ref.watch(feesProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBg(context),
-      appBar: AppBar(
+    return DesktopDetailScaffold(
+      isNested: true,
+      mobileAppBar: AppBar(
         title: const Text('Fee Details'),
       ),
+      header: _buildDesktopHeader(context),
+      toolbar: const BreadcrumbBar(currentLabel: 'Fee Details'),
       body: feesAsync.when(
         loading: () => const LoadingIndicator(),
         error: (error, _) => Center(child: Text('Error: $error')),
@@ -32,7 +37,7 @@ class FeeDetailsScreen extends ConsumerWidget {
           );
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: AppSizes.s4),
+            padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.symmetric(horizontal: 16, vertical: AppSizes.s4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -55,6 +60,37 @@ class FeeDetailsScreen extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildDesktopHeader(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppColors.primary),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Text(
+            'Fee Details',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimaryC(context),
+            ),
+          ),
+        ],
       ),
     );
   }
