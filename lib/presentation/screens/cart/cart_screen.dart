@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/razorpay_checkout.dart' as razorpay_web;
 import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/auth_provider.dart';
@@ -25,25 +28,33 @@ class CartScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScreenState extends ConsumerState<CartScreen> {
-  late Razorpay _razorpay;
+  Razorpay? _razorpay;
   bool _isProcessing = false;
+  /// Local loading overlay — replaces showDialog so it auto-clears when widget disposes.
+  bool _isPaymentLoading = false;
+  String? _loadingMessage; // null = just spinner, non-null = spinner + text
   int? _currentPayId;
   int? _currentCarId;
   String? _currentOrderId;
   List<FeeModel>? _currentPaymentItems;
+  /// Captured before opening Razorpay so callbacks can clean up even after widget disposal.
+  SupabaseClient? _capturedClient;
 
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    // razorpay_flutter only works on mobile (Android/iOS), not on web
+    if (!kIsWeb) {
+      _razorpay = Razorpay();
+      _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+      _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+      _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    }
   }
 
   @override
   void dispose() {
-    _razorpay.clear();
+    _razorpay?.clear();
     super.dispose();
   }
 
@@ -51,7 +62,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   Widget build(BuildContext context) {
     final cartState = ref.watch(cartProvider);
 
-    return DesktopDetailScaffold(
+    final scaffold = DesktopDetailScaffold(
       isNested: true,
       header: Column(
         children: [
@@ -60,13 +71,61 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           const SizedBox(height: 16),
         ],
       ),
-      toolbar: const BreadcrumbBar(currentLabel: 'Payment Summary'),
+      toolbar: Row(
+        children: [
+          const Expanded(child: BreadcrumbBar(currentLabel: 'Payment Summary')),
+          if (cartState.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: TextButton.icon(
+                onPressed: () => _showClearCartDialog(context, ref),
+                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                label: const Text('Clear All'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                ),
+              ),
+            ),
+        ],
+      ),
       body: cartState.isEmpty
           ? _buildEmptyState(context)
           : _buildCartContent(context, ref, cartState),
       bottomBar: cartState.isNotEmpty
           ? _buildBottomBar(context, ref, cartState)
           : null,
+    );
+
+    // Local loading overlay — lives inside this widget so it auto-clears on dispose,
+    // preventing the orphaned global-dialog spinner bug when navigating away.
+    if (!_isPaymentLoading) return scaffold;
+
+    return Stack(
+      children: [
+        scaffold,
+        Positioned.fill(
+          child: Container(
+            color: Colors.black.withValues(alpha: 0.4),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(
+                    color: _loadingMessage != null ? Colors.white : AppColors.primary,
+                  ),
+                  if (_loadingMessage != null) ...[
+                    const SizedBox(height: 16),
+                    Text(
+                      _loadingMessage!,
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -196,15 +255,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: SvgPicture.asset(
-                'assets/icons/Cart.svg',
-                width: 48,
-                height: 48,
-                colorFilter: ColorFilter.mode(
-                  AppColors.textHintC(context),
-                  BlendMode.srcIn,
-                ),
-              ),
+              child: Icon(Icons.shopping_cart_outlined, size: 48, color: AppColors.textHintC(context)),
             ),
           ),
           const SizedBox(height: 24),
@@ -667,7 +718,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ],
           ),
           GestureDetector(
-            onTap: () => _handleProceedToPayment(context, ref),
+            onTap: () => _handleProceedToPayment(),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
               decoration: BoxDecoration(
@@ -732,26 +783,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
-  Future<void> _handleProceedToPayment(BuildContext context, WidgetRef ref) async {
+  Future<void> _handleProceedToPayment() async {
     if (_isProcessing) return;
 
     final cartState = ref.read(cartProvider);
     final student = ref.read(selectedStudentProvider);
     if (cartState.isEmpty || student == null) return;
 
-    setState(() => _isProcessing = true);
-
-    // Show loading overlay
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      ),
-    );
+    setState(() {
+      _isProcessing = true;
+      _isPaymentLoading = true;  // Show local overlay (auto-clears if widget disposes)
+    });
 
     try {
       // Step 1: Save cart to database
+      debugPrint('PAYMENT STEP 1: Saving cart to database...');
       final carId = await saveCartToDatabase(
         ref: ref,
         items: cartState.items,
@@ -759,8 +805,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       );
 
       if (carId == null) {
-        if (context.mounted) Navigator.pop(context);
-        if (context.mounted) {
+        debugPrint('PAYMENT STEP 1 FAILED: carId is null. Error: $lastCartSaveError');
+        if (mounted) setState(() => _isPaymentLoading = false);
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to save cart: ${lastCartSaveError ?? "Unknown error"}'),
@@ -769,11 +816,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ),
           );
         }
-        setState(() => _isProcessing = false);
+        if (mounted) setState(() => _isProcessing = false);
         return;
       }
+      debugPrint('PAYMENT STEP 1 OK: carId=$carId');
 
       // Step 2: Initiate payment
+      debugPrint('PAYMENT STEP 2: Initiating payment...');
       final payId = await initiatePayment(
         ref: ref,
         carId: carId,
@@ -782,8 +831,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       );
 
       if (payId == null) {
-        if (context.mounted) Navigator.pop(context);
-        if (context.mounted) {
+        debugPrint('PAYMENT STEP 2 FAILED: payId is null. Error: $lastPaymentError');
+        if (mounted) setState(() => _isPaymentLoading = false);
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to initiate payment: ${lastPaymentError ?? "Unknown error"}'),
@@ -792,12 +842,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ),
           );
         }
-        setState(() => _isProcessing = false);
+        if (mounted) setState(() => _isProcessing = false);
         return;
       }
+      debugPrint('PAYMENT STEP 2 OK: payId=$payId');
 
       // Step 3: Create Razorpay order via Edge Function
       final amountInPaise = (cartState.totalAmount * 100).toInt();
+      debugPrint('PAYMENT STEP 3: Creating Razorpay order (amount=$amountInPaise paise)...');
 
       final orderId = await createRazorpayOrder(
         ref: ref,
@@ -807,10 +859,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       );
 
       if (orderId == null) {
+        debugPrint('PAYMENT STEP 3 FAILED: orderId is null. Error: $lastOrderCreationError');
         // Roll back payment since we can't proceed without an order
         await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
-        if (context.mounted) Navigator.pop(context);
-        if (context.mounted) {
+        if (mounted) setState(() => _isPaymentLoading = false);
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to create payment order: ${lastOrderCreationError ?? "Unknown error"}. Please try again.'),
@@ -819,21 +872,25 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             ),
           );
         }
-        setState(() => _isProcessing = false);
+        if (mounted) setState(() => _isProcessing = false);
         return;
       }
+      debugPrint('PAYMENT STEP 3 OK: orderId=$orderId');
 
-      // Store payment info for callbacks
+      // Store payment info for callbacks (captured before Razorpay opens
+      // so cleanup can happen even if the widget is disposed when callback fires)
       _currentPayId = payId;
       _currentCarId = carId;
       _currentOrderId = orderId;
       _currentPaymentItems = List.from(cartState.items);
+      _capturedClient = ref.read(supabaseClientProvider);
 
-      // Dismiss loading
-      if (context.mounted) Navigator.pop(context);
+      // Hide loading overlay before opening Razorpay
+      if (mounted) setState(() => _isPaymentLoading = false);
 
       // Step 4: Open Razorpay checkout with order_id
-      _razorpay.open({
+      debugPrint('PAYMENT STEP 4: Opening Razorpay checkout (kIsWeb=$kIsWeb)...');
+      final checkoutOptions = {
         'key': 'rzp_test_RQsgJgVFwM7kov',
         'amount': amountInPaise,
         'currency': 'INR',
@@ -853,10 +910,31 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           'car_id': carId.toString(),
           'student_id': student.stuId.toString(),
         },
-      });
-    } catch (e) {
-      if (context.mounted) Navigator.pop(context);
-      if (context.mounted) {
+      };
+
+      if (kIsWeb) {
+        // Use JavaScript SDK directly on web
+        razorpay_web.openRazorpayWebCheckout(
+          options: checkoutOptions,
+          onSuccess: (paymentId) {
+            debugPrint('Razorpay Web Payment Success: $paymentId');
+            _handleWebPaymentSuccess(paymentId);
+          },
+          onError: (code, description) {
+            debugPrint('Razorpay Web Payment Error: $code - $description');
+            _handleWebPaymentError(code, description);
+          },
+        );
+      } else {
+        // Use razorpay_flutter on mobile
+        _razorpay!.open(checkoutOptions);
+      }
+      debugPrint('PAYMENT STEP 4: Razorpay checkout opened successfully');
+    } catch (e, stackTrace) {
+      debugPrint('PAYMENT ERROR: $e');
+      debugPrint('PAYMENT STACK: $stackTrace');
+      if (mounted) {
+        setState(() => _isPaymentLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
@@ -866,12 +944,78 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         );
       }
     } finally {
-      setState(() => _isProcessing = false);
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    debugPrint('Payment Success: ${response.paymentId}');
+  /// Handles web Razorpay payment success (called from JS interop callback)
+  void _handleWebPaymentSuccess(String paymentId) async {
+    _handlePaymentSuccessCore(paymentId);
+  }
+
+  /// Handles web Razorpay payment error (called from JS interop callback)
+  void _handleWebPaymentError(int code, String description) async {
+    debugPrint('Web Payment Error: $code - $description');
+
+    final payId = _currentPayId;
+    final carId = _currentCarId;
+    final client = _capturedClient;
+
+    // Clear state immediately to prevent duplicate handling
+    _currentPayId = null;
+    _currentCarId = null;
+    _currentOrderId = null;
+    _currentPaymentItems = null;
+    _capturedClient = null;
+
+    if (payId != null && carId != null) {
+      if (mounted) {
+        // Widget is still alive — use ref-based cleanup (refreshes providers too)
+        try {
+          await handlePaymentFailure(
+            ref: ref,
+            payId: payId,
+            carId: carId,
+            errorReason: description,
+          );
+        } catch (e) {
+          debugPrint('Error in handlePaymentFailure: $e');
+        }
+      } else if (client != null) {
+        // Widget disposed (user navigated away) — use captured client directly
+        debugPrint('Widget disposed, cleaning up payment directly via captured client');
+        try {
+          await Future.wait([
+            client.from('payment').update({
+              'paystatus': 'F',
+              'paymethod': 'razorpay',
+              'paydate': DateTime.now().toIso8601String(),
+            }).eq('pay_id', payId),
+            client.from('shoppingcart').update({
+              'carinitiated': 'N',
+            }).eq('car_id', carId),
+          ]);
+          debugPrint('Direct cleanup done: pay_id=$payId marked F, car_id=$carId reset to N');
+        } catch (e) {
+          debugPrint('Error in direct payment cleanup: $e');
+        }
+      }
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment failed: $description'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  /// Core payment success logic shared by mobile (razorpay_flutter) and web (JS interop)
+  void _handlePaymentSuccessCore(String paymentId) async {
+    debugPrint('Payment Success: $paymentId');
 
     final payId = _currentPayId;
     final carId = _currentCarId;
@@ -885,38 +1029,32 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     _currentOrderId = null;
     _currentPaymentItems = null;
 
-    // Show processing dialog
+    // Show processing overlay (local widget — auto-clears if cart screen disposes)
     if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: Colors.white),
-              SizedBox(height: 16),
-              Text(
-                'Processing payment...',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-            ],
-          ),
-        ),
-      );
+      setState(() {
+        _isPaymentLoading = true;
+        _loadingMessage = 'Processing payment...';
+      });
     }
 
-    final success = await handlePaymentSuccess(
-      ref: ref,
-      payId: payId,
-      carId: carId,
-      paymethod: 'razorpay',
-      payreference: response.paymentId ?? '',
-      items: items,
-    );
+    bool success = false;
+    if (mounted) {
+      try {
+        success = await handlePaymentSuccess(
+          ref: ref,
+          payId: payId,
+          carId: carId,
+          paymethod: 'razorpay',
+          payreference: paymentId,
+          items: items,
+        );
+      } catch (e) {
+        debugPrint('Error in handlePaymentSuccess (widget may be disposed): $e');
+      }
+    }
 
-    // Dismiss processing dialog
-    if (mounted) Navigator.pop(context);
+    // Hide processing overlay
+    if (mounted) setState(() => _isPaymentLoading = false);
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -936,6 +1074,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         ),
       );
     }
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    _handlePaymentSuccessCore(response.paymentId ?? '');
   }
 
   void _handlePaymentError(PaymentFailureResponse response) async {

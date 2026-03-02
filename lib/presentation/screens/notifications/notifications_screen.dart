@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
@@ -8,6 +7,7 @@ import '../../../core/utils/extensions.dart';
 import '../../../data/models/notification_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/fee_provider.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -419,15 +419,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/icons/Cart.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
-                  ),
+                  const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
                   if (cartItemCount > 0)
                     Positioned(
                       top: -4,
@@ -487,7 +479,17 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               title: overdueNotification.first.title,
               message: overdueNotification.first.body,
               actionLabel: 'Pay Now',
-              onAction: () => context.go(Routes.home),
+              onAction: () {
+                final now = DateTime.now();
+                final today = DateTime(now.year, now.month, now.day);
+                final overdueFees = ref.read(pendingFeesProvider)
+                    .where((f) => f.dueDate.isBefore(today))
+                    .toList();
+                if (overdueFees.isNotEmpty) {
+                  ref.read(cartProvider.notifier).addFees(overdueFees);
+                }
+                context.go(Routes.cart);
+              },
             ),
           if (overdueNotification.isNotEmpty && upcomingNotification.isNotEmpty)
             const SizedBox(height: 10),

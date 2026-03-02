@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
+import '../../providers/cart_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../widgets/common/app_button.dart';
 import '../../widgets/common/loading_indicator.dart';
@@ -51,7 +54,11 @@ class FeeDetailsScreen extends ConsumerWidget {
                   AppButton(
                     text: 'Pay Now - ${Formatters.currency(fee.balanceAmount)}',
                     onPressed: () {
-                      // TODO: Implement payment
+                      final cart = ref.read(cartProvider.notifier);
+                      if (!ref.read(cartProvider).containsFee(fee.id)) {
+                        cart.addFee(fee);
+                      }
+                      context.go(Routes.cart);
                     },
                     isFullWidth: true,
                   ),

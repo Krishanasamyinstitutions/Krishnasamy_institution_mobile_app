@@ -93,13 +93,14 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
 
     // Apply status filter (overdue/dueSoon)
     final now = DateTime.now();
-    final thirtyDaysFromNow = now.add(const Duration(days: 30));
+    final today = DateTime(now.year, now.month, now.day);
+    final thirtyDaysFromNow = today.add(const Duration(days: 30));
     if (widget.filterStatus == 'overdue') {
-      filteredFees = filteredFees.where((f) => f.dueDate.isBefore(now)).toList();
+      filteredFees = filteredFees.where((f) => f.dueDate.isBefore(today)).toList();
     } else if (widget.filterStatus == 'dueSoon') {
-      // Due soon = not overdue AND due within next 30 days (matches fee_provider.dart)
+      // Due soon = today or future AND within next 30 days
       filteredFees = filteredFees.where((f) =>
-        !f.dueDate.isBefore(now) && f.dueDate.isBefore(thirtyDaysFromNow)
+        !f.dueDate.isBefore(today) && f.dueDate.isBefore(thirtyDaysFromNow)
       ).toList();
     }
 
@@ -220,15 +221,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/images/notification.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
-                  ),
+                  const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
                   if (notificationCount > 0)
                     Positioned(
                       top: -4,
@@ -542,14 +535,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
     // Show Clear button as active when user has selected a sub-filter or has fee selections
     final hasFilter = _selectedSubFilter != null || _localSelectedFeeIds.isNotEmpty;
 
-    // Get appropriate label based on group type
-    final groupName = widget.filterGroup?.toUpperCase() ?? '';
-    String filterLabel = 'Filter';
-    if (groupName.contains('SCHOOL')) {
-      filterLabel = 'Term';
-    } else if (groupName.contains('VAN') || groupName.contains('BUS') || groupName.contains('TUITION') || groupName.contains('HOSTEL')) {
-      filterLabel = 'Month';
-    }
+    const filterLabel = 'Filter';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -2216,15 +2202,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SvgPicture.asset(
-                          'assets/icons/Cart.svg',
-                          width: 20,
-                          height: 20,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
-                            BlendMode.srcIn,
-                          ),
-                        ),
+                        const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
                         const SizedBox(width: 8),
                         const Text(
                           'Add to Queue',
@@ -2363,11 +2341,26 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
 
   // Helper methods
   /// Check if selection should be blocked (dueSoon view with overdue fees pending)
-  bool _shouldBlockSelection() {
-    if (widget.filterStatus != 'dueSoon') return false;
+  // Returns true if there are overdue fees that must be settled first
+  bool _hasOverdueFees() {
     final pendingFees = ref.read(pendingFeesProvider);
     final now = DateTime.now();
-    return pendingFees.any((f) => f.dueDate.isBefore(now));
+    final today = DateTime(now.year, now.month, now.day);
+    return pendingFees.any((f) => f.dueDate.isBefore(today));
+  }
+
+  // Block selection of a fee if it is NOT overdue but overdue fees exist
+  bool _shouldBlockFee(FeeModel fee) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final feeIsOverdue = fee.dueDate.isBefore(today);
+    if (feeIsOverdue) return false; // Always allow selecting overdue fees
+    return _hasOverdueFees();
+  }
+
+  bool _shouldBlockSelection() {
+    if (widget.filterStatus != 'dueSoon') return false;
+    return _hasOverdueFees();
   }
 
   void _showOverdueBlockMessage() {
@@ -2417,8 +2410,8 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
   }
 
   void _toggleSingleFee(FeeModel fee, bool isSelected) {
-    // Block adding upcoming fees when overdue fees exist
-    if (!isSelected && _shouldBlockSelection()) {
+    // Block adding upcoming/due-today fees when overdue fees exist
+    if (!isSelected && _shouldBlockFee(fee)) {
       _showOverdueBlockMessage();
       return;
     }

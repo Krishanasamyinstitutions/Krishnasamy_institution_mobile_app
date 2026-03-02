@@ -25,6 +25,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondaryC(context))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              ref.read(authProvider.notifier).signOut();
+              context.go(Routes.welcome);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Sign Out'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedStudent = ref.watch(selectedStudentProvider);
@@ -127,7 +157,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         _InfoItem(icon: Icons.email_outlined, label: 'Email', value: studentData['email']!),
                         _InfoItem(icon: Icons.location_on_outlined, label: 'Address', value: studentData['address']!, isNotProvided: studentData['address'] == 'N/A'),
                       ]),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 28),
+                      // Sign Out button — mobile only (desktop has sidebar logout)
+                      GestureDetector(
+                        onTap: () => _showLogoutDialog(context),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.error.withValues(alpha: 0.4),
+                                blurRadius: 16,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Sign Out',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Icon(Icons.logout_rounded, size: 22, color: Colors.white),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
@@ -308,15 +373,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/icons/Cart.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
-                  ),
+                  const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
                   if (cartItemCount > 0)
                     Positioned(
                       top: -4,
@@ -360,15 +417,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/images/notification.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
-                  ),
+                  const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
                   if (notificationCount > 0)
                     Positioned(
                       top: -4,
@@ -505,8 +554,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: AppColors.cardBlue,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.borderC(context).withValues(alpha: 0.3)),
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
@@ -515,7 +565,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             imageUrl: logoUrl,
                             width: 56,
                             height: 56,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain,
                             placeholder: (context, url) => Center(
                               child: Text(
                                 schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',
@@ -1090,8 +1140,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.cardBlue,
+              color: Colors.white,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.borderC(context).withValues(alpha: 0.3)),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
@@ -1100,7 +1151,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       imageUrl: logoUrl,
                       width: 56,
                       height: 56,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
                       placeholder: (context, url) => Center(
                         child: Text(
                           schoolName.isNotEmpty ? schoolName[0].toUpperCase() : 'S',

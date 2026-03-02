@@ -391,8 +391,9 @@ class MainScaffold extends ConsumerWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppColors.borderC(context).withValues(alpha: 0.3)),
                   ),
                   clipBehavior: Clip.antiAlias,
                   child: hasLogo
@@ -400,14 +401,18 @@ class MainScaffold extends ConsumerWidget {
                           imageUrl: logoUrl,
                           width: 36,
                           height: 36,
-                          fit: BoxFit.cover,
-                          errorWidget: (context, url, error) => const Icon(
-                              Icons.school_rounded,
-                              color: Colors.white,
-                              size: 20),
+                          fit: BoxFit.contain,
+                          errorWidget: (context, url, error) => Container(
+                              color: AppColors.primary,
+                              child: const Icon(
+                                  Icons.school_rounded,
+                                  color: Colors.white,
+                                  size: 20)),
                         )
-                      : const Icon(Icons.school_rounded,
-                          color: Colors.white, size: 20),
+                      : Container(
+                          color: AppColors.primary,
+                          child: const Icon(Icons.school_rounded,
+                              color: Colors.white, size: 20)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -468,6 +473,7 @@ class MainScaffold extends ConsumerWidget {
             outlinedIcon: Icons.notifications_outlined,
             filledIcon: Icons.notifications_rounded,
             onTap: () => context.go(Routes.notifications),
+            badge: ref.watch(notificationCountProvider),
           ),
           _buildSidebarItem(
             context: context,
@@ -525,6 +531,7 @@ class MainScaffold extends ConsumerWidget {
     required IconData outlinedIcon,
     required IconData filledIcon,
     required VoidCallback onTap,
+    int badge = 0,
   }) {
     final isSelected = index == selectedIndex;
 
@@ -558,6 +565,29 @@ class MainScaffold extends ConsumerWidget {
                     isSelected ? AppColors.primary : AppColors.textHintC(context),
               ),
             ),
+            if (badge > 0) ...[
+              const Spacer(),
+              Container(
+                constraints: const BoxConstraints(minWidth: 20, maxWidth: 28),
+                height: 20,
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.error,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Center(
+                  child: Text(
+                    badge > 99 ? '99+' : '$badge',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -573,18 +603,19 @@ class MainScaffold extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
+          color: AppColors.error.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: AppColors.textHintC(context)),
+            Icon(icon, size: 20, color: AppColors.error),
             const SizedBox(width: 12),
             Text(
               label,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textHintC(context),
+                fontWeight: FontWeight.w600,
+                color: AppColors.error,
               ),
             ),
           ],

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
@@ -38,15 +37,7 @@ class FloatingCartButton extends ConsumerWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              SvgPicture.asset(
-                'assets/icons/Cart.svg',
-                width: 28,
-                height: 28,
-                colorFilter: const ColorFilter.mode(
-                  Colors.white,
-                  BlendMode.srcIn,
-                ),
-              ),
+              const Icon(Icons.shopping_cart_outlined, size: 28, color: Colors.white),
               // Badge
               Positioned(
                 top: 8,
