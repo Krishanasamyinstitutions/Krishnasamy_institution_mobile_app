@@ -277,15 +277,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
-                SvgPicture.asset(
-                  'assets/icons/Cart.svg',
-                  width: 20,
-                  height: 20,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
-                  ),
-                ),
+                const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
                 if (cartItemCount > 0)
                   Positioned(
                     top: -4,
@@ -331,15 +323,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
-                SvgPicture.asset(
-                  'assets/images/notification.svg',
-                  width: 20,
-                  height: 20,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
-                  ),
-                ),
+                const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
                 if (notificationCount > 0)
                   Positioned(
                     top: -4,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
@@ -236,15 +235,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
-                SvgPicture.asset(
-                  'assets/icons/Cart.svg',
-                  width: 20,
-                  height: 20,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
-                  ),
-                ),
+                const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
                 if (cartItemCount > 0)
                   Positioned(
                     top: -4,
@@ -290,15 +281,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
               clipBehavior: Clip.none,
               alignment: Alignment.center,
               children: [
-                SvgPicture.asset(
-                  'assets/images/notification.svg',
-                  width: 20,
-                  height: 20,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
-                  ),
-                ),
+                const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
                 if (notificationCount > 0)
                   Positioned(
                     top: -4,
@@ -528,6 +511,41 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
 
     return GestureDetector(
       onTap: () {
+        final isSelected = ref.read(cartProvider).containsFee(fee.id);
+        if (!isSelected) {
+          // Block upcoming/due-today fees when overdue fees exist
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final feeIsOverdue = fee.dueDate.isBefore(today);
+          if (!feeIsOverdue) {
+            final pendingFees = ref.read(pendingFeesProvider);
+            final hasOverdue = pendingFees.any((f) => f.dueDate.isBefore(today));
+            if (hasOverdue) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Please pay overdue fees first before selecting upcoming fees.',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  margin: const EdgeInsets.all(16),
+                  duration: const Duration(seconds: 3),
+                ),
+              );
+              return;
+            }
+          }
+        }
         ref.read(cartProvider.notifier).toggleFee(fee);
       },
       child: AnimatedContainer(
@@ -655,15 +673,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SvgPicture.asset(
-                  'assets/icons/Cart.svg',
-                  width: 20,
-                  height: 20,
-                  colorFilter: const ColorFilter.mode(
-                    Colors.white,
-                    BlendMode.srcIn,
-                  ),
-                ),
+                const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
                 const SizedBox(width: AppSizes.s2),
                 Text(
                   'View Cart ($cartItemCount)',

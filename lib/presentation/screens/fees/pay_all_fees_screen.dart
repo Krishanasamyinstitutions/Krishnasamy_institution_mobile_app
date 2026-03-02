@@ -418,15 +418,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/images/notification.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
-                  ),
+                  const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
                   if (notificationCount > 0)
                     Positioned(
                       top: -4,
@@ -2702,15 +2694,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SvgPicture.asset(
-                          'assets/icons/Cart.svg',
-                          width: 20,
-                          height: 20,
-                          colorFilter: const ColorFilter.mode(
-                            Colors.white,
-                            BlendMode.srcIn,
-                          ),
-                        ),
+                        const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
                         const SizedBox(width: 8),
                         const Text(
                           'Add to Queue',

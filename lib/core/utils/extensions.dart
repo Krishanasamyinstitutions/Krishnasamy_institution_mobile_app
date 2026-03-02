@@ -165,7 +165,11 @@ extension DateTimeExtensions on DateTime {
     return months[month - 1];
   }
 
-  bool get isOverdue => isBefore(DateTime.now());
+  bool get isOverdue {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return isBefore(today);
+  }
 }
 
 extension NumberExtensions on num {

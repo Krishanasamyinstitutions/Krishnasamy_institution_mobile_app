@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
@@ -96,13 +95,9 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   Widget _buildTransactionList(List<PaymentModel> payments) {
     final filtered = _filterPayments(payments);
 
-    if (filtered.isEmpty) {
-      return _buildEmptyState();
-    }
-
     const int pageSize = 10;
-    final totalPages = (filtered.length / pageSize).ceil();
-    final paged = filtered.skip(_currentPage * pageSize).take(pageSize).toList();
+    final totalPages = filtered.isEmpty ? 0 : (filtered.length / pageSize).ceil();
+    final paged = filtered.isEmpty ? <PaymentModel>[] : filtered.skip(_currentPage * pageSize).take(pageSize).toList();
 
     if (context.isDesktop) {
       return Container(
@@ -118,11 +113,19 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
               child: _buildFilterTabs(['All', 'Paid', 'Failed']),
             ),
-            Expanded(child: _buildDesktopTable(paged)),
-            _buildPaginationControls(totalPages),
+            if (filtered.isEmpty)
+              Expanded(child: _buildEmptyState())
+            else ...[
+              Expanded(child: _buildDesktopTable(paged)),
+              _buildPaginationControls(totalPages),
+            ],
           ],
         ),
       );
+    }
+
+    if (filtered.isEmpty) {
+      return _buildEmptyState();
     }
 
     // Mobile: show all filtered items in a scrollable list (no pagination)
@@ -183,15 +186,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/icons/Cart.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
-                  ),
+                  const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
                   if (cartItemCount > 0)
                     Positioned(
                       top: -4,
@@ -237,15 +232,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/images/notification.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
-                  ),
+                  const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
                   if (notificationCount > 0)
                     Positioned(
                       top: -4,

@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
@@ -139,15 +138,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  SvgPicture.asset(
-                    'assets/images/notification.svg',
-                    width: 20,
-                    height: 20,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.white,
-                      BlendMode.srcIn,
-                    ),
-                  ),
+                  const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
                   if (notificationCount > 0)
                     Positioned(
                       top: -4,
