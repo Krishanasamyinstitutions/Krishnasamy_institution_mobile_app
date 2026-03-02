@@ -130,7 +130,7 @@ final feeSummaryProvider = FutureProvider<FeeSummary>((ref) async {
       }
 
       // Check if overdue
-      if (fee.duedate != null && fee.duedate!.isBefore(DateTime.now())) {
+      if (fee.duedate != null && fee.duedate!.isBefore(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day))) {
         overdueCount++;
       }
     }
@@ -438,22 +438,24 @@ final pendingFeesByGroupProvider = Provider<Map<String, double>>((ref) {
 final overdueFeesProvider = Provider<List<FeeModel>>((ref) {
   final pendingFees = ref.watch(pendingFeesProvider);
   final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
   return pendingFees
-      .where((f) => f.dueDate.isBefore(now))
+      .where((f) => f.dueDate.isBefore(today))
       .toList()
     ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
 });
 
-/// Get fees due soon (due date is in the future AND within next 30 days).
+/// Get fees due soon (due date is today or in the future AND within next 30 days).
 /// Uses dueDate getter (falls back to createdat if duedate is null)
 /// to match All Pending Fees screen behaviour.
 final dueSoonFeesProvider = Provider<List<FeeModel>>((ref) {
   final pendingFees = ref.watch(pendingFeesProvider);
   final now = DateTime.now();
-  final thirtyDaysLater = now.add(const Duration(days: 30));
+  final today = DateTime(now.year, now.month, now.day);
+  final thirtyDaysLater = today.add(const Duration(days: 30));
   return pendingFees
       .where((f) =>
-          !f.dueDate.isBefore(now) &&
+          !f.dueDate.isBefore(today) &&
           f.dueDate.isBefore(thirtyDaysLater))
       .toList()
     ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
