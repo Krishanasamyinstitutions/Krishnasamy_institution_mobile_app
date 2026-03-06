@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/services/notification_service.dart';
 import '../../data/models/notification_model.dart';
 import 'auth_provider.dart';
 import 'student_provider.dart';
@@ -12,6 +16,46 @@ final _currencyFmt = NumberFormat.currency(
 
 String _dateStr(DateTime d) =>
     '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+/// Converts a `notification` table row into a NotificationModel.
+NotificationModel _dbNotificationToModel(Map<String, dynamic> row) {
+  final notiId = row['noti_id'].toString();
+  final title = row['notititle'] as String? ?? '';
+  final body = row['notibody'] as String? ?? '';
+  final notiType = row['notitype'] as String? ?? 'general';
+  final isRead = (row['isread'] as int?) == 1;
+  final createdAt = row['createdat'] != null
+      ? DateTime.parse(row['createdat'])
+      : DateTime.now();
+
+  NotificationType type;
+  switch (notiType) {
+    case 'notice':
+    case 'announcement':
+      type = NotificationType.announcement;
+      break;
+    case 'alert':
+      type = NotificationType.alert;
+      break;
+    case 'fee_reminder':
+      type = NotificationType.feeReminder;
+      break;
+    default:
+      type = NotificationType.general;
+  }
+
+  return NotificationModel(
+    id: 'noti_$notiId',
+    schoolId: row['ins_id']?.toString() ?? '',
+    parentId: '',
+    studentId: row['stu_id']?.toString(),
+    title: title,
+    message: body,
+    type: type,
+    isRead: isRead,
+    createdAt: createdAt,
+  );
+}
 
 /// Converts a payment record into a NotificationModel.
 /// Read status comes from [notification_read] column in the payment table.
@@ -98,7 +142,23 @@ final notificationsProvider =
         .toList();
   } catch (_) {}
 
-  // 2. Fetch fee reminders and group into summary cards:
+  // 2. Fetch school notifications from the `notification` table
+  try {
+    final notiResponse = await client
+        .from('notification')
+        .select()
+        .eq('stu_id', selectedStudent.stuId)
+        .eq('activestatus', 1)
+        .order('createdat', ascending: false)
+        .limit(50);
+
+    final dbNotifications = (notiResponse as List<dynamic>)
+        .map((e) => _dbNotificationToModel(e as Map<String, dynamic>))
+        .toList();
+    notifications.addAll(dbNotifications);
+  } catch (_) {}
+
+  // 3. Fetch fee reminders and group into summary cards:
   //    - One "Fee Overdue" card  for all overdue unpaid fees
   //    - One "Upcoming Fees"  card for fees due within 10 days
   //    Both repeat daily until fees are paid.
@@ -203,44 +263,71 @@ class NotificationNotifier extends StateNotifier<AsyncValue<void>> {
 
   NotificationNotifier(this._ref) : super(const AsyncValue.data(null));
 
-  /// Marks a payment notification as read.
-  /// Fee notifications ([fee_xxx]) are intentionally skipped — they remain
-  /// as daily reminders until the fee is paid.
+  /// Marks a notification as read.
+  /// - `pay_*` → updates `notification_read` in `payment` table
+  /// - `noti_*` → updates `isread` in `notification` table
+  /// - Fee notifications (`fee_*`) are skipped — they stay until paid.
   Future<void> markAsRead(String notificationId) async {
-    if (!notificationId.startsWith('pay_')) return;
-    final payId = int.tryParse(notificationId.replaceFirst('pay_', ''));
-    if (payId == null) return;
+    final client = _ref.read(supabaseClientProvider);
 
     try {
-      final client = _ref.read(supabaseClientProvider);
-      await client
-          .from('payment')
-          .update({'notification_read': true}).eq('pay_id', payId);
+      if (notificationId.startsWith('pay_')) {
+        final payId = int.tryParse(notificationId.replaceFirst('pay_', ''));
+        if (payId == null) return;
+        await client
+            .from('payment')
+            .update({'notification_read': true}).eq('pay_id', payId);
+      } else if (notificationId.startsWith('noti_')) {
+        final notiId = int.tryParse(notificationId.replaceFirst('noti_', ''));
+        if (notiId == null) return;
+        await client
+            .from('notification')
+            .update({'isread': 1}).eq('noti_id', notiId);
+      } else {
+        return; // fee_* notifications — skip
+      }
       _ref.invalidate(notificationsProvider);
     } catch (_) {}
     state = const AsyncValue.data(null);
   }
 
-  /// Marks all payment notifications as read.
+  /// Marks all payment and notification table notifications as read.
   /// Fee reminders are skipped — they stay unread until the fee is paid.
   Future<void> markAllAsRead() async {
     final notifications = _ref.read(notificationsProvider).valueOrNull ?? [];
+    final client = _ref.read(supabaseClientProvider);
 
+    // Mark payment notifications as read
     final unreadPayIds = notifications
         .where((n) => !n.isRead && n.id.startsWith('pay_'))
         .map((n) => int.tryParse(n.id.replaceFirst('pay_', '')))
         .whereType<int>()
         .toList();
 
-    if (unreadPayIds.isEmpty) return;
+    if (unreadPayIds.isNotEmpty) {
+      try {
+        await client
+            .from('payment')
+            .update({'notification_read': true}).inFilter('pay_id', unreadPayIds);
+      } catch (_) {}
+    }
 
-    try {
-      final client = _ref.read(supabaseClientProvider);
-      await client
-          .from('payment')
-          .update({'notification_read': true}).inFilter('pay_id', unreadPayIds);
-      _ref.invalidate(notificationsProvider);
-    } catch (_) {}
+    // Mark notification table records as read
+    final unreadNotiIds = notifications
+        .where((n) => !n.isRead && n.id.startsWith('noti_'))
+        .map((n) => int.tryParse(n.id.replaceFirst('noti_', '')))
+        .whereType<int>()
+        .toList();
+
+    if (unreadNotiIds.isNotEmpty) {
+      try {
+        await client
+            .from('notification')
+            .update({'isread': 1}).inFilter('noti_id', unreadNotiIds);
+      } catch (_) {}
+    }
+
+    _ref.invalidate(notificationsProvider);
     state = const AsyncValue.data(null);
   }
 }
@@ -248,4 +335,52 @@ class NotificationNotifier extends StateNotifier<AsyncValue<void>> {
 final notificationActionsProvider =
     StateNotifierProvider<NotificationNotifier, AsyncValue<void>>((ref) {
   return NotificationNotifier(ref);
+});
+
+/// Supabase Realtime listener for the `notification` table.
+/// Subscribes when a student is selected; shows a local push notification
+/// on INSERT and refreshes the notifications list.
+final notificationRealtimeProvider = Provider.autoDispose<void>((ref) {
+  final client = ref.watch(supabaseClientProvider);
+  final selectedStudent = ref.watch(selectedStudentProvider);
+
+  if (selectedStudent == null) return;
+
+  final channel = client
+      .channel('notification_realtime_${selectedStudent.stuId}')
+      .onPostgresChanges(
+        event: PostgresChangeEvent.insert,
+        schema: 'public',
+        table: 'notification',
+        filter: PostgresChangeFilter(
+          type: PostgresChangeFilterType.eq,
+          column: 'stu_id',
+          value: selectedStudent.stuId,
+        ),
+        callback: (payload) {
+          final newRow = payload.newRecord;
+          if (newRow.isEmpty) return;
+
+          final title = newRow['notititle'] as String? ?? 'New Notification';
+          final body = newRow['notibody'] as String? ?? '';
+          final notiId = newRow['noti_id'] as int? ?? DateTime.now().millisecondsSinceEpoch;
+
+          // Show local push notification (mobile only)
+          if (!kIsWeb) {
+            NotificationService.showInstantNotification(
+              id: notiId % 100000, // keep ID in safe range
+              title: title,
+              body: body,
+            );
+          }
+
+          // Refresh the notifications list
+          ref.invalidate(notificationsProvider);
+        },
+      )
+      .subscribe();
+
+  ref.onDispose(() {
+    client.removeChannel(channel);
+  });
 });

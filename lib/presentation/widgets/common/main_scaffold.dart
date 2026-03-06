@@ -66,6 +66,9 @@ class MainScaffold extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = _calculateSelectedIndex(context);
+    // Activate Supabase Realtime listener for push notifications
+    ref.watch(notificationRealtimeProvider);
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (context.isDesktop) {

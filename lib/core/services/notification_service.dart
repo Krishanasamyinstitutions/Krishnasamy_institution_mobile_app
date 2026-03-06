@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 
 const int _notificationId = 1001;
 const String _channelKey = 'overdue_fee_reminder';
+const String _realtimeChannelKey = 'realtime_notifications';
 
 class NotificationService {
-  /// Initialize awesome_notifications with the app's notification channel.
+  /// Initialize awesome_notifications with the app's notification channels.
   static Future<void> initialize() async {
     await AwesomeNotifications().initialize(
       null, // null = use default app icon
@@ -20,6 +21,17 @@ class NotificationService {
           defaultPrivacy: NotificationPrivacy.Public,
           defaultColor: Colors.red,
           ledColor: Colors.red,
+        ),
+        NotificationChannel(
+          channelKey: _realtimeChannelKey,
+          channelName: 'School Notifications',
+          channelDescription: 'Notices and announcements from your school',
+          importance: NotificationImportance.High,
+          channelShowBadge: true,
+          playSound: true,
+          defaultPrivacy: NotificationPrivacy.Public,
+          defaultColor: const Color(0xFF1976D2),
+          ledColor: const Color(0xFF1976D2),
         ),
       ],
     );
@@ -55,6 +67,25 @@ class NotificationService {
         millisecond: 0,
         repeats: true,
         allowWhileIdle: true,
+      ),
+    );
+  }
+
+  /// Show an instant push notification (used for real-time Supabase notifications).
+  static Future<void> showInstantNotification({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    await AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: id,
+        channelKey: _realtimeChannelKey,
+        title: title,
+        body: body,
+        notificationLayout: NotificationLayout.Default,
+        wakeUpScreen: true,
+        category: NotificationCategory.Message,
       ),
     );
   }
