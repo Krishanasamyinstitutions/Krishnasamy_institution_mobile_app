@@ -1,5 +1,5 @@
 -- ============================================
--- TBS School - Drop All Tables
+-- Krishnasamy Institution - Drop All Tables
 -- Run this FIRST, then run migrate_supabase_schema.sql
 -- ============================================
 

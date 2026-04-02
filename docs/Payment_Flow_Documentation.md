@@ -1,4 +1,4 @@
-# TBS School Fees App - Payment Gateway Flow Documentation
+# Krishnasamy Institution Fees App - Payment Gateway Flow Documentation
 
 ## Overview
 
@@ -279,7 +279,7 @@ _razorpay.open({
   'key': 'rzp_test_RQsgJgVFwM7kov',    // Public key (safe for client)
   'amount': 900000,                      // Amount in paise
   'currency': 'INR',
-  'name': 'TBS School',
+  'name': 'Krishnasamy Institution',
   'description': 'School Fees Payment',
   'order_id': orderId,                   // From Step 3
   'prefill': {

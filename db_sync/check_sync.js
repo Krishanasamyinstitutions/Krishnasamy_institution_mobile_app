@@ -33,7 +33,7 @@ const tables = [
 ];
 
 console.log('='.repeat(60));
-console.log('  TBS School - Sync Status Check');
+console.log('  Krishnasamy Institution - Sync Status Check');
 console.log('='.repeat(60));
 console.log('');
 console.log('Table'.padEnd(25) + 'Local'.padEnd(10) + 'Supabase'.padEnd(10) + 'Status');

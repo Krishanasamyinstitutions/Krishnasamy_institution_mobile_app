@@ -272,7 +272,7 @@ async function main() {
   const startTime = Date.now();
 
   console.log('='.repeat(60));
-  console.log('  TBS School Database REVERSE Sync Tool');
+  console.log('  Krishnasamy Institution Database REVERSE Sync Tool');
   console.log('  (Supabase -> Local PostgreSQL)');
   console.log('='.repeat(60));
   console.log(`Mode: ${isDryRun ? 'DRY RUN' : 'LIVE SYNC'}${clearFirst ? ' (CLEAR FIRST)' : ''}`);

@@ -113,18 +113,18 @@ class ParentAuthNotifier extends StateNotifier<AsyncValue<ParentAuthState>> {
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
       // Query parents table for matching payinchargemob
-      final response = await _client
+      final rows = await _client
           .from('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('activestatus', 1)
-          .maybeSingle();
+          .limit(1);
 
-      if (response == null) {
+      if (rows.isEmpty) {
         throw Exception('Mobile number not registered');
       }
 
-      final parent = ParentModel.fromJson(response);
+      final parent = ParentModel.fromJson(rows.first);
 
       // Check if account creation is complete (password is set)
       if (parent.parpassword == null || parent.parpassword!.isEmpty) {
@@ -203,17 +203,17 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       throw Exception('Invalid mobile number format');
     }
 
-    final response = await _client
+    final rows = await _client
         .from('parents')
         .select()
         .eq('payinchargemob', mobileNumber)
-        .maybeSingle();
+        .limit(1);
 
-    if (response == null) {
+    if (rows.isEmpty) {
       throw Exception('Mobile number not registered. Contact school admin.');
     }
 
-    final parent = ParentModel.fromJson(response);
+    final parent = ParentModel.fromJson(rows.first);
 
     // Check if account is active
     if (parent.activestatus != 1) {
@@ -277,18 +277,20 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
       // Query parent record with matching mobile and OTP
-      final response = await _client
+      final rows = await _client
           .from('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('parmobotp', int.parse(otp))
           .eq('parotpstatus', 0) // Not yet verified
           .eq('activestatus', 1)
-          .maybeSingle();
+          .limit(1);
 
-      if (response == null) {
+      if (rows.isEmpty) {
         throw Exception('Invalid or expired OTP');
       }
+
+      final response = rows.first;
 
       // Mark OTP as verified in parent record
       await _client
@@ -314,19 +316,19 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
       // Verify OTP was verified for this mobile
-      final response = await _client
+      final rows = await _client
           .from('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('parotpstatus', 1) // Must be verified
           .eq('activestatus', 1)
-          .maybeSingle();
+          .limit(1);
 
-      if (response == null) {
+      if (rows.isEmpty) {
         throw Exception('Please verify OTP first');
       }
 
-      final parent = ParentModel.fromJson(response);
+      final parent = ParentModel.fromJson(rows.first);
 
       // Update parent record with password
       await _client.from('parents').update({
@@ -389,17 +391,17 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       }
 
       // Check if account exists with password set
-      final response = await _client
+      final rows = await _client
           .from('parents')
           .select()
           .eq('payinchargemob', mobileNumber)
-          .maybeSingle();
+          .limit(1);
 
-      if (response == null) {
+      if (rows.isEmpty) {
         throw Exception('Mobile number not registered. Please sign up first.');
       }
 
-      final parent = ParentModel.fromJson(response);
+      final parent = ParentModel.fromJson(rows.first);
 
       // Check if account is active
       if (parent.activestatus != 1) {
@@ -453,18 +455,20 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
       // Query parent record with matching mobile and OTP
-      final response = await _client
+      final rows = await _client
           .from('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('parmobotp', int.parse(otp))
           .eq('parotpstatus', 0) // Not yet verified
           .eq('activestatus', 1)
-          .maybeSingle();
+          .limit(1);
 
-      if (response == null) {
+      if (rows.isEmpty) {
         throw Exception('Invalid or expired OTP');
       }
+
+      final response = rows.first;
 
       // Mark OTP as verified
       await _client
@@ -490,31 +494,32 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
       // Verify OTP was verified for this mobile
-      final verifyResponse = await _client
+      final verifyRows = await _client
           .from('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('parotpstatus', 1) // Must be verified
           .eq('activestatus', 1)
-          .maybeSingle();
+          .limit(1);
 
-      if (verifyResponse == null) {
+      if (verifyRows.isEmpty) {
         throw Exception('Please verify OTP first');
       }
 
-      // Update password in parents table
-      final response = await _client
+      final verifyResponse = verifyRows.first;
+
+      // Update password in parents table using par_id
+      final updateRows = await _client
           .from('parents')
           .update({
             'parpassword': newPassword,
             'parmobotp': null, // Clear OTP after password reset
           })
-          .eq('payinchargemob', cleanMobile)
-          .eq('activestatus', 1)
+          .eq('par_id', verifyResponse['par_id'])
           .select()
-          .maybeSingle();
+          .limit(1);
 
-      if (response == null) {
+      if (updateRows.isEmpty) {
         throw Exception('Failed to reset password');
       }
 

@@ -1,4 +1,4 @@
--- TBS School Database Schema for Supabase
+-- Krishnasamy Institution Database Schema for Supabase
 -- COMPLETE RESET SCRIPT: Drops all tables and recreates with correct structure
 -- Run this script in Supabase SQL Editor
 

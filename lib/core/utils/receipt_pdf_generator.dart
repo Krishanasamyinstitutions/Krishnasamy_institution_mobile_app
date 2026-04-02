@@ -1,378 +1,467 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
 import '../../data/models/payment_model.dart';
 import '../../data/models/student_model.dart';
 import '../../data/models/institution_model.dart';
+import '../../data/models/fee_model.dart';
 
-// Brand palette
-const _kPrimary = PdfColor(0.18, 0.49, 0.20); // #2E7D32
-const _kPrimaryLight = PdfColor(0.91, 0.96, 0.91); // #E8F5E9
-const _kPrimaryMid = PdfColor(0.51, 0.78, 0.52); // #81C784
-const _kErrorDark = PdfColor(0.73, 0.11, 0.11); // #BA1A1A
-const _kErrorLight = PdfColor(1.0, 0.93, 0.93); // #FFEDED
-const _kErrorMid = PdfColor(0.94, 0.60, 0.60); // #EF9999
+// Figma color palette (matching receipt_widget.dart)
+const _kPrimaryBlue = PdfColor.fromInt(0xFF6C8EEF);
+const _kDarkBlue = PdfColor.fromInt(0xFF4A6CD4);
+const _kTextDark = PdfColor.fromInt(0xFF2a2a2a);
+const _kTextMedium = PdfColor.fromInt(0xFF4c4c4c);
+const _kHeaderBg = PdfColor.fromInt(0xFFE9EEFF);
+const _kBorderColor = PdfColor.fromInt(0xFFd9d9d9);
+const _kDividerColor = PdfColor.fromInt(0xFFACBEDD);
+
+/// Term + fee items for receipt table
+class _ReceiptTerm {
+  final String term;
+  final List<(String type, double amount)> fees;
+  _ReceiptTerm({required this.term, required this.fees});
+}
 
 Future<pw.Document> generateReceiptPdf({
   required PaymentModel payment,
   required StudentModel student,
   InstitutionModel? institution,
+  List<FeeModel>? feeDetails,
 }) async {
+  // Load fonts that support Rupee symbol (₹)
+  final fontRegular = await PdfGoogleFonts.notoSansRegular();
+  final fontBold = await PdfGoogleFonts.notoSansBold();
+  final fontItalic = await PdfGoogleFonts.notoSansItalic();
+
   final pdf = pw.Document();
   final isPaid = payment.paystatus == 'C';
+  final isFailed = payment.paystatus == 'F';
 
-  final primaryColor = isPaid ? _kPrimary : _kErrorDark;
-  final bgColor = isPaid ? _kPrimaryLight : _kErrorLight;
-  final borderColor = isPaid ? _kPrimaryMid : _kErrorMid;
+  // Theme with Unicode-supporting font
+  final theme = pw.ThemeData.withFont(
+    base: fontRegular,
+    bold: fontBold,
+    italic: fontItalic,
+    boldItalic: fontBold,
+  );
 
-  final dateStr = payment.paydate != null
-      ? DateFormat('dd MMM yyyy, hh:mm a').format(payment.paydate!)
-      : DateFormat('dd MMM yyyy, hh:mm a').format(payment.createdat);
-  final amountStr =
-      NumberFormat('#,##,###.00', 'en_IN').format(payment.transtotalamount);
+  final dateFormat = DateFormat('dd MMM yyyy');
+  final payDate = payment.paydate ?? payment.createdat;
+  final dateStr = dateFormat.format(payDate);
 
   final addressParts = <String>[
     if (institution?.insaddress1 != null) institution!.insaddress1!,
     if (institution?.insaddress2 != null) institution!.insaddress2!,
-    if (institution?.cityName != null) institution!.cityName!,
     if (institution?.inspincode != null) institution!.inspincode!,
   ];
-  final contactParts = <String>[
-    if (institution?.insmobno != null) 'Ph: ${institution!.insmobno}',
-    if (institution?.insmail != null) institution!.insmail!,
-  ];
 
-  pdf.addPage(
-    pw.Page(
-      pageFormat: PdfPageFormat.a4,
-      margin: pw.EdgeInsets.zero,
-      build: (context) {
-        return pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-          children: [
-            // ── Green header banner ────────────────────────────────────
-            pw.Container(
-              color: isPaid ? _kPrimary : _kErrorDark,
-              padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 40, vertical: 22),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  pw.Text(
-                    (institution?.insname ?? 'School').toUpperCase(),
-                    style: pw.TextStyle(
-                      fontSize: 20,
-                      fontWeight: pw.FontWeight.bold,
-                      color: PdfColors.white,
-                      letterSpacing: 1.2,
-                    ),
-                    textAlign: pw.TextAlign.center,
+  // Try to load school logo
+  pw.MemoryImage? logoImage;
+  if (institution?.inslogo != null) {
+    try {
+      final response = await http.get(Uri.parse(institution!.inslogo!));
+      if (response.statusCode == 200) {
+        logoImage = pw.MemoryImage(response.bodyBytes);
+      }
+    } catch (_) {}
+  }
+
+  // Group fees by term
+  final terms = <_ReceiptTerm>[];
+  if (feeDetails != null && feeDetails.isNotEmpty) {
+    final feesByTerm = <String, List<(String, double)>>{};
+    for (final fee in feeDetails) {
+      final termKey = fee.demfeeterm;
+      feesByTerm.putIfAbsent(termKey, () => []).add(
+        (fee.feeTypeName, fee.paidamount > 0 ? fee.paidamount : fee.feeamount),
+      );
+    }
+    for (final entry in feesByTerm.entries) {
+      terms.add(_ReceiptTerm(term: entry.key, fees: entry.value));
+    }
+  }
+
+  // Pagination: max items per page
+  const maxItemsFirstPage = 8;
+  const maxItemsContinuation = 12;
+
+  final List<(int startIdx, List<_ReceiptTerm> items, bool isFirst, bool isLast)> pages = [];
+  if (terms.isEmpty) {
+    pages.add((0, <_ReceiptTerm>[], true, true));
+  } else if (terms.length <= maxItemsFirstPage) {
+    pages.add((0, terms, true, true));
+  } else {
+    pages.add((0, terms.sublist(0, maxItemsFirstPage), true, false));
+    int offset = maxItemsFirstPage;
+    int remaining = terms.length - maxItemsFirstPage;
+    while (remaining > 0) {
+      final count = remaining <= maxItemsContinuation ? remaining : maxItemsContinuation;
+      final isLast = count >= remaining;
+      pages.add((offset, terms.sublist(offset, offset + count), false, isLast));
+      offset += count;
+      remaining -= count;
+    }
+  }
+
+  for (int pageIdx = 0; pageIdx < pages.length; pageIdx++) {
+    final (startIdx, items, isFirst, isLast) = pages[pageIdx];
+    final pageNum = pageIdx + 1;
+    final totalPages = pages.length;
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        theme: theme,
+        margin: const pw.EdgeInsets.symmetric(horizontal: 60, vertical: 40),
+        build: (context) {
+          final content = pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              // Header
+              _buildPdfHeader(institution, logoImage, addressParts, dateStr, payment.paymentNumber, pageNum, totalPages),
+              pw.SizedBox(height: 12),
+              pw.Container(height: 1, color: _kDividerColor),
+              pw.SizedBox(height: 12),
+
+              // Student info (first page only)
+              if (isFirst) ...[
+                _buildPdfStudentInfo(student),
+                pw.SizedBox(height: 20),
+              ],
+
+              // Fee table
+              if (items.isNotEmpty)
+                _buildPdfFeeTable(items, startIdx, isLast, payment.transtotalamount),
+
+              if (isLast) ...[
+                pw.Spacer(),
+                // Payment info
+                _pdfLabelValue('Receipt Method:', payment.paymethod?.toLowerCase() == 'razorpay' ? 'Online' : (payment.paymethod ?? '-')),
+                pw.SizedBox(height: 6),
+                _pdfLabelValue('Status:', isPaid ? 'Paid' : isFailed ? 'Failed' : payment.statusText),
+                pw.Spacer(),
+                // Footer
+                pw.Center(
+                  child: pw.Text(
+                    'Thank you for your payment.',
+                    style: pw.TextStyle(fontSize: 14, color: _kTextDark, fontStyle: pw.FontStyle.italic),
                   ),
-                  if (addressParts.isNotEmpty) ...[
-                    pw.SizedBox(height: 4),
-                    pw.Text(
-                      addressParts.join(', '),
-                      style: const pw.TextStyle(
-                          fontSize: 9, color: PdfColors.white),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ],
-                  if (contactParts.isNotEmpty) ...[
-                    pw.SizedBox(height: 2),
-                    pw.Text(
-                      contactParts.join('   |   '),
-                      style: const pw.TextStyle(
-                          fontSize: 9, color: PdfColors.white),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // ── Title strip ───────────────────────────────────────────
-            pw.Container(
-              color: bgColor,
-              padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 40, vertical: 12),
-              child: pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  pw.Text(
-                    'PAYMENT RECEIPT',
-                    style: pw.TextStyle(
-                      fontSize: 15,
-                      fontWeight: pw.FontWeight.bold,
-                      color: primaryColor,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 5),
-                    decoration: pw.BoxDecoration(
-                      color: primaryColor,
-                      borderRadius: pw.BorderRadius.circular(4),
-                    ),
-                    child: pw.Text(
-                      isPaid ? 'COMPLETED' : 'FAILED',
-                      style: pw.TextStyle(
-                        fontSize: 10,
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.white,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // ── Body ──────────────────────────────────────────────────
-            pw.Expanded(
-              child: pw.Padding(
-                padding: const pw.EdgeInsets.fromLTRB(40, 24, 40, 24),
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-                  children: [
-                    // Receipt No + Date chips
-                    pw.Row(
-                      children: [
-                        pw.Expanded(
-                          child: _metaChip(
-                              'Receipt No', payment.paymentNumber, primaryColor),
-                        ),
-                        pw.SizedBox(width: 16),
-                        pw.Expanded(
-                          child: _metaChip('Date', dateStr, primaryColor),
-                        ),
-                      ],
-                    ),
-                    pw.SizedBox(height: 20),
-
-                    // Info cards
-                    pw.Row(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Expanded(
-                          child: _infoCard(
-                            title: 'Payment Details',
-                            titleColor: primaryColor,
-                            rows: [
-                              ('Method',
-                                  _capitalize(payment.paymethod ?? '-')),
-                              if (payment.payreference != null &&
-                                  payment.payreference!.isNotEmpty)
-                                ('Transaction ID', payment.payreference!),
-                              ('Currency', payment.transcurrency),
-                            ],
-                          ),
-                        ),
-                        pw.SizedBox(width: 16),
-                        pw.Expanded(
-                          child: _infoCard(
-                            title: 'Student Details',
-                            titleColor: primaryColor,
-                            rows: [
-                              ('Name', student.stuname),
-                              ('Class', student.stuclass),
-                              ('Adm No', student.stuadmno),
-                              ('Academic Year', payment.yrlabel ?? '-'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    pw.SizedBox(height: 24),
-
-                    // Amount box
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(
-                          vertical: 22, horizontal: 20),
-                      decoration: pw.BoxDecoration(
-                        color: bgColor,
-                        border: pw.Border.all(
-                            color: borderColor, width: 1.5),
-                        borderRadius: pw.BorderRadius.circular(8),
-                      ),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.center,
-                        children: [
-                          pw.Text(
-                            'Total Amount Paid',
-                            style: const pw.TextStyle(
-                              fontSize: 11,
-                              color: PdfColors.grey600,
-                            ),
-                          ),
-                          pw.SizedBox(height: 8),
-                          pw.Text(
-                            'Rs. $amountStr',
-                            style: pw.TextStyle(
-                              fontSize: 30,
-                              fontWeight: pw.FontWeight.bold,
-                              color: primaryColor,
-                            ),
-                          ),
-                          pw.SizedBox(height: 4),
-                          pw.Text(
-                            payment.transcurrency,
-                            style: const pw.TextStyle(
-                              fontSize: 10,
-                              color: PdfColors.grey500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    pw.Spacer(),
-                  ],
                 ),
-              ),
-            ),
-
-            // ── Footer ────────────────────────────────────────────────
-            pw.Container(
-              color: PdfColors.grey100,
-              padding: const pw.EdgeInsets.fromLTRB(40, 10, 40, 14),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-                children: [
-                  pw.Divider(
-                      color: PdfColors.grey300, thickness: 0.5),
-                  pw.SizedBox(height: 6),
-                  pw.Row(
-                    mainAxisAlignment:
-                        pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Text(
-                        institution?.inscode != null
-                            ? 'Code: ${institution!.inscode}'
-                            : '',
-                        style: const pw.TextStyle(
-                            fontSize: 8, color: PdfColors.grey500),
-                      ),
-                      pw.Text(
-                        'This is a computer-generated receipt. No signature required.',
-                        style: const pw.TextStyle(
-                            fontSize: 8, color: PdfColors.grey500),
-                      ),
-                      pw.Text(
-                        'Generated: ${DateFormat("dd MMM yyyy").format(DateTime.now())}',
-                        style: const pw.TextStyle(
-                            fontSize: 8, color: PdfColors.grey500),
-                      ),
-                    ],
+                pw.SizedBox(height: 8),
+                if (institution?.insmail != null || institution?.insmobno != null)
+                  pw.Center(
+                    child: pw.Text(
+                      'For any further inquiries, please contact us at ${institution?.insmail ?? ''}'
+                      '${institution?.insmail != null && institution?.insmobno != null ? ' or call ' : ''}'
+                      '${institution?.insmobno ?? ''}',
+                      style: const pw.TextStyle(fontSize: 10, color: _kTextMedium),
+                      textAlign: pw.TextAlign.center,
+                    ),
                   ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-    ),
-  );
+              ] else ...[
+                pw.Spacer(),
+                pw.Center(
+                  child: pw.Text(
+                    'Continued on next page...',
+                    style: pw.TextStyle(fontSize: 10, color: _kTextMedium, fontStyle: pw.FontStyle.italic),
+                  ),
+                ),
+              ],
+            ],
+          );
+
+          return pw.Stack(
+            children: [
+              // Background logo watermark (center of page)
+              if (logoImage != null)
+                pw.Positioned.fill(
+                  child: pw.Center(
+                    child: pw.Opacity(
+                      opacity: 0.05,
+                      child: pw.Image(logoImage, width: 200, height: 200, fit: pw.BoxFit.contain),
+                    ),
+                  ),
+                ),
+              // Main content
+              content,
+              // PAID/FAILED stamp overlay — over Term & Fee Type columns
+              if (isPaid || isFailed)
+                pw.Positioned(
+                  left: 130,
+                  top: isFirst ? 310 : 80,
+                  child: pw.Transform.rotateBox(
+                    angle: -0.35,
+                    child: pw.Opacity(
+                      opacity: 0.55,
+                      child: pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        decoration: pw.BoxDecoration(
+                          color: isPaid
+                              ? const PdfColor.fromInt(0x66c2eecd)
+                              : const PdfColor.fromInt(0x66FFD6D6),
+                          border: pw.Border.all(
+                            color: isPaid ? const PdfColor.fromInt(0xFF34c759) : const PdfColor.fromInt(0xFFFF3B30),
+                            width: 2,
+                          ),
+                          borderRadius: pw.BorderRadius.circular(8),
+                        ),
+                        child: pw.Text(
+                          isPaid ? 'PAID' : 'FAILED',
+                          style: pw.TextStyle(
+                            fontSize: 18,
+                            fontWeight: pw.FontWeight.bold,
+                            color: isPaid ? const PdfColor.fromInt(0xFF34c759) : const PdfColor.fromInt(0xFFFF3B30),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   return pdf;
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────
+// ── PDF Helpers ──────────────────────────────────────────────────────────
 
-pw.Widget _metaChip(String label, String value, PdfColor accent) {
-  return pw.Container(
-    padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-    decoration: pw.BoxDecoration(
-      color: PdfColors.grey50,
-      border: pw.Border.all(color: PdfColors.grey200),
-      borderRadius: pw.BorderRadius.circular(6),
-    ),
-    child: pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          '$label  ',
-          style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+pw.Widget _buildPdfHeader(
+  InstitutionModel? institution,
+  pw.MemoryImage? logoImage,
+  List<String> addressParts,
+  String dateStr,
+  String receiptNo,
+  int pageNum,
+  int totalPages,
+) {
+  return pw.Column(
+    children: [
+      // Logo + school name
+      pw.Center(
+        child: pw.Row(
+          mainAxisSize: pw.MainAxisSize.min,
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          children: [
+            if (logoImage != null) ...[
+              pw.Image(logoImage, width: 48, height: 48, fit: pw.BoxFit.cover),
+              pw.SizedBox(width: 12),
+            ],
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  institution?.insname ?? '',
+                  style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: _kDarkBlue),
+                ),
+                pw.SizedBox(height: 3),
+                pw.Text(
+                  addressParts.join(', '),
+                  style: const pw.TextStyle(fontSize: 9, color: _kTextMedium),
+                ),
+              ],
+            ),
+          ],
         ),
-        pw.Expanded(
-          child: pw.Text(
-            value,
-            style: pw.TextStyle(
-                fontSize: 10, fontWeight: pw.FontWeight.bold),
+      ),
+      pw.SizedBox(height: 14),
+      // Fee Receipt + receipt no + date
+      pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.end,
+        children: [
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Fee Receipt', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: _kPrimaryBlue)),
+              pw.SizedBox(height: 6),
+              _pdfLabelValue('Receipt No:', receiptNo),
+              pw.SizedBox(height: 3),
+              _pdfLabelValue('Date:', dateStr),
+            ],
           ),
-        ),
-      ],
-    ),
+          pw.Spacer(),
+          if (totalPages > 1)
+            pw.Text('Page $pageNum of $totalPages', style: const pw.TextStyle(fontSize: 9, color: _kTextMedium)),
+        ],
+      ),
+    ],
   );
 }
 
-pw.Widget _infoCard({
-  required String title,
-  required PdfColor titleColor,
-  required List<(String, String)> rows,
-}) {
-  return pw.Container(
-    decoration: pw.BoxDecoration(
-      border: pw.Border.all(color: PdfColors.grey200),
-      borderRadius: pw.BorderRadius.circular(6),
-    ),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: [
-        // Card header
-        pw.Container(
-          padding:
-              const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          decoration: pw.BoxDecoration(
-            color: titleColor,
-            borderRadius: const pw.BorderRadius.only(
-              topLeft: pw.Radius.circular(5),
-              topRight: pw.Radius.circular(5),
+pw.Widget _buildPdfStudentInfo(StudentModel student) {
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      pw.Text('To:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: _kTextDark)),
+      pw.SizedBox(height: 8),
+      pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                _pdfLabelValue('Name:', student.stuname),
+                pw.SizedBox(height: 6),
+                _pdfLabelValue('Mobile No:', student.stumobile),
+                pw.SizedBox(height: 6),
+                pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Address:', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _kTextDark)),
+                    pw.SizedBox(width: 6),
+                    pw.Expanded(
+                      child: pw.Text(student.fullAddress, style: const pw.TextStyle(fontSize: 10, color: _kTextMedium)),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          child: pw.Text(
-            title,
-            style: pw.TextStyle(
-              fontSize: 10,
-              fontWeight: pw.FontWeight.bold,
-              color: PdfColors.white,
-            ),
+          pw.SizedBox(width: 20),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              _pdfLabelValue('Admission No:', student.stuadmno),
+              pw.SizedBox(height: 6),
+              _pdfLabelValue('Class:', student.stuclass),
+            ],
           ),
-        ),
-        // Card rows
-        pw.Padding(
-          padding: const pw.EdgeInsets.all(12),
-          child: pw.Column(
-            children: rows
-                .map((r) => _infoRow(r.$1, r.$2))
-                .toList(),
-          ),
-        ),
-      ],
-    ),
+        ],
+      ),
+    ],
   );
 }
 
-pw.Widget _infoRow(String label, String value) {
-  return pw.Padding(
-    padding: const pw.EdgeInsets.only(bottom: 6),
+pw.Widget _buildPdfFeeTable(List<_ReceiptTerm> items, int startIdx, bool isLast, double total) {
+  return pw.Column(
+    children: [
+      // Table header
+      pw.Container(
+        decoration: pw.BoxDecoration(
+          color: _kHeaderBg,
+          border: pw.Border.all(color: _kBorderColor, width: 1),
+        ),
+        child: pw.Row(
+          children: [
+            _pdfHeaderCell('S.No', 46),
+            pw.Container(width: 1, color: _kBorderColor),
+            _pdfHeaderCell('Term', 124),
+            pw.Container(width: 1, color: _kBorderColor),
+            pw.Expanded(child: _pdfHeaderCell('Fee Type', null)),
+            pw.Container(width: 1, color: _kBorderColor),
+            _pdfHeaderCell('Amount', 119),
+          ],
+        ),
+      ),
+      // Data rows
+      for (int i = 0; i < items.length; i++)
+        _buildPdfDataRow(startIdx + i, items[i]),
+      // Sub total (last page only)
+      if (isLast)
+        pw.Row(
+          children: [
+            pw.SizedBox(width: 172),
+            pw.Expanded(
+              child: pw.Container(
+                decoration: const pw.BoxDecoration(
+                  color: _kPrimaryBlue,
+                  borderRadius: pw.BorderRadius.only(
+                    bottomLeft: pw.Radius.circular(4),
+                    bottomRight: pw.Radius.circular(4),
+                  ),
+                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                child: pw.Row(
+                  children: [
+                    pw.Expanded(
+                      child: pw.Text('Sub Total', textAlign: pw.TextAlign.right,
+                        style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                    ),
+                    pw.SizedBox(
+                      width: 119,
+                      child: pw.Text('\u20B9${_formatAmount(total)}', textAlign: pw.TextAlign.right,
+                        style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+    ],
+  );
+}
+
+pw.Widget _pdfHeaderCell(String text, double? width) {
+  final child = pw.Container(
+    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+    alignment: pw.Alignment.center,
+    child: pw.Text(text, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _kPrimaryBlue)),
+  );
+  return width != null ? pw.SizedBox(width: width, child: child) : child;
+}
+
+pw.Widget _buildPdfDataRow(int index, _ReceiptTerm term) {
+  return pw.Container(
+    constraints: const pw.BoxConstraints(minHeight: 36),
+    decoration: const pw.BoxDecoration(
+      border: pw.Border(
+        left: pw.BorderSide(color: _kBorderColor, width: 1),
+        right: pw.BorderSide(color: _kBorderColor, width: 1),
+        bottom: pw.BorderSide(color: _kBorderColor, width: 1),
+      ),
+    ),
     child: pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.SizedBox(
-          width: 88,
-          child: pw.Text(
-            label,
-            style:
-                const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+          width: 46,
+          child: pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            alignment: pw.Alignment.topCenter,
+            child: pw.Text('${index + 1}.', style: const pw.TextStyle(fontSize: 10, color: _kTextDark)),
           ),
         ),
+        pw.Container(width: 1, color: _kBorderColor),
+        pw.SizedBox(
+          width: 124,
+          child: pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            alignment: pw.Alignment.topCenter,
+            child: pw.Text(term.term, style: const pw.TextStyle(fontSize: 10, color: _kTextDark)),
+          ),
+        ),
+        pw.Container(width: 1, color: _kBorderColor),
         pw.Expanded(
-          child: pw.Text(
-            value,
-            style: pw.TextStyle(
-                fontSize: 9, fontWeight: pw.FontWeight.bold),
+          child: pw.Column(
+            children: [
+              for (final fee in term.fees)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: pw.Text(fee.$1, textAlign: pw.TextAlign.center,
+                    style: const pw.TextStyle(fontSize: 10, color: _kTextDark)),
+                ),
+            ],
+          ),
+        ),
+        pw.Container(width: 1, color: _kBorderColor),
+        pw.SizedBox(
+          width: 119,
+          child: pw.Column(
+            children: [
+              for (final fee in term.fees)
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: pw.Text('\u20B9${_formatAmount(fee.$2)}', textAlign: pw.TextAlign.right,
+                    style: const pw.TextStyle(fontSize: 10, color: _kTextDark)),
+                ),
+            ],
           ),
         ),
       ],
@@ -380,7 +469,22 @@ pw.Widget _infoRow(String label, String value) {
   );
 }
 
-String _capitalize(String s) {
-  if (s.isEmpty) return s;
-  return s[0].toUpperCase() + s.substring(1).toLowerCase();
+pw.Widget _pdfLabelValue(String label, String value) {
+  return pw.Row(
+    mainAxisSize: pw.MainAxisSize.min,
+    children: [
+      pw.Text(label, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _kTextDark)),
+      pw.SizedBox(width: 6),
+      pw.Text(value, style: const pw.TextStyle(fontSize: 10, color: _kTextMedium)),
+    ],
+  );
+}
+
+String _formatAmount(double amount) {
+  if (amount == amount.truncateToDouble()) {
+    return amount.toInt().toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
+  }
+  return amount.toStringAsFixed(2).replaceAllMapped(
+    RegExp(r'(\d)(?=(\d{3})+\.)'), (m) => '${m[1]},');
 }

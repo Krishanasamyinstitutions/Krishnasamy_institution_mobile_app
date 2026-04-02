@@ -228,7 +228,7 @@ async function main() {
   const startTime = Date.now();
 
   console.log('='.repeat(60));
-  console.log('  TBS School Database Full Sync Tool (Optimized)');
+  console.log('  Krishnasamy Institution Database Full Sync Tool (Optimized)');
   console.log('='.repeat(60));
   console.log(`Mode: ${isDryRun ? 'DRY RUN' : 'LIVE SYNC'}${clearFirst ? ' (CLEAR FIRST)' : ''}`);
   console.log(`Batch Size: ${BATCH_SIZE} rows`);

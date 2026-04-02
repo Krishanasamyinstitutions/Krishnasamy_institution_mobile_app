@@ -2,14 +2,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/receipt_pdf_generator.dart';
 import '../../../data/models/fee_model.dart';
 import '../../../data/models/payment_model.dart';
+import '../../../receipt_widget.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
@@ -18,6 +21,8 @@ import '../../providers/student_provider.dart';
 import '../../../core/utils/extensions.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
+
+enum _ExportMode { download, print, share }
 
 class TransactionDetailsScreen extends ConsumerWidget {
   final String paymentId;
@@ -39,7 +44,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
           const SizedBox(height: 12),
         ],
       ),
-      toolbar: BreadcrumbBar(
+      toolbar: const BreadcrumbBar(
         parentLabel: 'Payment History',
         parentRoute: Routes.paymentHistory,
         currentLabel: 'Transaction Details',
@@ -72,11 +77,57 @@ class TransactionDetailsScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 // Action Buttons
                 _buildActionButtons(context, ref, payment, isPaid),
+                const SizedBox(height: 24),
               ],
             ),
           );
         },
       ),
+    );
+  }
+
+  ReceiptData? _buildReceiptData({
+    required PaymentModel payment,
+    required dynamic selectedStudent,
+    required dynamic institution,
+    required List<FeeModel> fees,
+  }) {
+    if (selectedStudent == null) return null;
+
+    final dateFormat = DateFormat('dd MMM yyyy');
+    final payDate = payment.paydate ?? payment.createdat;
+
+    // Group fees by term
+    final feesByTerm = <String, List<ReceiptFeeItem>>{};
+    for (final fee in fees) {
+      final termKey = fee.demfeeterm;
+      feesByTerm.putIfAbsent(termKey, () => []).add(
+        ReceiptFeeItem(type: fee.feeTypeName, amount: fee.paidamount > 0 ? fee.paidamount : fee.feeamount),
+      );
+    }
+
+    final termDetails = feesByTerm.entries
+        .map((e) => ReceiptTermDetail(term: e.key, fees: e.value))
+        .toList();
+
+    return ReceiptData(
+      receiptNo: payment.paymentNumber,
+      date: dateFormat.format(payDate),
+      studentName: selectedStudent.name ?? '',
+      mobileNo: selectedStudent.stumobile ?? '',
+      address: selectedStudent.fullAddress ?? '',
+      admissionNo: selectedStudent.admissionNumber ?? '',
+      className: selectedStudent.className ?? '',
+      schoolName: institution?.insname ?? '',
+      schoolAddress: institution?.fullAddress ?? '',
+      schoolLogoUrl: institution?.inslogo,
+      schoolMobile: institution?.insmobno,
+      schoolEmail: institution?.insmail,
+      feeDetails: termDetails,
+      paymentMethod: payment.paymentMethod,
+      paymentDate: dateFormat.format(payDate),
+      status: payment.paystatus == 'C' ? 'paid' : payment.paystatus == 'F' ? 'failed' : 'pending',
+      total: payment.transtotalamount,
     );
   }
 
@@ -471,7 +522,132 @@ class TransactionDetailsScreen extends ConsumerWidget {
   }
 
   Future<void> _handleDownloadOrShare(BuildContext context, WidgetRef ref, PaymentModel payment, {required bool isShare}) async {
-    // Show loading
+    if (isShare) {
+      // Direct share — generate PDF and share
+      await _generateAndExport(context, ref, payment, mode: _ExportMode.share);
+      return;
+    }
+
+    // Show receipt preview dialog with Download/Print options
+    // First show loading while fetching fee details
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg(context),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading receipt...'),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final student = ref.read(selectedStudentProvider);
+      final institutionAsync = ref.read(selectedStudentWithInstitutionProvider);
+      final institution = institutionAsync.valueOrNull;
+
+      if (student == null) {
+        if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+        return;
+      }
+
+      // Fetch fee details
+      final client = ref.read(supabaseClientProvider);
+      final details = await client
+          .from('paymentdetails')
+          .select('*')
+          .eq('pay_id', payment.payId)
+          .eq('activestatus', 1);
+
+      final detailModels = (details as List)
+          .map((d) => PaymentDetailModel.fromJson(d))
+          .toList();
+
+      List<FeeModel> feeModels = [];
+      if (detailModels.isNotEmpty) {
+        final demIds = detailModels.map((d) => d.demId).toList();
+        try {
+          final fees = await client
+              .from('feedemand')
+              .select('*, feetype(*, feegroup(*))')
+              .inFilter('dem_id', demIds);
+          feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
+        } catch (e) {
+          final fees = await client
+              .from('feedemand')
+              .select('*')
+              .inFilter('dem_id', demIds);
+          feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
+        }
+
+        // Map paid amounts
+        final detailMap = <int, PaymentDetailModel>{};
+        for (final d in detailModels) {
+          detailMap[d.demId] = d;
+        }
+        feeModels = feeModels.map((fee) {
+          final detail = detailMap[fee.demId];
+          return detail != null ? fee.copyWith(paidamount: detail.transtotalamount) : fee;
+        }).toList();
+      }
+
+      final receiptData = _buildReceiptData(
+        payment: payment,
+        selectedStudent: student,
+        institution: institution,
+        fees: feeModels,
+      );
+
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+
+      if (receiptData == null) return;
+
+      // Show receipt preview dialog
+      if (!context.mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        builder: (dialogContext) => _ReceiptPreviewDialog(
+          receiptData: receiptData,
+          payment: payment,
+          onDownload: () async {
+            Navigator.of(dialogContext).pop();
+            await _generateAndExport(context, ref, payment, mode: _ExportMode.download);
+          },
+          onPrint: () async {
+            Navigator.of(dialogContext).pop();
+            await _generateAndExport(context, ref, payment, mode: _ExportMode.print);
+          },
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _generateAndExport(BuildContext context, WidgetRef ref, PaymentModel payment, {required _ExportMode mode}) async {
+    bool loadingDialogOpen = false;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -493,6 +669,14 @@ class TransactionDetailsScreen extends ConsumerWidget {
         ),
       ),
     );
+    loadingDialogOpen = true;
+
+    void dismissLoading() {
+      if (loadingDialogOpen && context.mounted) {
+        loadingDialogOpen = false;
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
 
     try {
       final student = ref.read(selectedStudentProvider);
@@ -500,24 +684,64 @@ class TransactionDetailsScreen extends ConsumerWidget {
       final institution = institutionAsync.valueOrNull;
 
       if (student == null) {
-        if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+        dismissLoading();
         return;
+      }
+
+      // Fetch fee details for the receipt table
+      final client = ref.read(supabaseClientProvider);
+      final details = await client
+          .from('paymentdetails')
+          .select('*')
+          .eq('pay_id', payment.payId)
+          .eq('activestatus', 1);
+
+      final detailModels = (details as List)
+          .map((d) => PaymentDetailModel.fromJson(d))
+          .toList();
+
+      List<FeeModel> feeModels = [];
+      if (detailModels.isNotEmpty) {
+        final demIds = detailModels.map((d) => d.demId).toList();
+        try {
+          final fees = await client
+              .from('feedemand')
+              .select('*, feetype(*, feegroup(*))')
+              .inFilter('dem_id', demIds);
+          feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
+        } catch (e) {
+          final fees = await client
+              .from('feedemand')
+              .select('*')
+              .inFilter('dem_id', demIds);
+          feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
+        }
+
+        final detailMap = <int, PaymentDetailModel>{};
+        for (final d in detailModels) {
+          detailMap[d.demId] = d;
+        }
+        feeModels = feeModels.map((fee) {
+          final detail = detailMap[fee.demId];
+          return detail != null ? fee.copyWith(paidamount: detail.transtotalamount) : fee;
+        }).toList();
       }
 
       final pdf = await generateReceiptPdf(
         payment: payment,
         student: student,
         institution: institution,
+        feeDetails: feeModels,
       );
 
       final bytes = await pdf.save();
 
+      dismissLoading();
       if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
 
-      if (isShare) {
-        // Save PDF to temp file and share via share_plus
-        final safeFilename = payment.paymentNumber.replaceAll('/', '_');
+      final safeFilename = payment.paymentNumber.replaceAll('/', '_');
+
+      if (mode == _ExportMode.share) {
         final tempDir = await getTemporaryDirectory();
         final file = File('${tempDir.path}/$safeFilename.pdf');
         await file.writeAsBytes(bytes);
@@ -525,15 +749,40 @@ class TransactionDetailsScreen extends ConsumerWidget {
           [XFile(file.path)],
           text: 'Payment Receipt - ${payment.paymentNumber}',
         );
+      } else if (mode == _ExportMode.download) {
+        if (Platform.isAndroid || Platform.isIOS) {
+          // Mobile: open system print/save dialog — user can save as PDF or print
+          await Printing.layoutPdf(
+            onLayout: (_) async => bytes,
+            name: '$safeFilename.pdf',
+          );
+        } else {
+          // Desktop: open the PDF directly
+          final tempDir = await getTemporaryDirectory();
+          final file = File('${tempDir.path}/$safeFilename.pdf');
+          await file.writeAsBytes(bytes);
+          final uri = Uri.file(file.path);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri);
+          } else if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Receipt saved to: ${file.path}'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
       } else {
+        // Print mode
         await Printing.layoutPdf(
           onLayout: (_) async => bytes,
-          name: '${payment.paymentNumber}.pdf',
+          name: '$safeFilename.pdf',
         );
       }
     } catch (e) {
+      dismissLoading();
       if (!context.mounted) return;
-      Navigator.of(context, rootNavigator: true).pop(); // dismiss loading
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: $e'),
@@ -721,4 +970,149 @@ class _CrossPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Receipt preview dialog with Download/Print/Close actions
+class _ReceiptPreviewDialog extends StatelessWidget {
+  final ReceiptData receiptData;
+  final PaymentModel payment;
+  final VoidCallback onDownload;
+  final VoidCallback onPrint;
+
+  const _ReceiptPreviewDialog({
+    required this.receiptData,
+    required this.payment,
+    required this.onDownload,
+    required this.onPrint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final dialogWidth = screenSize.width > 650 ? 620.0 : screenSize.width * 0.92;
+    final receiptScale = (dialogWidth - 32) / 595; // 595 is A4 width, 32 for padding
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      child: Container(
+        width: dialogWidth,
+        constraints: BoxConstraints(maxHeight: screenSize.height * 0.9),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg(context),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Top action bar
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+              child: Row(
+                children: [
+                  // Download button
+                  _ActionButton(
+                    icon: Icons.download_rounded,
+                    label: 'Download',
+                    onTap: onDownload,
+                    filled: false,
+                  ),
+                  const SizedBox(width: 12),
+                  // Print button
+                  _ActionButton(
+                    icon: Icons.print_rounded,
+                    label: 'Print',
+                    onTap: onPrint,
+                    filled: true,
+                  ),
+                  const Spacer(),
+                  // Close button
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, size: 24),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.grey.shade200,
+                      shape: const CircleBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Receipt preview (scrollable)
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Builder(
+                  builder: (context) {
+                    final pageCount = receiptData.feeDetails.length <= 8
+                        ? 1
+                        : ((receiptData.feeDetails.length - 8) / 12).ceil() + 1;
+                    final totalReceiptHeight = pageCount * 842.0 + (pageCount - 1) * 16.0;
+
+                    return SizedBox(
+                      width: dialogWidth - 32,
+                      height: totalReceiptHeight * receiptScale,
+                      child: FittedBox(
+                        fit: BoxFit.fitWidth,
+                        alignment: Alignment.topLeft,
+                        child: SizedBox(
+                          width: 595,
+                          height: totalReceiptHeight,
+                          child: ReceiptWidget(data: receiptData),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool filled;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.filled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: filled ? const Color(0xFF6C8EEF) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: filled ? null : Border.all(color: Colors.grey.shade400),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: filled ? Colors.white : AppColors.textSecondaryC(context)),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: filled ? Colors.white : AppColors.textSecondaryC(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }

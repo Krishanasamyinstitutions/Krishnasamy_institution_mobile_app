@@ -1,6 +1,6 @@
 @echo off
 echo ============================================================
-echo   TBS School - FORWARD SYNC
+echo   Krishnasamy Institution - FORWARD SYNC
 echo   Local PostgreSQL  -^>  Supabase
 echo ============================================================
 echo.

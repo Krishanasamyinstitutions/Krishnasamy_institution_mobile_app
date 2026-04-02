@@ -894,7 +894,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         'key': 'rzp_test_RQsgJgVFwM7kov',
         'amount': amountInPaise,
         'currency': 'INR',
-        'name': 'TBS School',
+        'name': 'Krishnasamy Institution',
         'description': 'School Fees Payment',
         'order_id': orderId,
         'prefill': {

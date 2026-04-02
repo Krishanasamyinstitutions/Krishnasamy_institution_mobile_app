@@ -1,5 +1,5 @@
 -- ============================================
--- TBS School - Supabase Schema ALTER Migration
+-- Krishnasamy Institution - Supabase Schema ALTER Migration
 -- Use this if tables ALREADY EXIST but need new columns
 -- ============================================
 

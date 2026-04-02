@@ -1,5 +1,5 @@
 -- ============================================
--- TBS School - Password Encryption Setup
+-- Krishnasamy Institution - Password Encryption Setup
 -- Using pgcrypto for secure password hashing
 -- ============================================
 

@@ -1,5 +1,5 @@
 {
-  "name": "tbs-school-db-sync",
+  "name": "krishnasamy-institution-db-sync",
   "version": "1.0.0",
   "description": "Sync local PostgreSQL database to Supabase",
   "main": "Full_sync.js",

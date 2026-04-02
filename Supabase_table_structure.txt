@@ -1,4 +1,4 @@
--- TBS School Database Table Structure Reference
+-- Krishnasamy Institution Database Table Structure Reference
 -- Last Updated: 2026-01-03
 -- This file documents the complete Supabase table structure
 

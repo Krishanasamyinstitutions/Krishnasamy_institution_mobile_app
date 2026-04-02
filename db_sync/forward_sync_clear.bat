@@ -1,6 +1,6 @@
 @echo off
 echo ============================================================
-echo   TBS School - FORWARD SYNC (CLEAR FIRST)
+echo   Krishnasamy Institution - FORWARD SYNC (CLEAR FIRST)
 echo   Local PostgreSQL  -^>  Supabase
 echo   WARNING: This will CLEAR all data in Supabase first!
 echo ============================================================

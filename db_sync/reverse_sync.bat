@@ -1,6 +1,6 @@
 @echo off
 echo ============================================================
-echo   TBS School - REVERSE SYNC
+echo   Krishnasamy Institution - REVERSE SYNC
 echo   Supabase  -^>  Local PostgreSQL
 echo ============================================================
 echo.

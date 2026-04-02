@@ -77,6 +77,61 @@ final paymentByIdProvider = FutureProvider.family<PaymentModel?, int>((ref, payI
   }
 });
 
+/// Fetch fee details for a single payment (for receipt display)
+final paymentFeeDetailsProvider = FutureProvider.family<List<FeeModel>, int>((ref, payId) async {
+  final client = ref.watch(supabaseClientProvider);
+
+  try {
+    // 1. Get payment details (links payment to feedemand records)
+    final details = await client
+        .from('paymentdetails')
+        .select('*')
+        .eq('pay_id', payId)
+        .eq('activestatus', 1);
+
+    final detailModels = (details as List)
+        .map((d) => PaymentDetailModel.fromJson(d))
+        .toList();
+
+    if (detailModels.isEmpty) return [];
+
+    final demIds = detailModels.map((d) => d.demId).toList();
+
+    // 2. Fetch feedemand records with fee type info
+    List<FeeModel> feeModels;
+    try {
+      final fees = await client
+          .from('feedemand')
+          .select('*, feetype(*, feegroup(*))')
+          .inFilter('dem_id', demIds);
+      feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
+    } catch (e) {
+      final fees = await client
+          .from('feedemand')
+          .select('*')
+          .inFilter('dem_id', demIds);
+      feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
+    }
+
+    // 3. Map paid amounts from payment details
+    final detailMap = <int, PaymentDetailModel>{};
+    for (final d in detailModels) {
+      detailMap[d.demId] = d;
+    }
+
+    return feeModels.map((fee) {
+      final detail = detailMap[fee.demId];
+      if (detail != null) {
+        return fee.copyWith(paidamount: detail.transtotalamount);
+      }
+      return fee;
+    }).toList();
+  } catch (e) {
+    debugPrint('Error fetching payment fee details: $e');
+    return [];
+  }
+});
+
 /// Recent payments (last 5)
 final recentPaymentsProvider = Provider<List<PaymentModel>>((ref) {
   final paymentsAsync = ref.watch(paymentsProvider);

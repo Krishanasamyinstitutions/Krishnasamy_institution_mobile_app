@@ -1,5 +1,5 @@
 -- ============================================
--- TBS School - Supabase Schema Migration
+-- Krishnasamy Institution - Supabase Schema Migration
 -- Run this script on Supabase to update schema
 -- ============================================
 
