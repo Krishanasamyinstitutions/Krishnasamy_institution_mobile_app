@@ -328,7 +328,19 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     final isSuccess = payment.paystatus == 'C';
 
     return GestureDetector(
-      onTap: () => context.push('/payment-history/${payment.payId}'),
+      onTap: () {
+        if (isSuccess && !payment.isReconciled) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Receipt is pending approval. Please wait for admin to approve.'),
+              backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
+        }
+        context.push('/payment-history/${payment.payId}');
+      },
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.cardBg(context),
@@ -602,6 +614,10 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                     flex: 2,
                     child: Text('Status', style: _tableHeaderStyle(context), textAlign: TextAlign.center),
                   ),
+                  SizedBox(
+                    width: 60,
+                    child: Text('Receipt', style: _tableHeaderStyle(context), textAlign: TextAlign.center),
+                  ),
                 ],
               ),
             ),
@@ -614,7 +630,19 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
               return Column(
                 children: [
                   InkWell(
-                    onTap: () => context.push('/payment-history/${payment.payId}'),
+                    onTap: () {
+                      if (isSuccess && !payment.isReconciled) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Receipt is pending approval. Please wait for admin to approve.'),
+                            backgroundColor: Colors.orange,
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                        return;
+                      }
+                      context.push('/payment-history/${payment.payId}');
+                    },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                       child: Row(
@@ -686,6 +714,29 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                                 ),
                               ),
                             ),
+                          ),
+                          // Receipt column
+                          SizedBox(
+                            width: 60,
+                            child: isSuccess
+                                ? payment.isReconciled
+                                    ? IconButton(
+                                        icon: Icon(Icons.download_rounded, size: 20, color: AppColors.primary),
+                                        tooltip: 'Download Receipt',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () => context.push('/payment-history/${payment.payId}'),
+                                      )
+                                    : Text(
+                                        'Pending',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.orange,
+                                        ),
+                                      )
+                                : const SizedBox.shrink(),
                           ),
                         ],
                       ),
