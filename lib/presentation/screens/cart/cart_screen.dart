@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io' show Directory, File, Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,12 +8,15 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/supabase_service.dart';
 import '../../../core/services/razorpay_checkout.dart' as razorpay_web;
 import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../providers/fee_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../../core/utils/extensions.dart';
@@ -925,8 +930,18 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             _handleWebPaymentError(code, description);
           },
         );
+      } else if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+        // Desktop: open Razorpay in browser + poll for status
+        await _openDesktopRazorpayCheckout(
+          payId: payId,
+          carId: carId,
+          orderId: orderId,
+          amountInPaise: amountInPaise,
+          student: student,
+          items: cartState.items,
+        );
       } else {
-        // Use razorpay_flutter on mobile
+        // Use razorpay_flutter on mobile (Android/iOS)
         _razorpay!.open(checkoutOptions);
       }
       debugPrint('PAYMENT STEP 4: Razorpay checkout opened successfully');
@@ -986,12 +1001,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         debugPrint('Widget disposed, cleaning up payment directly via captured client');
         try {
           await Future.wait([
-            client.from('payment').update({
+            SupabaseService.fromSchema('payment').update({
               'paystatus': 'F',
               'paymethod': 'razorpay',
               'paydate': DateTime.now().toIso8601String(),
             }).eq('pay_id', payId),
-            client.from('shoppingcart').update({
+            SupabaseService.fromSchema('shoppingcart').update({
               'carinitiated': 'N',
             }).eq('car_id', carId),
           ]);
@@ -1129,8 +1144,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   /// Fetches the Razorpay payment ID by order_id via Edge Function
   Future<String?> _fetchPaymentIdFromOrder(String orderId) async {
     try {
-      final client = ref.read(supabaseClientProvider);
-      final response = await client.functions.invoke(
+      final response = await SupabaseService.client.functions.invoke(
         'get-razorpay-payment',
         body: {'order_id': orderId},
       );
@@ -1146,6 +1160,175 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     } catch (e) {
       debugPrint('Error fetching payment ID from Razorpay: $e');
       return null;
+    }
+  }
+
+  /// Desktop payment: opens Razorpay JS checkout in system browser,
+  /// then polls the Edge Function for payment status (same as admin app).
+  Future<void> _openDesktopRazorpayCheckout({
+    required int payId,
+    required int carId,
+    required String orderId,
+    required int amountInPaise,
+    required dynamic student,
+    required List<FeeModel> items,
+  }) async {
+    final studentName = (student.stuname as String).replaceAll("'", "\\'");
+    final studentMobile = student.stumobile as String;
+    final studentEmail = (student.stuemail as String?) ?? '';
+
+    // Build HTML with Razorpay JS checkout (same as admin app)
+    final html = '''
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SchoolPay - Fee Payment</title>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }
+    .container { text-align: center; padding: 40px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .success { color: #4CAF50; font-size: 24px; }
+    .failed { color: #F44336; font-size: 24px; }
+    .info { color: #666; margin-top: 10px; }
+  </style>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+  <div class="container" id="status">
+    <p>Opening Razorpay Checkout...</p>
+  </div>
+  <script>
+    var options = {
+      key: 'rzp_test_RQsgJgVFwM7kov',
+      amount: $amountInPaise,
+      currency: 'INR',
+      name: 'SchoolPay',
+      description: 'School Fees Payment',
+      order_id: '$orderId',
+      prefill: {
+        name: '$studentName',
+        contact: '$studentMobile',
+        email: '$studentEmail'
+      },
+      theme: { color: '#1A73E8' },
+      notes: { pay_id: '$payId', student_id: '${student.stuId}' },
+      handler: function(response) {
+        document.getElementById('status').innerHTML =
+          '<p class="success">Payment Successful!</p>' +
+          '<p class="info">Payment ID: ' + response.razorpay_payment_id + '</p>' +
+          '<p class="info">You can close this window now.</p>';
+      }
+    };
+    var rzp = new Razorpay(options);
+    rzp.on('payment.failed', function(response) {
+      document.getElementById('status').innerHTML =
+        '<p class="failed">Payment Failed</p>' +
+        '<p class="info">' + response.error.description + '</p>' +
+        '<p class="info">You can close this window now.</p>';
+    });
+    rzp.open();
+  </script>
+</body>
+</html>
+''';
+
+    // Write temp HTML file and open in browser
+    final tempDir = Directory.systemTemp;
+    final tempFile = File('${tempDir.path}/schoolpay_razorpay_checkout.html');
+    await tempFile.writeAsString(html);
+    final fileUri = Uri.file(tempFile.path);
+    await launchUrl(fileUri);
+
+    // Show polling dialog while waiting for payment
+    if (!mounted) return;
+
+    Timer? pollTimer;
+    final completer = Completer<String?>();
+
+    pollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      try {
+        final response = await SupabaseService.client.functions.invoke(
+          'get-razorpay-payment',
+          body: {'order_id': orderId},
+        );
+
+        if (response.status == 200) {
+          final data = response.data as Map<String, dynamic>;
+          final status = data['status'] as String?;
+          final rpPaymentId = data['payment_id'] as String?;
+
+          if (status == 'captured' || status == 'authorized') {
+            timer.cancel();
+            if (!completer.isCompleted) completer.complete('C');
+
+            // Update payment reference
+            await SupabaseService.fromSchema('payment').update({
+              'payreference': rpPaymentId,
+            }).eq('pay_id', payId);
+
+            await handlePaymentSuccess(
+              ref: ref,
+              payId: payId,
+              carId: carId,
+              paymethod: 'razorpay',
+              payreference: rpPaymentId ?? orderId,
+              items: items,
+            );
+          } else if (status == 'failed') {
+            timer.cancel();
+            if (!completer.isCompleted) completer.complete('F');
+
+            await handlePaymentFailure(
+              ref: ref,
+              payId: payId,
+              carId: carId,
+              payReference: rpPaymentId,
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('Polling error: $e');
+      }
+    });
+
+    // Show waiting dialog
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Waiting for Payment'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            const Text('Complete the payment in your browser.\nThis will update automatically.'),
+            const SizedBox(height: 24),
+            TextButton(
+              onPressed: () {
+                pollTimer?.cancel();
+                if (!completer.isCompleted) completer.complete(null);
+                Navigator.of(ctx).pop();
+              },
+              child: const Text('Cancel Payment'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // If dialog dismissed without completion, handle as failure
+    final result = completer.isCompleted ? await completer.future : null;
+    pollTimer?.cancel();
+
+    if (result == null) {
+      await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
+    }
+
+    if (result == 'C' && mounted) {
+      Navigator.of(context).pop(); // Close dialog if still open
+      ref.invalidate(feesProvider);
+      ref.invalidate(paymentsProvider);
     }
   }
 

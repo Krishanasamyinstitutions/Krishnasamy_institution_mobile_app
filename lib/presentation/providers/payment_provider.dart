@@ -2,24 +2,21 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/fee_model.dart';
 import '../../data/models/payment_model.dart';
+import '../../core/services/supabase_service.dart';
 import 'student_provider.dart';
 import 'auth_provider.dart';
 import 'cart_provider.dart';
 import 'fee_provider.dart';
 import 'notification_provider.dart';
 
-/// Fetch payments from Supabase 'payment' table
-/// Note: The payment table stores payment records linked to shopping carts
+/// Fetch payments from Supabase 'payment' table (schema-specific)
 final paymentsProvider = FutureProvider<List<PaymentModel>>((ref) async {
   final student = ref.watch(selectedStudentProvider);
-  final client = ref.watch(supabaseClientProvider);
 
   if (student == null) return [];
 
   try {
-    // Get payments for the selected student
-    final response = await client
-        .from('payment')
+    final response = await SupabaseService.fromSchema('payment')
         .select('*')
         .eq('stu_id', student.stuId)
         .eq('activestatus', 1)
@@ -35,13 +32,10 @@ final paymentsProvider = FutureProvider<List<PaymentModel>>((ref) async {
   }
 });
 
-/// Fetch payments by institution ID
+/// Fetch payments by institution ID (schema-specific)
 final paymentsByInstitutionProvider = FutureProvider.family<List<PaymentModel>, int>((ref, insId) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
-    final response = await client
-        .from('payment')
+    final response = await SupabaseService.fromSchema('payment')
         .select('*')
         .eq('ins_id', insId)
         .eq('activestatus', 1)
@@ -58,11 +52,8 @@ final paymentsByInstitutionProvider = FutureProvider.family<List<PaymentModel>, 
 
 /// Fetch a single payment by ID
 final paymentByIdProvider = FutureProvider.family<PaymentModel?, int>((ref, payId) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
-    final response = await client
-        .from('payment')
+    final response = await SupabaseService.fromSchema('payment')
         .select('*')
         .eq('pay_id', payId)
         .maybeSingle();
@@ -79,12 +70,9 @@ final paymentByIdProvider = FutureProvider.family<PaymentModel?, int>((ref, payI
 
 /// Fetch fee details for a single payment (for receipt display)
 final paymentFeeDetailsProvider = FutureProvider.family<List<FeeModel>, int>((ref, payId) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
     // 1. Get payment details (links payment to feedemand records)
-    final details = await client
-        .from('paymentdetails')
+    final details = await SupabaseService.fromSchema('paymentdetails')
         .select('*')
         .eq('pay_id', payId)
         .eq('activestatus', 1);
@@ -100,14 +88,12 @@ final paymentFeeDetailsProvider = FutureProvider.family<List<FeeModel>, int>((re
     // 2. Fetch feedemand records with fee type info
     List<FeeModel> feeModels;
     try {
-      final fees = await client
-          .from('feedemand')
+      final fees = await SupabaseService.fromSchema('feedemand')
           .select('*, feetype(*, feegroup(*))')
           .inFilter('dem_id', demIds);
       feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
     } catch (e) {
-      final fees = await client
-          .from('feedemand')
+      final fees = await SupabaseService.fromSchema('feedemand')
           .select('*')
           .inFilter('dem_id', demIds);
       feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
@@ -152,13 +138,10 @@ final successfulPaymentsProvider = Provider<List<PaymentModel>>((ref) {
   );
 });
 
-/// Shopping cart provider
+/// Shopping cart provider (schema-specific)
 final shoppingCartProvider = FutureProvider.family<ShoppingCartModel?, int>((ref, carId) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
-    final response = await client
-        .from('shoppingcart')
+    final response = await SupabaseService.fromSchema('shoppingcart')
         .select('*')
         .eq('car_id', carId)
         .maybeSingle();
@@ -173,13 +156,10 @@ final shoppingCartProvider = FutureProvider.family<ShoppingCartModel?, int>((ref
   }
 });
 
-/// Shopping cart details provider
+/// Shopping cart details provider (schema-specific)
 final shoppingCartDetailsProvider = FutureProvider.family<List<ShoppingCartDetailModel>, int>((ref, carId) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
-    final response = await client
-        .from('shoppingcartdetails')
+    final response = await SupabaseService.fromSchema('shoppingcartdetails')
         .select('*')
         .eq('car_id', carId)
         .eq('activestatus', 1);
@@ -198,12 +178,9 @@ Future<bool> clearCartFromDatabase({
   required WidgetRef ref,
   required int studentId,
 }) async {
-  final client = ref.read(supabaseClientProvider);
-
   try {
     // Find active cart for this student
-    final existingCart = await client
-        .from('shoppingcart')
+    final existingCart = await SupabaseService.fromSchema('shoppingcart')
         .select('car_id')
         .eq('stu_id', studentId)
         .eq('carinitiated', 'N')
@@ -214,22 +191,21 @@ Future<bool> clearCartFromDatabase({
       final carId = existingCart['car_id'] as int;
 
       // Delete cart details first (foreign key constraint)
-      await client.from('shoppingcartdetails').delete().eq('car_id', carId);
+      await SupabaseService.fromSchema('shoppingcartdetails').delete().eq('car_id', carId);
 
       // Delete the cart
-      await client.from('shoppingcart').delete().eq('car_id', carId);
+      await SupabaseService.fromSchema('shoppingcart').delete().eq('car_id', carId);
 
       debugPrint('Cart cleared from DB: car_id=$carId');
 
       // Check if table is empty and reset sequence
-      final remainingCarts = await client
-          .from('shoppingcart')
+      final remainingCarts = await SupabaseService.fromSchema('shoppingcart')
           .select('car_id')
           .limit(1);
 
       if ((remainingCarts as List).isEmpty) {
         // Reset sequences when tables are empty
-        await client.rpc('reset_cart_sequences');
+        await SupabaseService.client.rpc('reset_cart_sequences');
         debugPrint('Cart sequences reset to 1');
       }
     }
@@ -251,7 +227,6 @@ Future<int?> saveCartToDatabase({
   required int studentId,
 }) async {
   lastCartSaveError = null;
-  final client = ref.read(supabaseClientProvider);
   final student = ref.read(selectedStudentProvider);
   final parent = ref.read(currentParentProvider);
   if (student == null || items.isEmpty) return null;
@@ -262,9 +237,7 @@ Future<int?> saveCartToDatabase({
 
   try {
     // Check if student already has active (non-finalized) carts
-    // Note: Only check stu_id and activestatus - carinitiated 'N' means not initiated
-    final existingCarts = await client
-        .from('shoppingcart')
+    final existingCarts = await SupabaseService.fromSchema('shoppingcart')
         .select('car_id, carinitiated')
         .eq('stu_id', student.stuId)
         .eq('activestatus', 1)
@@ -286,8 +259,8 @@ Future<int?> saveCartToDatabase({
     // Clean up stale initiated carts (from failed/abandoned payments)
     for (final stale in staleCarts) {
       final staleCarId = stale['car_id'] as int;
-      await client.from('shoppingcartdetails').delete().eq('car_id', staleCarId);
-      await client.from('shoppingcart').delete().eq('car_id', staleCarId);
+      await SupabaseService.fromSchema('shoppingcartdetails').delete().eq('car_id', staleCarId);
+      await SupabaseService.fromSchema('shoppingcart').delete().eq('car_id', staleCarId);
       debugPrint('Deleted stale initiated cart: $staleCarId');
     }
 
@@ -300,13 +273,13 @@ Future<int?> saveCartToDatabase({
       // Delete any other duplicate carts for this student
       for (int i = 1; i < activeCarts.length; i++) {
         final oldCarId = activeCarts[i]['car_id'] as int;
-        await client.from('shoppingcartdetails').delete().eq('car_id', oldCarId);
-        await client.from('shoppingcart').delete().eq('car_id', oldCarId);
+        await SupabaseService.fromSchema('shoppingcartdetails').delete().eq('car_id', oldCarId);
+        await SupabaseService.fromSchema('shoppingcart').delete().eq('car_id', oldCarId);
         debugPrint('Deleted duplicate cart: $oldCarId');
       }
 
       // Update cart header with new total, date, and createdby
-      await client.from('shoppingcart').update({
+      await SupabaseService.fromSchema('shoppingcart').update({
         'yr_id': firstFee.yrId,
         'yrlabel': firstFee.demfeeyear,
         'transdate': DateTime.now().toIso8601String().split('T')[0],
@@ -315,13 +288,12 @@ Future<int?> saveCartToDatabase({
       }).eq('car_id', carId);
 
       // Delete old cart details
-      await client
-          .from('shoppingcartdetails')
+      await SupabaseService.fromSchema('shoppingcartdetails')
           .delete()
           .eq('car_id', carId);
     } else {
       // Create new cart
-      final cartResponse = await client.from('shoppingcart').insert({
+      final cartResponse = await SupabaseService.fromSchema('shoppingcart').insert({
         'yr_id': firstFee.yrId,
         'yrlabel': firstFee.demfeeyear,
         'ins_id': student.insId,
@@ -348,7 +320,7 @@ Future<int?> saveCartToDatabase({
       'transtotalamount': fee.balancedue,
     }).toList();
 
-    await client.from('shoppingcartdetails').insert(detailRows);
+    await SupabaseService.fromSchema('shoppingcartdetails').insert(detailRows);
 
     debugPrint('Cart saved to DB: car_id=$carId, ${items.length} detail rows');
     return carId;
@@ -372,7 +344,7 @@ Future<int?> initiatePayment({
   required double cartTotal,
 }) async {
   lastPaymentError = null;
-  final client = ref.read(supabaseClientProvider);
+
   final student = ref.read(selectedStudentProvider);
   final parent = ref.read(currentParentProvider);
   if (student == null || cartItems.isEmpty) return null;
@@ -382,23 +354,21 @@ Future<int?> initiatePayment({
     var totalAmount = cartTotal;
 
     // 0. Clean up any stale 'I' (initiated but never completed) payments for this student
-    final stalePays = await client
-        .from('payment')
+    final stalePays = await SupabaseService.fromSchema('payment')
         .select('pay_id')
         .eq('stu_id', student.stuId)
         .eq('paystatus', 'I');
 
     if ((stalePays as List).isNotEmpty) {
       final stalePayIds = stalePays.map((p) => p['pay_id'] as int).toList();
-      await client.from('paymentdetails').delete().inFilter('pay_id', stalePayIds);
-      await client.from('payment').delete().inFilter('pay_id', stalePayIds);
+      await SupabaseService.fromSchema('paymentdetails').delete().inFilter('pay_id', stalePayIds);
+      await SupabaseService.fromSchema('payment').delete().inFilter('pay_id', stalePayIds);
       debugPrint('Cleaned up ${stalePayIds.length} stale initiated payment(s)');
     }
 
     // 1. Validate: check actual balancedue from DB to prevent double payment
     final demIds = items.map((f) => f.demId).toList();
-    final freshDemands = await client
-        .from('feedemand')
+    final freshDemands = await SupabaseService.fromSchema('feedemand')
         .select('dem_id, balancedue, paidstatus')
         .inFilter('dem_id', demIds);
 
@@ -431,7 +401,7 @@ Future<int?> initiatePayment({
 
     // 2. Check if these fees are already being paid on another device
     try {
-      final lockedFees = await client.rpc('check_fees_locked', params: {
+      final lockedFees = await SupabaseService.client.rpc('check_fees_locked', params: {
         'p_dem_ids': items.map((f) => f.demId).toList(),
       });
       if ((lockedFees as List).isNotEmpty) {
@@ -443,34 +413,39 @@ Future<int?> initiatePayment({
       debugPrint('check_fees_locked RPC not available: $e');
     }
 
-    // 3. Generate payment number atomically (prevents duplicate paynumber on concurrent devices)
+    // 3. Generate payment number
     String payNumber;
     try {
-      final rpcResult = await client.rpc('generate_payment_number');
+      final rpcResult = await SupabaseService.client.rpc('generate_payment_number');
       payNumber = rpcResult as String;
     } catch (e) {
-      // Fallback: non-atomic sequence generation (if RPC not deployed yet)
+      // Fallback: sequence table is in institution schema
       debugPrint('generate_payment_number RPC not available, using fallback: $e');
-      final sequence = await client
-          .from('sequence')
-          .select('seq_id, sequid, seqwidth, seqcurno')
-          .limit(1)
-          .single();
+      try {
+        final sequence = await SupabaseService.fromSchema('sequence')
+            .select('seq_id, sequid, seqwidth, seqcurno')
+            .limit(1)
+            .single();
 
-      final sequid = sequence['sequid'] as String;
-      final seqWidth = sequence['seqwidth'] as int;
-      final seqCurNo = (sequence['seqcurno'] as num).toInt();
-      final newSeqNo = seqCurNo + 1;
-      final prefix = sequid.replaceAll(RegExp(r'\d+$'), '');
-      payNumber = '$prefix${newSeqNo.toString().padLeft(seqWidth, '0')}';
+        final sequid = sequence['sequid'] as String;
+        final seqWidth = sequence['seqwidth'] as int;
+        final seqCurNo = (sequence['seqcurno'] as num).toInt();
+        final newSeqNo = seqCurNo + 1;
+        final prefix = sequid.replaceAll(RegExp(r'\d+$'), '');
+        payNumber = '$prefix${newSeqNo.toString().padLeft(seqWidth, '0')}';
 
-      await client.from('sequence').update({
-        'seqcurno': newSeqNo,
-      }).eq('seq_id', sequence['seq_id'] as int);
+        await SupabaseService.fromSchema('sequence').update({
+          'seqcurno': newSeqNo,
+        }).eq('seq_id', sequence['seq_id'] as int);
+      } catch (seqError) {
+        // Final fallback: generate from pay_id
+        debugPrint('Sequence table not available: $seqError');
+        payNumber = 'PAY${DateTime.now().millisecondsSinceEpoch}';
+      }
     }
 
     // 4. Create payment record with paynumber (paystatus = 'I' for Initiated)
-    final payResponse = await client.from('payment').insert({
+    final payResponse = await SupabaseService.fromSchema('payment').insert({
       'ins_id': student.insId,
       'inscode': student.inscode,
       'stu_id': student.stuId,
@@ -498,8 +473,8 @@ Future<int?> initiatePayment({
     }).toList();
 
     await Future.wait([
-      client.from('paymentdetails').insert(payDetailRows),
-      client.from('shoppingcart').update({
+      SupabaseService.fromSchema('paymentdetails').insert(payDetailRows),
+      SupabaseService.fromSchema('shoppingcart').update({
         'carinitiated': 'I',
       }).eq('car_id', carId),
     ]);
@@ -526,10 +501,10 @@ Future<String?> createRazorpayOrder({
   String currency = 'INR',
 }) async {
   lastOrderCreationError = null;
-  final client = ref.read(supabaseClientProvider);
+
 
   try {
-    final response = await client.functions.invoke(
+    final response = await SupabaseService.client.functions.invoke(
       'create-razorpay-order',
       body: {
         'amount': amountInPaise,
@@ -575,75 +550,87 @@ Future<bool> handlePaymentSuccess({
   required String payreference,
   required List<FeeModel> items,
 }) async {
-  final client = ref.read(supabaseClientProvider);
+
 
   try {
-    // 1. Update payment status + fetch feedemand in parallel
-    final paymentUpdateFuture = client.from('payment').update({
-      'paystatus': 'C',
-      'paymethod': paymethod,
-      'payreference': payreference,
-      'paydate': DateTime.now().toIso8601String(),
-    }).eq('pay_id', payId).select('paynumber').single();
-
-    final demandsFuture = client
-        .from('feedemand')
-        .select('dem_id, paidamount, feeamount, conamount, balancedue')
-        .inFilter('dem_id', items.map((f) => f.demId).toList())
-        .eq('activestatus', 1);
-
-    final results = await Future.wait<dynamic>([
-      paymentUpdateFuture,
-      demandsFuture,
-    ]);
-
-    final demands = results[1] as List<dynamic>;
-
-    // 2. Update feedemand + find all student carts in parallel
-    final List<Future> feedemandOps = [];
     final studentId = items.first.stuId;
+    final student = ref.read(selectedStudentProvider);
 
-    final paidMap = <int, double>{};
-    for (final fee in items) {
-      paidMap[fee.demId] = fee.balancedue;
+    // 1. Try atomic RPC (same as admin app) — updates payment, feedemand,
+    //    and paymentdetails in a single transaction
+    try {
+      final rpcItems = items.map((fee) => {
+        'dem_id': fee.demId,
+        'amount': fee.balancedue,
+        'demfeetype': fee.demfeetype,
+      }).toList();
+
+      await SupabaseService.client.rpc('complete_payment_grouped', params: {
+        'p_pay_id': payId,
+        'p_pay_method': paymethod,
+        'p_pay_reference': payreference,
+        'p_items': rpcItems,
+        'p_ins_id': student?.insId ?? items.first.insId,
+        'p_status': 'C',
+      });
+
+      debugPrint('Payment completed via RPC: pay_id=$payId');
+    } catch (rpcError) {
+      // Fallback: manual updates if RPC not deployed
+      debugPrint('complete_payment_grouped RPC not available, using fallback: $rpcError');
+
+      // Update payment status
+      await SupabaseService.fromSchema('payment').update({
+        'paystatus': 'C',
+        'paymethod': paymethod,
+        'payreference': payreference,
+        'paydate': DateTime.now().toIso8601String(),
+      }).eq('pay_id', payId);
+
+      // Fetch and update feedemand records
+      final demands = await SupabaseService.fromSchema('feedemand')
+          .select('dem_id, paidamount, balancedue')
+          .inFilter('dem_id', items.map((f) => f.demId).toList())
+          .eq('activestatus', 1);
+
+      final paidMap = <int, double>{};
+      for (final fee in items) {
+        paidMap[fee.demId] = fee.balancedue;
+      }
+
+      for (final demand in (demands as List)) {
+        final demId = demand['dem_id'] as int;
+        final paidAmount = paidMap[demId] ?? 0;
+        final currentPaid = (demand['paidamount'] as num?)?.toDouble() ?? 0;
+        final currentBalance = (demand['balancedue'] as num?)?.toDouble() ?? 0;
+        final newPaid = currentPaid + paidAmount;
+        final newBalance = currentBalance - paidAmount;
+
+        await SupabaseService.fromSchema('feedemand').update({
+          'paidamount': newPaid,
+          'balancedue': newBalance <= 0 ? 0 : newBalance,
+          'paidstatus': newBalance <= 0 ? 'P' : 'U',
+          'pay_id': payId,
+        }).eq('dem_id', demId);
+      }
     }
 
-    for (final demand in demands) {
-      final demId = demand['dem_id'] as int;
-      final paidAmount = paidMap[demId] ?? 0;
-      final currentPaid = (demand['paidamount'] as num?)?.toDouble() ?? 0;
-      final currentBalance = (demand['balancedue'] as num?)?.toDouble() ?? 0;
-      final newPaid = currentPaid + paidAmount;
-      final newBalance = currentBalance - paidAmount;
-
-      feedemandOps.add(client.from('feedemand').update({
-        'paidamount': newPaid,
-        'balancedue': newBalance <= 0 ? 0 : newBalance,
-        'paidstatus': newBalance <= 0 ? 'P' : 'U',
-        'pay_id': payId,
-      }).eq('dem_id', demId));
-    }
-
-    // Fetch all cart IDs for this student in parallel with feedemand updates
-    final allCartsFuture = client
-        .from('shoppingcart')
+    // 2. Clean up ALL carts for this student
+    final allCarts = await SupabaseService.fromSchema('shoppingcart')
         .select('car_id')
         .eq('stu_id', studentId);
 
-    await Future.wait([...feedemandOps, allCartsFuture]);
-
-    // 3. Bulk delete ALL carts for this student (current + stale)
-    final allCarIds = ((await allCartsFuture) as List)
+    final allCarIds = ((allCarts) as List)
         .map((c) => c['car_id'] as int)
         .toList();
 
     if (allCarIds.isNotEmpty) {
-      await client.from('shoppingcartdetails').delete().inFilter('car_id', allCarIds);
-      await client.from('shoppingcart').delete().inFilter('car_id', allCarIds);
+      await SupabaseService.fromSchema('shoppingcartdetails').delete().inFilter('car_id', allCarIds);
+      await SupabaseService.fromSchema('shoppingcart').delete().inFilter('car_id', allCarIds);
       debugPrint('Deleted ${allCarIds.length} cart(s) for student $studentId');
     }
 
-    // 4. Clear in-memory cart & refresh all related providers
+    // 3. Clear in-memory cart & refresh all related providers
     ref.read(cartProvider.notifier).clearCart();
     ref.invalidate(feesProvider);
     ref.invalidate(paymentsProvider);
@@ -657,8 +644,8 @@ Future<bool> handlePaymentSuccess({
     debugPrint('Stack trace: $stackTrace');
     // Still try to delete the cart even if feedemand updates failed
     try {
-      await client.from('shoppingcartdetails').delete().eq('car_id', carId);
-      await client.from('shoppingcart').delete().eq('car_id', carId);
+      await SupabaseService.fromSchema('shoppingcartdetails').delete().eq('car_id', carId);
+      await SupabaseService.fromSchema('shoppingcart').delete().eq('car_id', carId);
       ref.read(cartProvider.notifier).clearCart();
       debugPrint('Cart deleted in error recovery');
     } catch (_) {}
@@ -674,26 +661,41 @@ Future<bool> handlePaymentFailure({
   String? payReference,
   String? errorReason,
 }) async {
-  final client = ref.read(supabaseClientProvider);
+
 
   try {
-    // Build update map - always set paymethod since payment was attempted via Razorpay
-    final paymentUpdate = <String, dynamic>{
-      'paystatus': 'F',
-      'paymethod': 'razorpay',
-      'paydate': DateTime.now().toIso8601String(),
-    };
-    if (payReference != null) {
-      paymentUpdate['payreference'] = payReference;
+    final student = ref.read(selectedStudentProvider);
+    final reference = payReference != null
+        ? 'Razorpay Failed: $payReference'
+        : 'Razorpay Failed';
+
+    // Try atomic RPC first (same as admin app)
+    try {
+      await SupabaseService.client.rpc('complete_payment_grouped', params: {
+        'p_pay_id': payId,
+        'p_pay_method': 'razorpay',
+        'p_pay_reference': reference,
+        'p_items': [],
+        'p_ins_id': student?.insId,
+        'p_status': 'F',
+      });
+    } catch (_) {
+      // Fallback: manual update
+      final paymentUpdate = <String, dynamic>{
+        'paystatus': 'F',
+        'paymethod': 'razorpay',
+        'paydate': DateTime.now().toIso8601String(),
+      };
+      if (payReference != null) {
+        paymentUpdate['payreference'] = reference;
+      }
+      await SupabaseService.fromSchema('payment').update(paymentUpdate).eq('pay_id', payId);
     }
 
-    // Mark payment as failed and reset cart in parallel
-    await Future.wait([
-      client.from('payment').update(paymentUpdate).eq('pay_id', payId),
-      client.from('shoppingcart').update({
-        'carinitiated': 'N',
-      }).eq('car_id', carId),
-    ]);
+    // Reset cart
+    await SupabaseService.fromSchema('shoppingcart').update({
+      'carinitiated': 'N',
+    }).eq('car_id', carId);
 
     ref.invalidate(paymentsProvider);
     ref.invalidate(notificationsProvider);
@@ -714,7 +716,7 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
   final student = ref.watch(selectedStudentProvider);
   if (student == null) return;
 
-  final client = ref.watch(supabaseClientProvider);
+
   final currentCart = ref.read(cartProvider);
 
   // If cart already has items for THIS student, skip loading
@@ -724,8 +726,7 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
 
   // First, recover any abandoned 'I' (initiated) carts from failed/interrupted payments
   try {
-    final abandonedCarts = await client
-        .from('shoppingcart')
+    final abandonedCarts = await SupabaseService.fromSchema('shoppingcart')
         .select('car_id')
         .eq('stu_id', student.stuId)
         .eq('carinitiated', 'I')
@@ -734,21 +735,20 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
     if ((abandonedCarts as List).isNotEmpty) {
       final abandonedCarIds = abandonedCarts.map((c) => c['car_id'] as int).toList();
       // Reset abandoned carts back to 'N' so RPC/fallback can find them
-      await client.from('shoppingcart').update({
+      await SupabaseService.fromSchema('shoppingcart').update({
         'carinitiated': 'N',
       }).inFilter('car_id', abandonedCarIds);
 
       // Delete orphaned 'I' payments (never completed, no need to show in history)
-      final stalePays = await client
-          .from('payment')
+      final stalePays = await SupabaseService.fromSchema('payment')
           .select('pay_id')
           .eq('stu_id', student.stuId)
           .eq('paystatus', 'I');
 
       if ((stalePays as List).isNotEmpty) {
         final stalePayIds = stalePays.map((p) => p['pay_id'] as int).toList();
-        await client.from('paymentdetails').delete().inFilter('pay_id', stalePayIds);
-        await client.from('payment').delete().inFilter('pay_id', stalePayIds);
+        await SupabaseService.fromSchema('paymentdetails').delete().inFilter('pay_id', stalePayIds);
+        await SupabaseService.fromSchema('payment').delete().inFilter('pay_id', stalePayIds);
         debugPrint('Deleted ${stalePayIds.length} orphaned initiated payment(s)');
       }
 
@@ -761,7 +761,7 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
 
   try {
     // Try single-query RPC first (requires running db_sync/setup_cart_rpc.sql)
-    final fees = await client.rpc('get_active_cart_fees', params: {
+    final fees = await SupabaseService.client.rpc('get_active_cart_fees', params: {
       'p_stu_id': student.stuId,
     });
 
@@ -775,10 +775,10 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
 
     // Clean up paid fee rows from DB
     if (unpaidFees.isEmpty && allFees.isNotEmpty) {
-      await _cleanupPaidCart(client, student.stuId);
+      await _cleanupPaidCart(student.stuId);
       debugPrint('All cart fees already paid — cart cleaned up');
     } else if (paidFees.isNotEmpty) {
-      await _cleanupPaidCartItems(client, student.stuId, paidFees, unpaidFees);
+      await _cleanupPaidCartItems(student.stuId, paidFees, unpaidFees);
     }
 
     ref.read(cartProvider.notifier).restoreCart(unpaidFees, student.stuId);
@@ -790,8 +790,7 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
     debugPrint('RPC fallback: $rpcError');
     try {
       // Abandoned 'I' carts were already reset to 'N' above, so just look for 'N'
-      final cart = await client
-          .from('shoppingcart')
+      final cart = await SupabaseService.fromSchema('shoppingcart')
           .select('car_id')
           .eq('stu_id', student.stuId)
           .eq('carinitiated', 'N')
@@ -806,8 +805,7 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
       final carId = cart['car_id'] as int;
 
       // Get dem_ids from cart details
-      final details = await client
-          .from('shoppingcartdetails')
+      final details = await SupabaseService.fromSchema('shoppingcartdetails')
           .select('dem_id')
           .eq('car_id', carId)
           .eq('activestatus', 1);
@@ -822,8 +820,7 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
       }
 
       // Fetch full feedemand records for these dem_ids
-      final fees = await client
-          .from('feedemand')
+      final fees = await SupabaseService.fromSchema('feedemand')
           .select('*')
           .inFilter('dem_id', demIds)
           .eq('activestatus', 1);
@@ -838,10 +835,10 @@ final cartRestorerProvider = FutureProvider.autoDispose<void>((ref) async {
 
       // Clean up paid fee rows from DB
       if (unpaidFees.isEmpty && allFees.isNotEmpty) {
-        await _cleanupPaidCart(client, student.stuId);
+        await _cleanupPaidCart(student.stuId);
         debugPrint('All cart fees already paid — cart cleaned up (fallback)');
       } else if (paidFees.isNotEmpty) {
-        await _cleanupPaidCartItems(client, student.stuId, paidFees, unpaidFees);
+        await _cleanupPaidCartItems(student.stuId, paidFees, unpaidFees);
       }
 
       ref.read(cartProvider.notifier).restoreCart(unpaidFees, student.stuId);
@@ -867,14 +864,12 @@ class PaidPaymentGroup {
 /// More reliable than filtering feedemand by paidstatus (which can be stale).
 final paidFeesByPaymentProvider = FutureProvider<Map<int, PaidPaymentGroup>>((ref) async {
   final student = ref.watch(selectedStudentProvider);
-  final client = ref.watch(supabaseClientProvider);
 
   if (student == null) return {};
 
   try {
     // 1. Get all completed payments
-    final payments = await client
-        .from('payment')
+    final payments = await SupabaseService.fromSchema('payment')
         .select('*')
         .eq('stu_id', student.stuId)
         .eq('paystatus', 'C')
@@ -887,8 +882,7 @@ final paidFeesByPaymentProvider = FutureProvider<Map<int, PaidPaymentGroup>>((re
     final payIds = paymentModels.map((p) => p.payId).toList();
 
     // 2. Get all payment details for these payments
-    final details = await client
-        .from('paymentdetails')
+    final details = await SupabaseService.fromSchema('paymentdetails')
         .select('*')
         .inFilter('pay_id', payIds)
         .eq('activestatus', 1);
@@ -915,14 +909,12 @@ final paidFeesByPaymentProvider = FutureProvider<Map<int, PaidPaymentGroup>>((re
 
     List<FeeModel> feeModels;
     try {
-      final fees = await client
-          .from('feedemand')
+      final fees = await SupabaseService.fromSchema('feedemand')
           .select('*, feetype(*, feegroup(*))')
           .inFilter('dem_id', allDemIds);
       feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
     } catch (e) {
-      final fees = await client
-          .from('feedemand')
+      final fees = await SupabaseService.fromSchema('feedemand')
           .select('*')
           .inFilter('dem_id', allDemIds);
       feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
@@ -959,10 +951,9 @@ final paidFeesByPaymentProvider = FutureProvider<Map<int, PaidPaymentGroup>>((re
 
 /// Helper: Remove individual paid fee rows from shoppingcartdetails (partial payment scenario)
 /// Updates the cart total to reflect only unpaid fees remaining.
-Future<void> _cleanupPaidCartItems(dynamic client, int stuId, List<FeeModel> paidFees, List<FeeModel> unpaidFees) async {
+Future<void> _cleanupPaidCartItems(int stuId, List<FeeModel> paidFees, List<FeeModel> unpaidFees) async {
   try {
-    final carts = await client
-        .from('shoppingcart')
+    final carts = await SupabaseService.fromSchema('shoppingcart')
         .select('car_id')
         .eq('stu_id', stuId)
         .eq('activestatus', 1);
@@ -973,16 +964,14 @@ Future<void> _cleanupPaidCartItems(dynamic client, int stuId, List<FeeModel> pai
     final paidDemIds = paidFees.map((f) => f.demId).toList();
 
     // Delete paid fee rows from shoppingcartdetails
-    await client
-        .from('shoppingcartdetails')
+    await SupabaseService.fromSchema('shoppingcartdetails')
         .delete()
         .inFilter('car_id', carIds)
         .inFilter('dem_id', paidDemIds);
 
     // Update cart header total to reflect only unpaid fees
     final newTotal = unpaidFees.fold<double>(0, (sum, f) => sum + f.balancedue);
-    await client
-        .from('shoppingcart')
+    await SupabaseService.fromSchema('shoppingcart')
         .update({'transtotalamount': newTotal})
         .inFilter('car_id', carIds);
 
@@ -993,18 +982,17 @@ Future<void> _cleanupPaidCartItems(dynamic client, int stuId, List<FeeModel> pai
 }
 
 /// Helper: Delete stale shopping cart for a student whose fees are all paid
-Future<void> _cleanupPaidCart(dynamic client, int stuId) async {
+Future<void> _cleanupPaidCart(int stuId) async {
   try {
-    final carts = await client
-        .from('shoppingcart')
+    final carts = await SupabaseService.fromSchema('shoppingcart')
         .select('car_id')
         .eq('stu_id', stuId)
         .eq('activestatus', 1);
 
     if ((carts as List).isNotEmpty) {
       final carIds = carts.map((c) => c['car_id'] as int).toList();
-      await client.from('shoppingcartdetails').delete().inFilter('car_id', carIds);
-      await client.from('shoppingcart').delete().inFilter('car_id', carIds);
+      await SupabaseService.fromSchema('shoppingcartdetails').delete().inFilter('car_id', carIds);
+      await SupabaseService.fromSchema('shoppingcart').delete().inFilter('car_id', carIds);
       debugPrint('Deleted ${carIds.length} stale cart(s) for student $stuId (all fees paid)');
     }
   } catch (e) {

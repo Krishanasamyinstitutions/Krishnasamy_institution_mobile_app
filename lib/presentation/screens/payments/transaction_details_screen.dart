@@ -6,14 +6,14 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
+
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/receipt_pdf_generator.dart';
 import '../../../data/models/fee_model.dart';
 import '../../../data/models/payment_model.dart';
 import '../../../receipt_widget.dart';
-import '../../providers/auth_provider.dart';
+import '../../../core/services/supabase_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/payment_provider.dart';
@@ -441,6 +441,30 @@ class TransactionDetailsScreen extends ConsumerWidget {
   }
 
   Widget _buildActionButtons(BuildContext context, WidgetRef ref, PaymentModel payment, bool isPaid) {
+    // If paid but pending approval, show pending message instead of download
+    if (isPaid && payment.isPendingApproval) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.orange.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange, width: 1.5),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.hourglass_top_rounded, size: 22, color: Colors.orange),
+            SizedBox(width: 10),
+            Text(
+              'Pending Approval',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.orange),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Row(
       children: [
         // Primary Button (Download for success, Retry for failed)
@@ -563,9 +587,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
       }
 
       // Fetch fee details
-      final client = ref.read(supabaseClientProvider);
-      final details = await client
-          .from('paymentdetails')
+      final details = await SupabaseService.fromSchema('paymentdetails')
           .select('*')
           .eq('pay_id', payment.payId)
           .eq('activestatus', 1);
@@ -578,14 +600,12 @@ class TransactionDetailsScreen extends ConsumerWidget {
       if (detailModels.isNotEmpty) {
         final demIds = detailModels.map((d) => d.demId).toList();
         try {
-          final fees = await client
-              .from('feedemand')
+          final fees = await SupabaseService.fromSchema('feedemand')
               .select('*, feetype(*, feegroup(*))')
               .inFilter('dem_id', demIds);
           feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
         } catch (e) {
-          final fees = await client
-              .from('feedemand')
+          final fees = await SupabaseService.fromSchema('feedemand')
               .select('*')
               .inFilter('dem_id', demIds);
           feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
@@ -689,9 +709,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
       }
 
       // Fetch fee details for the receipt table
-      final client = ref.read(supabaseClientProvider);
-      final details = await client
-          .from('paymentdetails')
+      final details = await SupabaseService.fromSchema('paymentdetails')
           .select('*')
           .eq('pay_id', payment.payId)
           .eq('activestatus', 1);
@@ -704,14 +722,12 @@ class TransactionDetailsScreen extends ConsumerWidget {
       if (detailModels.isNotEmpty) {
         final demIds = detailModels.map((d) => d.demId).toList();
         try {
-          final fees = await client
-              .from('feedemand')
+          final fees = await SupabaseService.fromSchema('feedemand')
               .select('*, feetype(*, feegroup(*))')
               .inFilter('dem_id', demIds);
           feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
         } catch (e) {
-          final fees = await client
-              .from('feedemand')
+          final fees = await SupabaseService.fromSchema('feedemand')
               .select('*')
               .inFilter('dem_id', demIds);
           feeModels = (fees as List).map((f) => FeeModel.fromJson(f)).toList();
@@ -750,29 +766,11 @@ class TransactionDetailsScreen extends ConsumerWidget {
           text: 'Payment Receipt - ${payment.paymentNumber}',
         );
       } else if (mode == _ExportMode.download) {
-        if (Platform.isAndroid || Platform.isIOS) {
-          // Mobile: open system print/save dialog — user can save as PDF or print
-          await Printing.layoutPdf(
-            onLayout: (_) async => bytes,
-            name: '$safeFilename.pdf',
-          );
-        } else {
-          // Desktop: open the PDF directly
-          final tempDir = await getTemporaryDirectory();
-          final file = File('${tempDir.path}/$safeFilename.pdf');
-          await file.writeAsBytes(bytes);
-          final uri = Uri.file(file.path);
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(uri);
-          } else if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Receipt saved to: ${file.path}'),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        }
+        // Use system print/save dialog — works on web, desktop, and mobile
+        await Printing.layoutPdf(
+          onLayout: (_) async => bytes,
+          name: '$safeFilename.pdf',
+        );
       } else {
         // Print mode
         await Printing.layoutPdf(
@@ -802,11 +800,8 @@ class TransactionDetailsScreen extends ConsumerWidget {
     );
 
     try {
-      final client = ref.read(supabaseClientProvider);
-
       // 1. Get dem_ids from paymentdetails for this payment
-      final payDetails = await client
-          .from('paymentdetails')
+      final payDetails = await SupabaseService.fromSchema('paymentdetails')
           .select('dem_id')
           .eq('pay_id', payment.payId);
 
@@ -827,8 +822,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
       }
 
       // 2. Fetch fresh feedemand records to check current status
-      final fees = await client
-          .from('feedemand')
+      final fees = await SupabaseService.fromSchema('feedemand')
           .select('*')
           .inFilter('dem_id', demIds)
           .eq('activestatus', 1);

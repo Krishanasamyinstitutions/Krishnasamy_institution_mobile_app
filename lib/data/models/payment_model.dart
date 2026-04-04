@@ -21,6 +21,7 @@ class PaymentModel {
   final String? createdby;
   final DateTime createdat;
   final int activestatus;
+  final String reconStatus; // 'P' = Pending reconciliation, 'R' = Reconciled/Approved
 
   PaymentModel({
     required this.payId,
@@ -40,6 +41,7 @@ class PaymentModel {
     this.createdby,
     required this.createdat,
     this.activestatus = 1,
+    this.reconStatus = 'P',
   });
 
   /// Create from Supabase JSON response
@@ -70,6 +72,7 @@ class PaymentModel {
           ? DateTime.parse(json['createdat'])
           : DateTime.now(),
       activestatus: json['activestatus'] ?? 1,
+      reconStatus: json['recon_status']?.toString() ?? 'P',
     );
   }
 
@@ -122,7 +125,7 @@ class PaymentModel {
   String get statusText {
     switch (paystatus) {
       case 'C':
-        return 'Completed';
+        return 'Paid';
       case 'F':
         return 'Failed';
       case 'R':
@@ -139,6 +142,8 @@ class PaymentModel {
   DateTime? get paidAt => paydate;
   bool get isActive => activestatus == 1;
   bool get isSuccess => paystatus == 'C';
+  bool get isReconciled => reconStatus == 'R';
+  bool get isPendingApproval => paystatus == 'C' && reconStatus == 'P';
 
   PaymentModel copyWith({
     int? payId,
@@ -158,6 +163,7 @@ class PaymentModel {
     String? createdby,
     DateTime? createdat,
     int? activestatus,
+    String? reconStatus,
   }) {
     return PaymentModel(
       payId: payId ?? this.payId,
@@ -177,6 +183,7 @@ class PaymentModel {
       createdby: createdby ?? this.createdby,
       createdat: createdat ?? this.createdat,
       activestatus: activestatus ?? this.activestatus,
+      reconStatus: reconStatus ?? this.reconStatus,
     );
   }
 }

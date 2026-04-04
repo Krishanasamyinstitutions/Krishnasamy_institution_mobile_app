@@ -7,7 +7,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../data/models/fee_model.dart';
 import '../../../data/models/notification_model.dart';
-import '../../providers/auth_provider.dart';
+import '../../../core/services/supabase_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/student_provider.dart';
@@ -384,11 +384,8 @@ class _NotificationDetailScreenState
     );
 
     try {
-      final client = ref.read(supabaseClientProvider);
-
       // 1. Get dem_ids from paymentdetails for this payment
-      final payDetails = await client
-          .from('paymentdetails')
+      final payDetails = await SupabaseService.fromSchema('paymentdetails')
           .select('dem_id')
           .eq('pay_id', payId);
 
@@ -411,8 +408,7 @@ class _NotificationDetailScreenState
       }
 
       // 2. Fetch fresh feedemand records
-      final fees = await client
-          .from('feedemand')
+      final fees = await SupabaseService.fromSchema('feedemand')
           .select('*')
           .inFilter('dem_id', demIds)
           .eq('activestatus', 1);
@@ -507,10 +503,7 @@ class _NotificationDetailScreenState
     );
 
     try {
-      final client = ref.read(supabaseClientProvider);
-
-      final fees = await client
-          .from('feedemand')
+      final fees = await SupabaseService.fromSchema('feedemand')
           .select('*')
           .inFilter('dem_id', demIds)
           .eq('activestatus', 1);
@@ -595,17 +588,7 @@ class _NotificationDetailScreenState
             );
         break;
       case NotificationType.paymentSuccess:
-        buttonText = 'View Receipt';
-        buttonIcon = Icons.receipt_long_rounded;
-        buttonColor = const Color(0xFF10B981);
-        onTap = () {
-          if (payId != null) {
-            context.go('/payment-history/$payId');
-          } else {
-            context.go('/payment-history');
-          }
-        };
-        break;
+        return const SizedBox.shrink();
       case NotificationType.paymentFailed:
         buttonText = 'Retry Payment';
         buttonIcon = Icons.refresh_rounded;
