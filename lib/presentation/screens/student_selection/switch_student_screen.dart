@@ -7,6 +7,7 @@ import '../../../core/utils/extensions.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/student_model.dart';
 import '../../providers/student_provider.dart';
+import '../../providers/institution_provider.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -18,16 +19,25 @@ class SwitchStudentScreen extends ConsumerStatefulWidget {
 }
 
 class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
-  int? _selectedStudentId;
+  int? _selectedIndex;
 
   @override
   void initState() {
     super.initState();
-    // Pre-select current student
-    final currentStudent = ref.read(selectedStudentProvider);
-    if (currentStudent != null) {
-      _selectedStudentId = currentStudent.stuId;
-    }
+    // Pre-select current student by matching stuId + insId
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentStudent = ref.read(selectedStudentProvider);
+      final students = ref.read(studentsByParentProvider).valueOrNull;
+      if (currentStudent != null && students != null) {
+        for (int i = 0; i < students.length; i++) {
+          if (students[i].stuId == currentStudent.stuId &&
+              students[i].insId == currentStudent.insId) {
+            setState(() => _selectedIndex = i);
+            break;
+          }
+        }
+      }
+    });
   }
 
   @override
@@ -120,19 +130,21 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final student = students[index];
-        final isSelected = _selectedStudentId == student.stuId;
-        final isCurrent = currentStudent?.stuId == student.stuId;
+        final isSelected = _selectedIndex == index;
+        final isCurrent = currentStudent != null &&
+            currentStudent.stuId == student.stuId &&
+            currentStudent.insId == student.insId;
 
-        return _buildStudentCard(student, isSelected, isCurrent);
+        return _buildStudentCard(student, isSelected, isCurrent, index);
       },
     );
   }
 
-  Widget _buildStudentCard(StudentModel student, bool isSelected, bool isCurrent) {
+  Widget _buildStudentCard(StudentModel student, bool isSelected, bool isCurrent, int index) {
     return GestureDetector(
       onTap: () {
         setState(() {
-          _selectedStudentId = student.stuId;
+          _selectedIndex = index;
         });
       },
       child: Container(
@@ -244,6 +256,22 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                       color: AppColors.textSecondaryC(context),
                     ),
                   ),
+                  Consumer(builder: (context, ref, _) {
+                    final instAsync = ref.watch(institutionByIdProvider(student.insId));
+                    final instName = instAsync.valueOrNull?.insname ?? student.inscode;
+                    if (instName.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        instName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),
@@ -276,7 +304,11 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
 
   Widget _buildSwitchButton() {
     final currentStudent = ref.watch(selectedStudentProvider);
-    final isNewSelection = _selectedStudentId != null && _selectedStudentId != currentStudent?.stuId;
+    final students = ref.watch(studentsByParentProvider).valueOrNull;
+    final currentIndex = (students != null && currentStudent != null)
+        ? students.indexWhere((s) => s.stuId == currentStudent.stuId && s.insId == currentStudent.insId)
+        : -1;
+    final isNewSelection = _selectedIndex != null && _selectedIndex != currentIndex;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -330,15 +362,13 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
   }
 
   Future<void> _handleSwitch() async {
-    if (_selectedStudentId == null) return;
+    if (_selectedIndex == null) return;
 
     final studentsAsync = ref.read(studentsByParentProvider);
     final students = studentsAsync.valueOrNull;
-    if (students == null) return;
+    if (students == null || _selectedIndex! >= students.length) return;
 
-    final selectedStudent = students.firstWhere(
-      (s) => s.stuId == _selectedStudentId,
-    );
+    final selectedStudent = students[_selectedIndex!];
 
     await ref.read(selectedStudentProvider.notifier).selectStudent(selectedStudent);
 

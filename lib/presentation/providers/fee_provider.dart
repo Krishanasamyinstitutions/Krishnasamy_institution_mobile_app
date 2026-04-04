@@ -2,13 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../data/models/fee_model.dart';
-import 'auth_provider.dart';
+import '../../core/services/supabase_service.dart';
 import 'student_provider.dart';
 
 /// Fetch fees for currently selected student from Supabase 'feedemand' table
 final feesProvider = FutureProvider<List<FeeModel>>((ref) async {
   final student = ref.watch(selectedStudentProvider);
-  final client = ref.watch(supabaseClientProvider);
 
   if (student == null) {
     debugPrint('Fees Provider: No student selected');
@@ -22,8 +21,7 @@ final feesProvider = FutureProvider<List<FeeModel>>((ref) async {
     // Falls back to basic query if FK relationships aren't set up yet
     dynamic response;
     try {
-      response = await client
-          .from('feedemand')
+      response = await SupabaseService.fromSchema('feedemand')
           .select('*, feetype(*, feegroup(*))')
           .eq('stu_id', student.stuId)
           .eq('activestatus', 1)
@@ -31,8 +29,7 @@ final feesProvider = FutureProvider<List<FeeModel>>((ref) async {
     } catch (e) {
       // Fallback to basic query without joins
       debugPrint('Fees Provider: Join failed, using basic query: $e');
-      response = await client
-          .from('feedemand')
+      response = await SupabaseService.fromSchema('feedemand')
           .select('*')
           .eq('stu_id', student.stuId)
           .eq('activestatus', 1)
@@ -52,20 +49,17 @@ final feesProvider = FutureProvider<List<FeeModel>>((ref) async {
 
 /// Fetch fees by student ID
 final feesByStudentIdProvider = FutureProvider.family<List<FeeModel>, int>((ref, stuId) async {
-  final client = ref.watch(supabaseClientProvider);
 
   try {
     dynamic response;
     try {
-      response = await client
-          .from('feedemand')
+      response = await SupabaseService.fromSchema('feedemand')
           .select('*, feetype(*, feegroup(*))')
           .eq('stu_id', stuId)
           .eq('activestatus', 1)
           .order('createdat', ascending: false);
     } catch (e) {
-      response = await client
-          .from('feedemand')
+      response = await SupabaseService.fromSchema('feedemand')
           .select('*')
           .eq('stu_id', stuId)
           .eq('activestatus', 1)
@@ -107,7 +101,6 @@ final paidFeesProvider = Provider<List<FeeModel>>((ref) {
 final feeSummaryProvider = FutureProvider<FeeSummary>((ref) async {
   final fees = await ref.watch(feesProvider.future);
   final student = ref.watch(selectedStudentProvider);
-  final client = ref.watch(supabaseClientProvider);
 
   double totalDue = 0;
   double totalPending = 0;
@@ -140,8 +133,7 @@ final feeSummaryProvider = FutureProvider<FeeSummary>((ref) async {
   double totalPaid = 0;
   if (student != null) {
     try {
-      final payments = await client
-          .from('payment')
+      final payments = await SupabaseService.fromSchema('payment')
           .select('transtotalamount')
           .eq('stu_id', student.stuId)
           .eq('paystatus', 'C')
@@ -168,19 +160,15 @@ final feeSummaryProvider = FutureProvider<FeeSummary>((ref) async {
 
 /// Fetch a single fee demand by ID
 final feeByIdProvider = FutureProvider.family<FeeModel?, int>((ref, demId) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
     dynamic response;
     try {
-      response = await client
-          .from('feedemand')
+      response = await SupabaseService.fromSchema('feedemand')
           .select('*, feetype(*, feegroup(*))')
           .eq('dem_id', demId)
           .maybeSingle();
     } catch (e) {
-      response = await client
-          .from('feedemand')
+      response = await SupabaseService.fromSchema('feedemand')
           .select('*')
           .eq('dem_id', demId)
           .maybeSingle();
@@ -199,23 +187,20 @@ final feeByIdProvider = FutureProvider.family<FeeModel?, int>((ref, demId) async
 /// Fetch fees by year
 final feesByYearProvider = FutureProvider.family<List<FeeModel>, int>((ref, yrId) async {
   final student = ref.watch(selectedStudentProvider);
-  final client = ref.watch(supabaseClientProvider);
 
   if (student == null) return [];
 
   try {
     dynamic response;
     try {
-      response = await client
-          .from('feedemand')
+      response = await SupabaseService.fromSchema('feedemand')
           .select('*, feetype(*, feegroup(*))')
           .eq('stu_id', student.stuId)
           .eq('yr_id', yrId)
           .eq('activestatus', 1)
           .order('createdat', ascending: false);
     } catch (e) {
-      response = await client
-          .from('feedemand')
+      response = await SupabaseService.fromSchema('feedemand')
           .select('*')
           .eq('stu_id', student.stuId)
           .eq('yr_id', yrId)
@@ -234,11 +219,8 @@ final feesByYearProvider = FutureProvider.family<List<FeeModel>, int>((ref, yrId
 
 /// Fetch all fee groups for the selected year
 final feeGroupsProvider = FutureProvider<List<FeeGroupModel>>((ref) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
-    final response = await client
-        .from('feegroup')
+    final response = await SupabaseService.fromSchema('feegroup')
         .select('*')
         .eq('activestatus', 1)
         .order('fgdesc');
@@ -254,19 +236,15 @@ final feeGroupsProvider = FutureProvider<List<FeeGroupModel>>((ref) async {
 
 /// Fetch all fee types with their fee groups
 final feeTypesProvider = FutureProvider<List<FeeTypeModel>>((ref) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
     dynamic response;
     try {
-      response = await client
-          .from('feetype')
+      response = await SupabaseService.fromSchema('feetype')
           .select('*, feegroup(*)')
           .eq('activestatus', 1)
           .order('feedesc');
     } catch (e) {
-      response = await client
-          .from('feetype')
+      response = await SupabaseService.fromSchema('feetype')
           .select('*')
           .eq('activestatus', 1)
           .order('feedesc');
@@ -312,14 +290,12 @@ String _categorizeByFeeType(String feeType) {
 /// Provider to fetch feegroup data first
 /// Returns List of fgdesc values from feegroup table
 final feeGroupListProvider = FutureProvider<List<String>>((ref) async {
-  final client = ref.watch(supabaseClientProvider);
   final student = ref.watch(selectedStudentProvider);
 
   if (student == null) return [];
 
   try {
-    final response = await client
-        .from('feegroup')
+    final response = await SupabaseService.fromSchema('feegroup')
         .select('fgdesc')
         .eq('ins_id', student.insId)
         .eq('activestatus', 1);
@@ -336,15 +312,13 @@ final feeGroupListProvider = FutureProvider<List<String>>((ref) async {
 /// Provider to fetch feetype -> feegroup mapping
 /// Returns Map<fee_id, fgdesc> for grouping feedemand by feegroup
 final feeTypeToGroupMappingProvider = FutureProvider<Map<int, String>>((ref) async {
-  final client = ref.watch(supabaseClientProvider);
   final student = ref.watch(selectedStudentProvider);
 
   if (student == null) return {};
 
   try {
-    // First, fetch feegroups (this should work - no RLS issues)
-    final feeGroupsResponse = await client
-        .from('feegroup')
+    // First, fetch feegroups (schema-specific)
+    final feeGroupsResponse = await SupabaseService.fromSchema('feegroup')
         .select('fg_id, fgdesc')
         .eq('ins_id', student.insId)
         .eq('activestatus', 1);
@@ -358,8 +332,7 @@ final feeTypeToGroupMappingProvider = FutureProvider<Map<int, String>>((ref) asy
 
     // Try to fetch feetypes (may fail due to RLS)
     try {
-      final feeTypesResponse = await client
-          .from('feetype')
+      final feeTypesResponse = await SupabaseService.fromSchema('feetype')
           .select('fee_id, fg_id')
           .eq('activestatus', 1);
 

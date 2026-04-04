@@ -10,6 +10,7 @@ class InstitutionModel {
   final String? inspincode;
   final String? insmobno;
   final String? insmail;
+  final String? inshortname;
   final String? inslogo;
   final String? insmotto;
   final int activestatus;
@@ -25,6 +26,7 @@ class InstitutionModel {
     this.inspincode,
     this.insmobno,
     this.insmail,
+    this.inshortname,
     this.inslogo,
     this.insmotto,
     this.activestatus = 1,
@@ -49,6 +51,7 @@ class InstitutionModel {
       inspincode: json['inspincode'],
       insmobno: json['insmobno'],
       insmail: json['insmail'],
+      inshortname: json['inshortname'],
       inslogo: json['inslogo'],
       insmotto: json['insmotto'],
       activestatus: json['activestatus'] ?? 1,

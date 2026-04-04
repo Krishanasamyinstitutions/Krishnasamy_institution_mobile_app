@@ -3,11 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/parent_model.dart';
+import '../../data/models/institution_model.dart';
 import '../../core/services/sms_service.dart';
+import '../../core/services/supabase_service.dart';
 
 final supabaseClientProvider = Provider<SupabaseClient>((ref) {
   return Supabase.instance.client;
 });
+
+// ─── Institution selection for login ───
+
+/// Holds the institution the parent selected on the auth screens.
+/// Must be set BEFORE sign-in / sign-up / forgot-password so the
+/// correct schema is used for all queries.
+final selectedAuthInstitutionProvider = StateProvider<InstitutionModel?>((ref) => null);
+
+/// Persisted schema string (saved to SharedPreferences on login)
+const String _schemaKey = 'saved_schema';
+const String _insIdKey = 'saved_ins_id';
 
 /// Custom auth state for parent-based authentication
 class ParentAuthState {
@@ -61,16 +74,26 @@ class ParentAuthNotifier extends StateNotifier<AsyncValue<ParentAuthState>> {
     _loadSavedSession();
   }
 
-  /// Load saved parent session from SharedPreferences
+  /// Load saved parent session from SharedPreferences.
+  /// Restores both the schema and parent record.
   Future<void> _loadSavedSession() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final savedParentId = prefs.getInt(_parentIdKey);
+      final savedSchema = prefs.getString(_schemaKey);
+      final savedInsId = prefs.getInt(_insIdKey);
 
       if (savedParentId != null) {
-        // Fetch parent from database
-        final response = await _client
-            .from('parents')
+        // Restore schema first so queries hit the right tables
+        if (savedSchema != null && savedSchema.isNotEmpty) {
+          SupabaseService.setSchema(savedSchema);
+        } else if (savedInsId != null) {
+          // Fallback: re-derive schema from institution
+          await SupabaseService.determineAndSetSchema(savedInsId);
+        }
+
+        // Fetch parent from schema-specific parents table
+        final response = await SupabaseService.fromSchema('parents')
             .select()
             .eq('par_id', savedParentId)
             .eq('activestatus', 1)
@@ -89,22 +112,33 @@ class ParentAuthNotifier extends StateNotifier<AsyncValue<ParentAuthState>> {
     }
   }
 
-  /// Save parent session to SharedPreferences
-  Future<void> _saveSession(int parentId) async {
+  /// Save parent session + schema to SharedPreferences
+  Future<void> _saveSession(int parentId, int insId) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_parentIdKey, parentId);
+    await prefs.setInt(_insIdKey, insId);
+    final schema = SupabaseService.currentSchema;
+    if (schema != null) {
+      await prefs.setString(_schemaKey, schema);
+    }
   }
 
-  /// Clear saved session
+  /// Clear saved session and schema
   Future<void> _clearSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_parentIdKey);
+    await prefs.remove(_insIdKey);
+    await prefs.remove(_schemaKey);
+    SupabaseService.clearSchema();
   }
 
-  /// Sign in using parent table - checks payinchargemob and parpassword
+  /// Sign in using parent table - checks payinchargemob and parpassword.
+  /// Schema must already be set via [SupabaseService.determineAndSetSchema]
+  /// BEFORE calling this method (the sign-in screen handles that).
   Future<ParentModel> signIn({
     required String mobile,
     required String password,
+    required int insId,
   }) async {
     state = const AsyncValue.loading();
 
@@ -112,9 +146,8 @@ class ParentAuthNotifier extends StateNotifier<AsyncValue<ParentAuthState>> {
       // Clean mobile number - remove any non-digit characters
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
-      // Query parents table for matching payinchargemob
-      final rows = await _client
-          .from('parents')
+      // Query parents table in institution schema
+      final rows = await SupabaseService.fromSchema('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('activestatus', 1)
@@ -138,26 +171,18 @@ class ParentAuthNotifier extends StateNotifier<AsyncValue<ParentAuthState>> {
         'hashed_password': parent.parpassword,
       });
 
-      // Debug: Print exact result
-      print('DEBUG: verifyResult = $verifyResult');
-      print('DEBUG: verifyResult type = ${verifyResult.runtimeType}');
-      print('DEBUG: password = $password');
-      print('DEBUG: hashed = ${parent.parpassword}');
-
       // RPC can return bool, String, or other formats - handle all cases
       final isValid = verifyResult == true ||
                       verifyResult == 'true' ||
                       verifyResult == 't' ||
                       verifyResult.toString() == 'true';
 
-      print('DEBUG: isValid = $isValid');
-
       if (!isValid) {
         throw Exception('Invalid password');
       }
 
-      // Save session
-      await _saveSession(parent.parId);
+      // Save session with institution context
+      await _saveSession(parent.parId, insId);
 
       state = AsyncValue.data(ParentAuthState(
         parent: parent,
@@ -171,7 +196,7 @@ class ParentAuthNotifier extends StateNotifier<AsyncValue<ParentAuthState>> {
     }
   }
 
-  /// Sign out - clear parent session
+  /// Sign out - clear parent session and schema
   Future<void> signOut() async {
     await _clearSession();
     state = AsyncValue.data(ParentAuthState());
@@ -190,12 +215,11 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
 
   AuthNotifier(this._client, this._ref) : super(const AsyncValue.data(null));
 
-  /// Validate if mobile number exists in parents table
-  /// Returns the parent if found, throws exception if not found
+  /// Validate if mobile number exists in parents table.
+  /// Auto-detects institution schema from the mobile number.
+  /// Returns the parent if found, throws exception if not found.
   Future<ParentModel> validateMobileNumber(String mobile) async {
     final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
-
-    print('Auth: Validating mobile number: $cleanMobile');
 
     // Convert to int for numeric column comparison
     final mobileNumber = int.tryParse(cleanMobile);
@@ -203,8 +227,15 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       throw Exception('Invalid mobile number format');
     }
 
-    final rows = await _client
-        .from('parents')
+    // Auto-detect institution if schema not already set
+    if (SupabaseService.currentSchema == null) {
+      final result = await SupabaseService.findParentInstitution(cleanMobile);
+      if (result.insId == null) {
+        throw Exception('Mobile number not registered. Contact school admin.');
+      }
+    }
+
+    final rows = await SupabaseService.fromSchema('parents')
         .select()
         .eq('payinchargemob', mobileNumber)
         .limit(1);
@@ -248,7 +279,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final otp = _generateSecureOtp();
 
       // Step 3: Store OTP in parent record (parmobotp field)
-      await _client.from('parents').update({
+      await SupabaseService.fromSchema('parents').update({
         'parmobotp': int.parse(otp),
         'parotpstatus': 0, // Reset to pending
       }).eq('par_id', parent.parId);
@@ -277,8 +308,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
       // Query parent record with matching mobile and OTP
-      final rows = await _client
-          .from('parents')
+      final rows = await SupabaseService.fromSchema('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('parmobotp', int.parse(otp))
@@ -293,8 +323,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final response = rows.first;
 
       // Mark OTP as verified in parent record
-      await _client
-          .from('parents')
+      await SupabaseService.fromSchema('parents')
           .update({'parotpstatus': 1})
           .eq('par_id', response['par_id']);
 
@@ -316,8 +345,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
       // Verify OTP was verified for this mobile
-      final rows = await _client
-          .from('parents')
+      final rows = await SupabaseService.fromSchema('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('parotpstatus', 1) // Must be verified
@@ -331,7 +359,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final parent = ParentModel.fromJson(rows.first);
 
       // Update parent record with password
-      await _client.from('parents').update({
+      await SupabaseService.fromSchema('parents').update({
         'parpassword': password,
         // Clear OTP after successful password set
         'parmobotp': null,
@@ -341,6 +369,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       await _ref.read(parentAuthStateProvider.notifier).signIn(
             mobile: cleanMobile,
             password: password,
+            insId: SupabaseService.currentInsId!,
           );
 
       state = const AsyncValue.data(null);
@@ -350,17 +379,29 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  /// Sign in using parent table authentication
+  /// Sign in using parent table authentication.
+  /// Auto-detects the institution schema from the mobile number.
   Future<void> signIn({
     required String mobile,
     required String password,
   }) async {
     state = const AsyncValue.loading();
     try {
-      // Use parent table authentication
+      final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
+
+      // Auto-detect ALL institutions where this parent exists
+      final matches = await SupabaseService.findParentInstitutions(cleanMobile);
+      if (matches.isEmpty) {
+        throw Exception('Mobile number not registered in any institution.');
+      }
+
+      // Cache all schemas for multi-institution student fetching
+      SupabaseService.setParentSchemas(matches);
+
       await _ref.read(parentAuthStateProvider.notifier).signIn(
             mobile: mobile,
             password: password,
+            insId: matches.first.insId,
           );
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -370,6 +411,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> signOut() async {
+    _ref.read(selectedAuthInstitutionProvider.notifier).state = null;
     await _ref.read(parentAuthStateProvider.notifier).signOut();
     await _client.auth.signOut();
   }
@@ -390,9 +432,16 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
         throw Exception('Invalid mobile number format');
       }
 
+      // Auto-detect institution if schema not already set
+      if (SupabaseService.currentSchema == null) {
+        final result = await SupabaseService.findParentInstitution(cleanMobile);
+        if (result.insId == null) {
+          throw Exception('Mobile number not registered. Please sign up first.');
+        }
+      }
+
       // Check if account exists with password set
-      final rows = await _client
-          .from('parents')
+      final rows = await SupabaseService.fromSchema('parents')
           .select()
           .eq('payinchargemob', mobileNumber)
           .limit(1);
@@ -422,7 +471,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final otp = _generateSecureOtp();
 
       // Store OTP in parent record
-      await _client.from('parents').update({
+      await SupabaseService.fromSchema('parents').update({
         'parmobotp': int.parse(otp),
         'parotpstatus': 0, // Reset to pending
       }).eq('par_id', parent.parId);
@@ -455,8 +504,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
       // Query parent record with matching mobile and OTP
-      final rows = await _client
-          .from('parents')
+      final rows = await SupabaseService.fromSchema('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('parmobotp', int.parse(otp))
@@ -471,8 +519,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final response = rows.first;
 
       // Mark OTP as verified
-      await _client
-          .from('parents')
+      await SupabaseService.fromSchema('parents')
           .update({'parotpstatus': 1})
           .eq('par_id', response['par_id']);
 
@@ -494,8 +541,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
       // Verify OTP was verified for this mobile
-      final verifyRows = await _client
-          .from('parents')
+      final verifyRows = await SupabaseService.fromSchema('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('parotpstatus', 1) // Must be verified
@@ -509,8 +555,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       final verifyResponse = verifyRows.first;
 
       // Update password in parents table using par_id
-      final updateRows = await _client
-          .from('parents')
+      final updateRows = await SupabaseService.fromSchema('parents')
           .update({
             'parpassword': newPassword,
             'parmobotp': null, // Clear OTP after password reset
