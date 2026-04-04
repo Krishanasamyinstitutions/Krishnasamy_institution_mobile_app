@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/models/student_model.dart';
 import '../../data/models/institution_model.dart';
+import '../../core/services/supabase_service.dart';
 import 'auth_provider.dart' show supabaseClientProvider, parentAuthStateProvider;
 import 'cart_provider.dart';
 
@@ -41,10 +42,7 @@ class SelectedStudentNotifier extends StateNotifier<StudentModel?> {
           return;
         }
 
-        final client = _ref.read(supabaseClientProvider);
-
-        final response = await client
-            .from('students')
+        final response = await SupabaseService.fromSchema('students')
             .select('*')
             .eq('stu_id', savedStudentId)
             .eq('activestatus', 1)
@@ -76,7 +74,7 @@ class SelectedStudentNotifier extends StateNotifier<StudentModel?> {
     }
   }
 
-  /// Select a student
+  /// Select a student and switch to the correct institution schema
   Future<void> selectStudent(StudentModel student) async {
     _manuallySelected = true;
 
@@ -85,6 +83,17 @@ class SelectedStudentNotifier extends StateNotifier<StudentModel?> {
     if (currentStudentId != null && currentStudentId != student.stuId) {
       _ref.read(cartProvider.notifier).clearCartLocal();
       debugPrint('Cart cleared for student switch');
+    }
+
+    // Switch schema to match this student's institution
+    final schemas = SupabaseService.parentSchemas;
+    final match = schemas.where((s) => s.insId == student.insId).firstOrNull;
+    if (match != null) {
+      SupabaseService.setSchema(match.schema);
+      debugPrint('Schema switched to ${match.schema} for ins_id=${student.insId}');
+    } else {
+      // Fallback: determine schema from institution
+      await SupabaseService.determineAndSetSchema(student.insId);
     }
 
     state = student;
@@ -99,10 +108,10 @@ class SelectedStudentNotifier extends StateNotifier<StudentModel?> {
   }
 }
 
-/// Fetch students by parent ID (used after login)
-/// Uses parentdetail table to link parents to students
+/// Fetch students by parent ID across ALL institution schemas.
+/// A parent with the same mobile in 3 institutions will see
+/// students from all 3 institutions in the student selection screen.
 final studentsByParentProvider = FutureProvider<List<StudentModel>>((ref) async {
-  final client = ref.watch(supabaseClientProvider);
   final parentAuthState = ref.watch(parentAuthStateProvider);
 
   final parent = parentAuthState.valueOrNull?.parent;
@@ -110,46 +119,87 @@ final studentsByParentProvider = FutureProvider<List<StudentModel>>((ref) async 
     return [];
   }
 
-  try {
-    // First, get student IDs from parentdetail table
-    final parentDetailResponse = await client
-        .from('parentdetail')
-        .select('stu_id')
-        .eq('par_id', parent.parId);
+  final schemas = SupabaseService.parentSchemas;
+  final allStudents = <StudentModel>[];
 
-    final studentIds = (parentDetailResponse as List<dynamic>)
-        .map((e) => e['stu_id'] as int)
-        .toList();
+  // Query each schema where this parent exists
+  for (final entry in schemas) {
+    try {
+      // Find parent in this schema by mobile
+      final parentRows = await SupabaseService.client.schema(entry.schema)
+          .from('parents')
+          .select('par_id')
+          .eq('payinchargemob', parent.payinchargemob)
+          .eq('activestatus', 1)
+          .limit(1)
+          .maybeSingle();
 
-    if (studentIds.isEmpty) {
-      debugPrint('No students linked to parent ${parent.parId}');
-      return [];
+      if (parentRows == null) continue;
+      final parId = parentRows['par_id'] as int;
+
+      // Get student IDs from parentdetail in this schema
+      final parentDetailResponse = await SupabaseService.client.schema(entry.schema)
+          .from('parentdetail')
+          .select('stu_id')
+          .eq('par_id', parId);
+
+      final studentIds = (parentDetailResponse as List<dynamic>)
+          .map((e) => e['stu_id'] as int)
+          .toList();
+
+      if (studentIds.isEmpty) continue;
+
+      // Fetch student records from this schema
+      final response = await SupabaseService.client.schema(entry.schema)
+          .from('students')
+          .select('*')
+          .inFilter('stu_id', studentIds)
+          .eq('activestatus', 1)
+          .order('stuname', ascending: true);
+
+      allStudents.addAll(
+        (response as List<dynamic>).map((e) => StudentModel.fromJson(e)),
+      );
+    } catch (e) {
+      debugPrint('Error fetching students from schema ${entry.schema}: $e');
     }
-
-    // Then fetch the actual student records
-    final response = await client
-        .from('students')
-        .select('*')
-        .inFilter('stu_id', studentIds)
-        .eq('activestatus', 1)
-        .order('stuname', ascending: true);
-
-    return (response as List<dynamic>)
-        .map((e) => StudentModel.fromJson(e))
-        .toList();
-  } catch (e) {
-    debugPrint('Error fetching students by parent: $e');
-    return [];
   }
+
+  // Fallback: if no schemas cached, use current schema
+  if (schemas.isEmpty) {
+    try {
+      final parentDetailResponse = await SupabaseService.fromSchema('parentdetail')
+          .select('stu_id')
+          .eq('par_id', parent.parId);
+
+      final studentIds = (parentDetailResponse as List<dynamic>)
+          .map((e) => e['stu_id'] as int)
+          .toList();
+
+      if (studentIds.isNotEmpty) {
+        final response = await SupabaseService.fromSchema('students')
+            .select('*')
+            .inFilter('stu_id', studentIds)
+            .eq('activestatus', 1)
+            .order('stuname', ascending: true);
+
+        allStudents.addAll(
+          (response as List<dynamic>).map((e) => StudentModel.fromJson(e)),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error fetching students (fallback): $e');
+    }
+  }
+
+  allStudents.sort((a, b) => a.stuname.compareTo(b.stuname));
+  return allStudents;
 });
 
-/// Fetch all students from Supabase
+/// Fetch all students from Supabase (schema-specific)
 final studentsProvider = FutureProvider<List<StudentModel>>((ref) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
-    final response = await client
-        .from('students')
+    final response = await SupabaseService.fromSchema('students')
         .select('*')
         .eq('activestatus', 1)
         .order('stuname', ascending: true);
@@ -163,13 +213,10 @@ final studentsProvider = FutureProvider<List<StudentModel>>((ref) async {
   }
 });
 
-/// Fetch students by institution ID
+/// Fetch students by institution ID (schema-specific)
 final studentsByInstitutionProvider = FutureProvider.family<List<StudentModel>, int>((ref, insId) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
-    final response = await client
-        .from('students')
+    final response = await SupabaseService.fromSchema('students')
         .select('*')
         .eq('ins_id', insId)
         .eq('activestatus', 1)
@@ -184,13 +231,10 @@ final studentsByInstitutionProvider = FutureProvider.family<List<StudentModel>, 
   }
 });
 
-/// Fetch a single student by ID
+/// Fetch a single student by ID (schema-specific)
 final studentByIdProvider = FutureProvider.family<StudentModel?, int>((ref, stuId) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
-    final response = await client
-        .from('students')
+    final response = await SupabaseService.fromSchema('students')
         .select('*')
         .eq('stu_id', stuId)
         .maybeSingle();
@@ -205,13 +249,10 @@ final studentByIdProvider = FutureProvider.family<StudentModel?, int>((ref, stuI
   }
 });
 
-/// Fetch student by mobile number (for login)
+/// Fetch student by mobile number (schema-specific)
 final studentByMobileProvider = FutureProvider.family<StudentModel?, String>((ref, mobile) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
-    final response = await client
-        .from('students')
+    final response = await SupabaseService.fromSchema('students')
         .select('*')
         .eq('stumobile', mobile)
         .eq('activestatus', 1)
@@ -227,13 +268,10 @@ final studentByMobileProvider = FutureProvider.family<StudentModel?, String>((re
   }
 });
 
-/// Fetch student by admission number
+/// Fetch student by admission number (schema-specific)
 final studentByAdmissionProvider = FutureProvider.family<StudentModel?, String>((ref, admNo) async {
-  final client = ref.watch(supabaseClientProvider);
-
   try {
-    final response = await client
-        .from('students')
+    final response = await SupabaseService.fromSchema('students')
         .select('*')
         .eq('stuadmno', admNo)
         .eq('activestatus', 1)

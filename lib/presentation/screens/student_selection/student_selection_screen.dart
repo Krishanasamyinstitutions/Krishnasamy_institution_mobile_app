@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../../data/models/student_model.dart';
 import '../../providers/student_provider.dart';
+import '../../providers/institution_provider.dart';
 import '../../widgets/common/auth_desktop_wrapper.dart';
 import '../../widgets/common/screen_illustrations.dart';
 
@@ -17,7 +18,7 @@ class StudentSelectionScreen extends ConsumerStatefulWidget {
 }
 
 class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen> {
-  int? _selectedStudentId;
+  int? _selectedStudentIndex;
   bool _hasAutoSelected = false;
   bool _isCheckingStudents = true; // Show loading while checking
 
@@ -206,7 +207,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
           children: [
             for (int index = 0; index < students.length; index++) ...[
               if (index > 0) const SizedBox(height: 12),
-              _buildStudentCard(students[index], _selectedStudentId == students[index].stuId, index),
+              _buildStudentCard(students[index], _selectedStudentIndex == index, index),
             ],
           ],
         );
@@ -218,7 +219,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
     return GestureDetector(
       onTap: () {
         setState(() {
-          _selectedStudentId = student.stuId;
+          _selectedStudentIndex = index;
         });
       },
       child: Container(
@@ -345,6 +346,22 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
                       ],
                     ),
                   ),
+                  Consumer(builder: (context, ref, _) {
+                    final instAsync = ref.watch(institutionByIdProvider(student.insId));
+                    final instName = instAsync.valueOrNull?.insname ?? student.inscode;
+                    if (instName.isEmpty) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        instName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    );
+                  }),
                 ],
               ),
             ),
@@ -380,7 +397,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
   }
 
   Widget _buildContinueButton() {
-    final isEnabled = _selectedStudentId != null;
+    final isEnabled = _selectedStudentIndex != null;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -389,10 +406,8 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
             ? () async {
                 final studentsAsync = ref.read(studentsByParentProvider);
                 final students = studentsAsync.valueOrNull;
-                if (students != null) {
-                  final selectedStudent = students.firstWhere(
-                    (s) => s.stuId == _selectedStudentId,
-                  );
+                if (students != null && _selectedStudentIndex != null) {
+                  final selectedStudent = students[_selectedStudentIndex!];
                   await ref.read(selectedStudentProvider.notifier).selectStudent(selectedStudent);
                 }
                 if (mounted) context.go(Routes.home);

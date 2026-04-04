@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/services/notification_service.dart';
+import '../../core/services/supabase_service.dart';
 import '../../data/models/notification_model.dart';
-import 'auth_provider.dart';
 import 'student_provider.dart';
 
 final _currencyFmt = NumberFormat.currency(
@@ -119,7 +119,6 @@ NotificationModel _paymentToNotification(Map<String, dynamic> payment) {
 
 final notificationsProvider =
     FutureProvider<List<NotificationModel>>((ref) async {
-  final client = ref.watch(supabaseClientProvider);
   final selectedStudent = ref.watch(selectedStudentProvider);
 
   if (selectedStudent == null) return [];
@@ -128,8 +127,7 @@ final notificationsProvider =
 
   // 1. Fetch payment notifications (success / failed / refunded)
   try {
-    final response = await client
-        .from('payment')
+    final response = await SupabaseService.fromSchema('payment')
         .select()
         .eq('stu_id', selectedStudent.stuId)
         .eq('activestatus', 1)
@@ -144,8 +142,7 @@ final notificationsProvider =
 
   // 2. Fetch school notifications from the `notification` table
   try {
-    final notiResponse = await client
-        .from('notification')
+    final notiResponse = await SupabaseService.fromSchema('notification')
         .select()
         .eq('stu_id', selectedStudent.stuId)
         .eq('activestatus', 1)
@@ -167,8 +164,7 @@ final notificationsProvider =
     final today = DateTime(now.year, now.month, now.day);
     final tenDaysLater = now.add(const Duration(days: 10));
 
-    final feeResponse = await client
-        .from('feedemand')
+    final feeResponse = await SupabaseService.fromSchema('feedemand')
         .select()
         .eq('stu_id', selectedStudent.stuId)
         .eq('activestatus', 1)
@@ -268,20 +264,16 @@ class NotificationNotifier extends StateNotifier<AsyncValue<void>> {
   /// - `noti_*` → updates `isread` in `notification` table
   /// - Fee notifications (`fee_*`) are skipped — they stay until paid.
   Future<void> markAsRead(String notificationId) async {
-    final client = _ref.read(supabaseClientProvider);
-
     try {
       if (notificationId.startsWith('pay_')) {
         final payId = int.tryParse(notificationId.replaceFirst('pay_', ''));
         if (payId == null) return;
-        await client
-            .from('payment')
+        await SupabaseService.fromSchema('payment')
             .update({'notification_read': true}).eq('pay_id', payId);
       } else if (notificationId.startsWith('noti_')) {
         final notiId = int.tryParse(notificationId.replaceFirst('noti_', ''));
         if (notiId == null) return;
-        await client
-            .from('notification')
+        await SupabaseService.fromSchema('notification')
             .update({'isread': 1}).eq('noti_id', notiId);
       } else {
         return; // fee_* notifications — skip
@@ -295,7 +287,6 @@ class NotificationNotifier extends StateNotifier<AsyncValue<void>> {
   /// Fee reminders are skipped — they stay unread until the fee is paid.
   Future<void> markAllAsRead() async {
     final notifications = _ref.read(notificationsProvider).valueOrNull ?? [];
-    final client = _ref.read(supabaseClientProvider);
 
     // Mark payment notifications as read
     final unreadPayIds = notifications
@@ -306,8 +297,7 @@ class NotificationNotifier extends StateNotifier<AsyncValue<void>> {
 
     if (unreadPayIds.isNotEmpty) {
       try {
-        await client
-            .from('payment')
+        await SupabaseService.fromSchema('payment')
             .update({'notification_read': true}).inFilter('pay_id', unreadPayIds);
       } catch (_) {}
     }
@@ -321,8 +311,7 @@ class NotificationNotifier extends StateNotifier<AsyncValue<void>> {
 
     if (unreadNotiIds.isNotEmpty) {
       try {
-        await client
-            .from('notification')
+        await SupabaseService.fromSchema('notification')
             .update({'isread': 1}).inFilter('noti_id', unreadNotiIds);
       } catch (_) {}
     }
@@ -341,16 +330,15 @@ final notificationActionsProvider =
 /// Subscribes when a student is selected; shows a local push notification
 /// on INSERT and refreshes the notifications list.
 final notificationRealtimeProvider = Provider.autoDispose<void>((ref) {
-  final client = ref.watch(supabaseClientProvider);
   final selectedStudent = ref.watch(selectedStudentProvider);
 
   if (selectedStudent == null) return;
 
-  final channel = client
+  final channel = SupabaseService.client
       .channel('notification_realtime_${selectedStudent.stuId}')
       .onPostgresChanges(
         event: PostgresChangeEvent.insert,
-        schema: 'public',
+        schema: SupabaseService.currentSchema ?? 'public',
         table: 'notification',
         filter: PostgresChangeFilter(
           type: PostgresChangeFilterType.eq,
@@ -381,6 +369,6 @@ final notificationRealtimeProvider = Provider.autoDispose<void>((ref) {
       .subscribe();
 
   ref.onDispose(() {
-    client.removeChannel(channel);
+    SupabaseService.client.removeChannel(channel);
   });
 });

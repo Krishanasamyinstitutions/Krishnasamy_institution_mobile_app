@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/fee_model.dart';
+import '../../core/services/supabase_service.dart';
 import 'auth_provider.dart';
 import 'student_provider.dart';
 
@@ -129,13 +130,11 @@ class CartNotifier extends StateNotifier<CartState> {
     final student = _ref.read(selectedStudentProvider);
     if (student == null) return;
 
-    final client = _ref.read(supabaseClientProvider);
     final parent = _ref.read(currentParentProvider);
 
     try {
       // Find existing active (non-initiated) cart for this student
-      final existingCart = await client
-          .from('shoppingcart')
+      final existingCart = await SupabaseService.fromSchema('shoppingcart')
           .select('car_id')
           .eq('stu_id', student.stuId)
           .eq('carinitiated', 'N')
@@ -146,8 +145,8 @@ class CartNotifier extends StateNotifier<CartState> {
       if (state.isEmpty) {
         if (existingCart != null) {
           final carId = existingCart['car_id'] as int;
-          await client.from('shoppingcartdetails').delete().eq('car_id', carId);
-          await client.from('shoppingcart').delete().eq('car_id', carId);
+          await SupabaseService.fromSchema('shoppingcartdetails').delete().eq('car_id', carId);
+          await SupabaseService.fromSchema('shoppingcart').delete().eq('car_id', carId);
           debugPrint('Cart deleted from DB: car_id=$carId');
         }
         return;
@@ -163,7 +162,7 @@ class CartNotifier extends StateNotifier<CartState> {
         carId = existingCart['car_id'] as int;
 
         // Update cart header
-        await client.from('shoppingcart').update({
+        await SupabaseService.fromSchema('shoppingcart').update({
           'yr_id': firstFee.yrId,
           'yrlabel': firstFee.demfeeyear,
           'transdate': DateTime.now().toIso8601String().split('T')[0],
@@ -172,10 +171,10 @@ class CartNotifier extends StateNotifier<CartState> {
         }).eq('car_id', carId);
 
         // Delete old cart details
-        await client.from('shoppingcartdetails').delete().eq('car_id', carId);
+        await SupabaseService.fromSchema('shoppingcartdetails').delete().eq('car_id', carId);
       } else {
         // Create new cart
-        final cartResponse = await client.from('shoppingcart').insert({
+        final cartResponse = await SupabaseService.fromSchema('shoppingcart').insert({
           'yr_id': firstFee.yrId,
           'yrlabel': firstFee.demfeeyear,
           'ins_id': student.insId,
@@ -202,7 +201,7 @@ class CartNotifier extends StateNotifier<CartState> {
         'transtotalamount': fee.balancedue,
       }).toList();
 
-      await client.from('shoppingcartdetails').insert(detailRows);
+      await SupabaseService.fromSchema('shoppingcartdetails').insert(detailRows);
 
       debugPrint('Cart synced to DB: car_id=$carId, ${items.length} items, total=$totalAmount');
     } catch (e) {

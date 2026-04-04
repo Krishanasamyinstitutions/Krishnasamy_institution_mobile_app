@@ -4,20 +4,34 @@ import '../../data/models/institution_model.dart';
 import 'auth_provider.dart' show supabaseClientProvider;
 import 'student_provider.dart' show selectedStudentProvider;
 
-/// Fetch institution by ID with city join
+/// Fetch institution by ID
 final institutionByIdProvider = FutureProvider.family<InstitutionModel?, int>((ref, insId) async {
   final client = ref.watch(supabaseClientProvider);
 
   try {
-    final response = await client
-        .from('institution')
-        .select('*, city:cit_id(citname)')
-        .eq('ins_id', insId)
-        .eq('activestatus', 1)
-        .maybeSingle();
+    try {
+      final response = await client
+          .from('institution')
+          .select('*, city:cit_id(citname)')
+          .eq('ins_id', insId)
+          .eq('activestatus', 1)
+          .maybeSingle();
 
-    if (response != null) {
-      return InstitutionModel.fromJson(response);
+      if (response != null) {
+        return InstitutionModel.fromJson(response);
+      }
+    } catch (_) {
+      // Fallback without city join
+      final response = await client
+          .from('institution')
+          .select('*')
+          .eq('ins_id', insId)
+          .eq('activestatus', 1)
+          .maybeSingle();
+
+      if (response != null) {
+        return InstitutionModel.fromJson(response);
+      }
     }
     return null;
   } catch (e) {
@@ -61,20 +75,34 @@ final selectedStudentInstitutionProvider = FutureProvider<InstitutionModel?>((re
   }
 });
 
-/// Fetch all active institutions with city join
+/// Fetch all active institutions
 final institutionsProvider = FutureProvider<List<InstitutionModel>>((ref) async {
   final client = ref.watch(supabaseClientProvider);
 
   try {
-    final response = await client
-        .from('institution')
-        .select('*, city:cit_id(citname)')
-        .eq('activestatus', 1)
-        .order('insname', ascending: true);
+    // Try with city join first
+    try {
+      final response = await client
+          .from('institution')
+          .select('*, city:cit_id(citname)')
+          .eq('activestatus', 1)
+          .order('insname', ascending: true);
 
-    return (response as List<dynamic>)
-        .map((e) => InstitutionModel.fromJson(e))
-        .toList();
+      return (response as List<dynamic>)
+          .map((e) => InstitutionModel.fromJson(e))
+          .toList();
+    } catch (_) {
+      // Fallback without city join
+      final response = await client
+          .from('institution')
+          .select('*')
+          .eq('activestatus', 1)
+          .order('insname', ascending: true);
+
+      return (response as List<dynamic>)
+          .map((e) => InstitutionModel.fromJson(e))
+          .toList();
+    }
   } catch (e) {
     debugPrint('Error fetching institutions: $e');
     return [];
