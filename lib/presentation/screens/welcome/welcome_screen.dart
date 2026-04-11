@@ -19,69 +19,76 @@ class WelcomeScreen extends StatelessWidget {
     );
   }
 
-  // ─── Mobile layout (existing design) ───────────────────────────────
+  // ─── Mobile layout — reference image style ───────────────────────────────
   Widget _buildMobileLayout(BuildContext context) {
-    return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                const Spacer(),
-                _buildLogo(context, 180),
-                const SizedBox(height: 32),
-                Text(
-                  'SchoolPay',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F1EE),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            children: [
+              const SizedBox(height: 60),
+                  // Title
+                  const Text(
+                    'Welcome to\nSchoolPay',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1A1A1A),
+                      height: 1.2,
+                      letterSpacing: -0.5,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Pay school fees with ease',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: AppColors.textSecondaryC(context),
+                  const SizedBox(height: 12),
+                  // Subtitle
+                  const Text(
+                    'Your go-to destination for smart, fast, and hassle-free fee payments',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
+                      color: Color(0xFF9E9E9E),
+                      height: 1.5,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                _buildFeatureItem(
-                  context: context,
-                  icon: Icons.speed_rounded,
-                  text: 'Quick & Easy Payments',
-                  color: AppColors.cardPurple,
-                  iconColor: AppColors.cardPurpleDark,
-                ),
-                const SizedBox(height: 12),
-                _buildFeatureItem(
-                  context: context,
-                  icon: Icons.security_rounded,
-                  text: '100% Secure Transactions',
-                  color: AppColors.cardGreen,
-                  iconColor: AppColors.cardGreenDark,
-                ),
-                const SizedBox(height: 12),
-                _buildFeatureItem(
-                  context: context,
-                  icon: Icons.receipt_long_rounded,
-                  text: 'Instant Digital Receipts',
-                  color: AppColors.cardBlue,
-                  iconColor: AppColors.cardBlueDark,
-                ),
-                const Spacer(),
-                _buildSignInButton(context),
-                const SizedBox(height: 12),
-                _buildCreateAccountButton(context),
-                const SizedBox(height: 16),
-              ],
+                  const SizedBox(height: 36),
+                  // Feature items
+                  _buildFeatureItem(
+                    context: context,
+                    icon: Icons.speed_rounded,
+                    text: 'Quick & Easy Payments',
+                    color: AppColors.cardGreen,
+                    iconColor: AppColors.cardGreenDark,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFeatureItem(
+                    context: context,
+                    icon: Icons.security_rounded,
+                    text: '100% Secure Transactions',
+                    color: AppColors.cardGreen,
+                    iconColor: AppColors.cardGreenDark,
+                  ),
+                  const SizedBox(height: 10),
+                  _buildFeatureItem(
+                    context: context,
+                    icon: Icons.receipt_long_rounded,
+                    text: 'Instant Digital Receipts',
+                    color: AppColors.cardGreen,
+                    iconColor: AppColors.cardGreenDark,
+                  ),
+                  const SizedBox(height: 32),
+                  // Sign In — dark button
+                  _buildSignInButton(context),
+                  const SizedBox(height: 12),
+                  // Create Account — outlined
+                  _buildCreateAccountButton(context),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -179,24 +186,15 @@ class WelcomeScreen extends StatelessWidget {
       onTap: () => context.push(Routes.signIn),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, AppColors.primary600],
-          ),
+          color: const Color(0xFF121212),
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
         ),
-        child: Row(
+        child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
+            Text(
               'Sign In',
               style: TextStyle(
                 fontSize: 16,
@@ -204,8 +202,8 @@ class WelcomeScreen extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            const SizedBox(width: 10),
-            const Icon(Icons.login_rounded, size: 20, color: Colors.white),
+            SizedBox(width: 10),
+            Icon(Icons.login_rounded, size: 20, color: Colors.white),
           ],
         ),
       ),
@@ -213,15 +211,19 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   Widget _buildCreateAccountButton(BuildContext context) {
+    final isMobile = !context.isDesktop;
     return GestureDetector(
       onTap: () => context.push(Routes.signUp),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          color: AppColors.cardBg(context),
+          color: isMobile ? Colors.white : AppColors.cardBg(context),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primary, width: 2),
+          border: Border.all(
+            color: isMobile ? const Color(0xFFE8E7E4) : AppColors.primary,
+            width: isMobile ? 1 : 2,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -231,11 +233,15 @@ class WelcomeScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: AppColors.primary,
+                color: isMobile ? const Color(0xFF1A1A1A) : AppColors.primary,
               ),
             ),
             const SizedBox(width: 10),
-            Icon(Icons.person_add_rounded, size: 20, color: AppColors.primary),
+            Icon(
+              Icons.person_add_rounded,
+              size: 20,
+              color: isMobile ? const Color(0xFF1A1A1A) : AppColors.primary,
+            ),
           ],
         ),
       ),
@@ -253,7 +259,7 @@ class WelcomeScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: Theme.of(context).brightness == Brightness.dark
             ? []
             : [BoxShadow(color: AppColors.shadowLight, blurRadius: 12, offset: const Offset(0, 4))],
@@ -265,7 +271,7 @@ class WelcomeScreen extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(12),
+              shape: BoxShape.circle,
             ),
             child: Icon(
               icon,

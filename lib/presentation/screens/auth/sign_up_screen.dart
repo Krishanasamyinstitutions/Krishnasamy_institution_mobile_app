@@ -434,9 +434,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, AppColors.primary600],
-          ),
+          color: const Color(0xFF121212),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
