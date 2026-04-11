@@ -1539,7 +1539,7 @@ class ScreenIllustrations {
               ),
               child: Row(
                 children: [
-                  for (final c in [const Color(0xFFEF4444), const Color(0xFFF59E0B), const Color(0xFF22C55E)])
+                  for (final c in [const Color(0xFFEF4444), const Color(0xFFF59E0B), const Color(0xFF0D9B5C)])
                     Container(
                       margin: EdgeInsets.only(right: size * 0.005),
                       width: size * 0.009,

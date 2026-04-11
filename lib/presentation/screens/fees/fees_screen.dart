@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
@@ -21,6 +23,14 @@ class FeesScreen extends ConsumerStatefulWidget {
 }
 
 class _FeesScreenState extends ConsumerState<FeesScreen> {
+  // Warm gray UI color palette (mobile)
+  static const Color _bg = Color(0xFFF2F1EE);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBorder = Color(0xFFE8E7E4);
+  static const Color _textDark = Color(0xFF1A1A1A);
+  static const Color _textMedium = Color(0xFF6B6B6B);
+  static const Color _textLight = Color(0xFF9E9E9E);
+
   // Mock data for preview (remove this when real data is available)
   List<FeeModel> get _mockFees => [
     // Mandatory Fees
@@ -143,16 +153,30 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
           children: [
             // Fixed Header with white SafeArea and subtle shadow
             Container(
-              color: AppColors.headerBg(context),
+              color: _cardBg,
               child: SafeArea(
                 bottom: false,
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.headerBg(context),
-                    boxShadow: AppColors.cardShadow(context),
+                  decoration: const BoxDecoration(
+                    color: _cardBg,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x0A000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
-                  child: _buildHeader(context),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _buildHeader(context),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -192,125 +216,153 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
     final cartItemCount = ref.watch(cartItemCountProvider);
     final notificationCount = ref.watch(notificationCountProvider);
+    final studentName = selectedStudent?.name ?? 'Student';
+    final className = selectedStudent?.className ?? 'N/A';
+    final courseName = selectedStudent?.courseName ?? 'N/A';
+    final hasPhoto = selectedStudent != null &&
+        selectedStudent.photoUrl != null &&
+        selectedStudent.photoUrl!.trim().isNotEmpty;
 
     return Row(
       children: [
+        // Avatar
+        GestureDetector(
+          onTap: () => context.go(Routes.profile),
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primary,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: hasPhoto
+                ? CachedNetworkImage(
+                    imageUrl: selectedStudent.photoUrl!,
+                    fit: BoxFit.cover,
+                    width: 48,
+                    height: 48,
+                    errorWidget: (context, url, error) => Center(
+                      child: Text(
+                        _getInitials(studentName),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                    ),
+                  )
+                : Center(
+                    child: Text(
+                      _getInitials(studentName),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(width: 14),
+        // Greeting
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Fees',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
-                ),
+                '$courseName | $className',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _textLight),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 2),
               Text(
-                'View and manage all fees',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textSecondaryC(context),
-                ),
+                'Hey, ${studentName.split(' ').first}',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textDark, letterSpacing: -0.3),
               ),
             ],
           ),
         ),
-        // Cart Icon - Dark theme
-        GestureDetector(
+        // Cart icon
+        _buildHeaderIcon(
+          svgPath: 'assets/icons/Cart.svg',
+          badgeCount: cartItemCount,
           onTap: () => context.push(Routes.cart),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.iconButtonBg(context),
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
-                if (cartItemCount > 0)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
-                      ),
-                      child: Text(
-                        cartItemCount > 9 ? '9+' : '$cartItemCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
         ),
-        const SizedBox(width: 10),
-        // Notification Icon - Dark theme with badge
-        GestureDetector(
+        const SizedBox(width: 8),
+        // Notification icon
+        _buildHeaderIcon(
+          svgPath: 'assets/main icons/line icons/notification.svg',
+          badgeCount: notificationCount,
           onTap: () => context.go(Routes.notifications),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.iconButtonBg(context),
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
-                if (notificationCount > 0)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
-                      ),
-                      child: Text(
-                        notificationCount > 9 ? '9+' : '$notificationCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
         ),
       ],
     );
+  }
+
+  Widget _buildHeaderIcon({
+    IconData? icon,
+    String? svgPath,
+    required int badgeCount,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFF121212),
+          shape: BoxShape.circle,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            svgPath != null
+                ? SvgPicture.asset(svgPath, width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))
+                : Icon(icon, size: 20, color: Colors.white),
+            if (badgeCount > 0)
+              Positioned(
+                top: -3,
+                right: -3,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Text(
+                    badgeCount > 9 ? '9+' : '$badgeCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'S';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
   }
 
   Widget _buildFeeBreakdownCard(List<FeeModel> fees, String? studentName) {
@@ -331,17 +383,15 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBg(context),
+        color: _cardBg,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: Theme.of(context).brightness == Brightness.dark
-            ? []
-            : [
-                BoxShadow(
-                  color: AppColors.shadowPurple,
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSizes.s4),
@@ -416,7 +466,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
               style: TextStyle(
                 fontSize: AppSizes.sectionTitle,
                 fontWeight: AppSizes.fontSemibold,
-                color: AppColors.textPrimaryC(context),
+                color: _textDark,
               ),
             ),
             const SizedBox(height: AppSizes.s1),
@@ -425,7 +475,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
               style: TextStyle(
                 fontSize: AppSizes.textXs,
                 fontWeight: AppSizes.fontNormal,
-                color: AppColors.textSecondaryC(context),
+                color: _textMedium,
               ),
             ),
           ],
@@ -437,7 +487,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
           ),
           decoration: BoxDecoration(
             color: AppColors.success,
-            borderRadius: BorderRadius.circular(6),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Text(
             term,
@@ -455,7 +505,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
   Widget _buildDivider() {
     return Container(
       height: 1,
-      color: AppColors.borderC(context),
+      color: const Color(0xFFF0F0F0),
     );
   }
 
@@ -553,7 +603,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.accent.withValues(alpha: 0.08) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isSelected ? AppColors.accent.withValues(alpha: 0.3) : Colors.transparent,
             width: 1,
@@ -569,7 +619,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
                 style: TextStyle(
                   fontSize: AppSizes.bodyText,
                   fontWeight: isSelected ? AppSizes.fontMedium : AppSizes.fontNormal,
-                  color: isSelected ? AppColors.textPrimaryC(context) : AppColors.textSecondaryC(context),
+                  color: isSelected ? _textDark : _textMedium,
                   height: 1.47,
                 ),
               ),
@@ -582,7 +632,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
                   style: TextStyle(
                     fontSize: AppSizes.textBase,
                     fontWeight: AppSizes.fontSemibold,
-                    color: isSelected ? AppColors.accent : AppColors.textPrimaryC(context),
+                    color: isSelected ? AppColors.accent : _textDark,
                   ),
                 ),
                 const SizedBox(width: 30),
@@ -593,7 +643,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
                     color: isSelected ? AppColors.accent : Colors.transparent,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: isSelected ? AppColors.accent : AppColors.textSecondaryC(context),
+                      color: isSelected ? AppColors.accent : _textLight,
                       width: 1.5,
                     ),
                   ),
@@ -622,7 +672,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
           style: TextStyle(
             fontSize: AppSizes.sectionTitle,
             fontWeight: AppSizes.fontSemibold,
-            color: AppColors.textPrimaryC(context),
+            color: _textDark,
           ),
         ),
         Padding(
@@ -632,7 +682,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
             style: TextStyle(
               fontSize: AppSizes.sectionTitle,
               fontWeight: AppSizes.fontSemibold,
-              color: AppColors.textPrimaryC(context),
+              color: _textDark,
             ),
           ),
         ),
@@ -649,7 +699,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
       width: double.infinity,
       decoration: BoxDecoration(
         color: isEnabled ? AppColors.primary : AppColors.filterBg(context),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: isEnabled
             ? [
                 BoxShadow(
@@ -664,7 +714,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: isEnabled ? () => context.go(Routes.cart) : null,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSizes.s2,
@@ -680,14 +730,14 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
                   style: TextStyle(
                     fontSize: AppSizes.textBase,
                     fontWeight: AppSizes.fontSemibold,
-                    color: isEnabled ? Colors.white : AppColors.textSecondaryC(context),
+                    color: isEnabled ? Colors.white : _textLight,
                   ),
                 ),
                 const SizedBox(width: AppSizes.s3),
                 Icon(
                   Icons.arrow_forward,
                   size: 24,
-                  color: isEnabled ? Colors.white : AppColors.textSecondaryC(context),
+                  color: isEnabled ? Colors.white : _textLight,
                 ),
               ],
             ),
@@ -743,7 +793,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimaryC(context),
+                color: _textDark,
               ),
             ),
             const SizedBox(height: 8),
@@ -752,7 +802,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondaryC(context),
+                color: _textMedium,
               ),
             ),
           ],

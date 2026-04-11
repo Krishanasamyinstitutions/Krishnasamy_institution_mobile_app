@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
@@ -19,6 +20,15 @@ class SupportScreen extends ConsumerStatefulWidget {
 }
 
 class _SupportScreenState extends ConsumerState<SupportScreen> {
+  static const Color _bg = Color(0xFFF2F1EE);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBorder = Color(0xFFE8E7E4);
+  static const Color _textDark = Color(0xFF1A1A1A);
+  static const Color _textMedium = Color(0xFF6B6B6B);
+  static const Color _textLight = Color(0xFF9E9E9E);
+
+  bool get _isMobile => !context.isDesktop;
+
   int _openFaqIndex = 0;
 
   final List<Map<String, String>> _faqs = [
@@ -57,7 +67,9 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
         ],
       ),
       toolbar: const BreadcrumbBar(currentLabel: 'Help & Support'),
-      body: SingleChildScrollView(
+      body: Container(
+        color: _isMobile ? _bg : null,
+        child: SingleChildScrollView(
         child: Padding(
           padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
@@ -73,7 +85,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
+                  color: _isMobile ? _textDark : AppColors.textPrimaryC(context),
                 ),
               ),
               const SizedBox(height: 12),
@@ -100,6 +112,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -120,11 +133,10 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
-              child: const Icon(
-                Icons.arrow_back_rounded,
-                size: 20,
-                color: Colors.white,
+              child: Center(
+                child: SvgPicture.asset('assets/icons/arrow-left.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
               ),
             ),
           ),
@@ -139,16 +151,17 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
+                    color: _isMobile ? _textDark : AppColors.textPrimaryC(context),
+                    letterSpacing: -0.3,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Get assistance',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondaryC(context),
+                    color: _isMobile ? _textMedium : AppColors.textSecondaryC(context),
                   ),
                 ),
               ],
@@ -168,12 +181,13 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
+                  SvgPicture.asset('assets/icons/Cart.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
                   if (cartItemCount > 0)
                     Positioned(
                       top: -4,
@@ -211,12 +225,13 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
+                  SvgPicture.asset('assets/main icons/line icons/notification.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
                   if (notificationCount > 0)
                     Positioned(
                       top: -4,
@@ -277,9 +292,11 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.cardBg(context),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: AppColors.cardShadow(context),
+        color: _isMobile ? _cardBg : AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: _isMobile
+            ? const [BoxShadow(color: Color(0x0F000000), blurRadius: 20, offset: Offset(0, 8))]
+            : AppColors.cardShadow(context),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,9 +307,9 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
               Container(
                 width: 48,
                 height: 48,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: AppColors.cardBlue,
-                  borderRadius: BorderRadius.circular(12),
+                  shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.support_agent_rounded,
@@ -306,7 +323,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
+                  color: _isMobile ? _textDark : AppColors.textPrimaryC(context),
                 ),
               ),
             ],
@@ -315,7 +332,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
           // Divider
           Container(
             height: 1,
-            color: AppColors.borderC(context),
+            color: _isMobile ? const Color(0xFFF0F0F0) : AppColors.borderC(context),
           ),
           const SizedBox(height: 20),
           // Email Row
@@ -406,12 +423,14 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(16),
-          border: isOpen
-              ? Border.all(color: AppColors.primary, width: 2)
-              : null,
-          boxShadow: [
+          color: _isMobile ? _cardBg : AppColors.cardBg(context),
+          borderRadius: BorderRadius.circular(20),
+          border: _isMobile
+              ? (isOpen ? Border.all(color: AppColors.primary, width: 2) : null)
+              : (isOpen ? Border.all(color: AppColors.primary, width: 2) : null),
+          boxShadow: _isMobile
+              ? const [BoxShadow(color: Color(0x0F000000), blurRadius: 20, offset: Offset(0, 8))]
+              : [
             BoxShadow(
               color: isOpen ? AppColors.shadowPurple : AppColors.shadowLight,
               blurRadius: 16,
@@ -446,7 +465,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: isOpen ? FontWeight.w600 : FontWeight.w500,
-                        color: AppColors.textPrimaryC(context),
+                        color: _isMobile ? _textDark : AppColors.textPrimaryC(context),
                       ),
                     ),
                   ),
@@ -473,7 +492,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
                     color: AppColors.cardPurple.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     answer,

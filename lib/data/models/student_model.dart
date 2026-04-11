@@ -20,6 +20,8 @@ class StudentModel {
   final String? stubloodgrp;
   final String? stuphoto;
   final String stuclass;
+  final int? courId;
+  final String? courname;
   final String stuserId;
   final int stuotpstatus;
   final int activestatus;
@@ -45,6 +47,8 @@ class StudentModel {
     this.stubloodgrp,
     this.stuphoto,
     required this.stuclass,
+    this.courId,
+    this.courname,
     required this.stuserId,
     this.stuotpstatus = 0,
     this.activestatus = 1,
@@ -77,6 +81,8 @@ class StudentModel {
       stubloodgrp: json['stubloodgrp'],
       stuphoto: json['stuphoto'],
       stuclass: json['stuclass'] ?? '',
+      courId: json['cour_id'] is int ? json['cour_id'] : (json['cour_id'] != null ? int.tryParse(json['cour_id'].toString()) : null),
+      courname: json['courname'],
       stuserId: json['stuser_id'] ?? '',
       stuotpstatus: json['stuotpstatus'] ?? 0,
       activestatus: json['activestatus'] ?? 1,
@@ -108,6 +114,8 @@ class StudentModel {
       'stubloodgrp': stubloodgrp,
       'stuphoto': stuphoto,
       'stuclass': stuclass,
+      'cour_id': courId,
+      'courname': courname,
       'stuser_id': stuserId,
       'stuotpstatus': stuotpstatus,
       'activestatus': activestatus,
@@ -119,6 +127,7 @@ class StudentModel {
   String get displayName => stuname;
   String get admissionNumber => stuadmno;
   String get className => stuclass;
+  String get courseName => courname ?? 'N/A';
   String get gender => stugender == 'M' ? 'Male' : stugender == 'F' ? 'Female' : 'Other';
   String get mobile => stumobile;
   String? get email => stuemail;
@@ -126,9 +135,13 @@ class StudentModel {
   bool get isActive => activestatus == 1;
   DateTime get dateOfBirth => studob;
 
+  /// Check if a value is meaningfully set (not null, empty, or literal "NULL")
+  static bool hasValue(String? value) =>
+      value != null && value.isNotEmpty && value.toUpperCase() != 'NULL';
+
   String get fullAddress {
     final parts = [stuaddress, stucity, stustate, stucountry, stupin]
-        .where((p) => p != null && p.isNotEmpty)
+        .where(hasValue)
         .toList();
     return parts.join(', ');
   }
@@ -153,6 +166,8 @@ class StudentModel {
     String? stubloodgrp,
     String? stuphoto,
     String? stuclass,
+    int? courId,
+    String? courname,
     String? stuserId,
     int? stuotpstatus,
     int? activestatus,
@@ -178,6 +193,8 @@ class StudentModel {
       stubloodgrp: stubloodgrp ?? this.stubloodgrp,
       stuphoto: stuphoto ?? this.stuphoto,
       stuclass: stuclass ?? this.stuclass,
+      courId: courId ?? this.courId,
+      courname: courname ?? this.courname,
       stuserId: stuserId ?? this.stuserId,
       stuotpstatus: stuotpstatus ?? this.stuotpstatus,
       activestatus: activestatus ?? this.activestatus,

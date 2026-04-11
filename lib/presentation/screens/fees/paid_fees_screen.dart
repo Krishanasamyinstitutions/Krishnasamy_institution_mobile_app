@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
@@ -93,13 +94,10 @@ class PaidFeesScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 18,
-                  color: Colors.white,
-                ),
+              child: Center(
+                child: SvgPicture.asset('assets/icons/arrow-left.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
               ),
             ),
           ),
@@ -129,12 +127,13 @@ class PaidFeesScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
+                  SvgPicture.asset('assets/main icons/line icons/notification.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
                   if (notificationCount > 0)
                     Positioned(
                       top: -4,
@@ -365,7 +364,7 @@ class _PaymentAccordionState extends State<_PaymentAccordion>
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: AppColors.cardShadow(context),
         ),
         clipBehavior: Clip.antiAlias,

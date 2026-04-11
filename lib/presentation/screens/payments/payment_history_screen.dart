@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../config/routes.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../data/models/payment_model.dart';
 import '../../providers/payment_provider.dart';
+import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 
@@ -21,6 +24,14 @@ class PaymentHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
+  // Warm gray UI colors (mobile only)
+  static const Color _bg = Color(0xFFF2F1EE);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBorder = Color(0xFFE8E7E4);
+  static const Color _textDark = Color(0xFF1A1A1A);
+  static const Color _textMedium = Color(0xFF6B6B6B);
+  static const Color _textLight = Color(0xFF9E9E9E);
+
   late String _activeFilter;
   int _currentPage = 0;
 
@@ -49,20 +60,29 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
           // Desktop: no header (MainScaffold top bar handles it) | Mobile: shadow header
           if (!context.isDesktop)
             Container(
-              color: AppColors.headerBg(context),
+              color: _cardBg,
               child: SafeArea(
                 bottom: false,
                 child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.headerBg(context),
-                    boxShadow: AppColors.cardShadow(context),
+                  decoration: const BoxDecoration(
+                    color: _cardBg,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x0A000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
                       const SizedBox(height: 16),
                       _buildHeader(context),
-                      const SizedBox(height: 20),
-                      _buildFilterTabs(filters),
+                      const SizedBox(height: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _buildFilterTabs(filters),
+                      ),
                       const SizedBox(height: 16),
                     ],
                   ),
@@ -103,7 +123,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
       return Container(
         decoration: BoxDecoration(
           color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: AppColors.cardShadow(context),
         ),
         clipBehavior: Clip.antiAlias,
@@ -131,7 +151,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     // Mobile: show all filtered items in a scrollable list (no pagination)
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       itemCount: filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) => _buildTransactionCard(filtered[index]),
@@ -139,187 +159,206 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
     final cartItemCount = ref.watch(cartItemCountProvider);
     final notificationCount = ref.watch(notificationCountProvider);
+    final studentName = selectedStudent?.name ?? 'Student';
+    final className = selectedStudent?.className ?? 'N/A';
+    final courseName = selectedStudent?.courseName ?? 'N/A';
+    final hasPhoto = selectedStudent != null &&
+        selectedStudent.photoUrl != null &&
+        selectedStudent.photoUrl!.trim().isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Avatar
+          GestureDetector(
+            onTap: () => context.go(Routes.profile),
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: hasPhoto
+                  ? CachedNetworkImage(
+                      imageUrl: selectedStudent.photoUrl!,
+                      fit: BoxFit.cover,
+                      width: 48,
+                      height: 48,
+                      errorWidget: (context, url, error) => Center(
+                        child: Text(
+                          _getInitials(studentName),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        _getInitials(studentName),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          // Greeting
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Payment History',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
-                  ),
+                  '$courseName | $className',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _textLight),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  'Track all your fee payments',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textSecondaryC(context),
-                  ),
+                  'Hey, ${studentName.split(' ').first}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textDark, letterSpacing: -0.3),
                 ),
               ],
             ),
           ),
-          // Cart Icon
-          GestureDetector(
+          // Cart icon
+          _buildHeaderIcon(
+            svgPath: 'assets/icons/Cart.svg',
+            badgeCount: cartItemCount,
             onTap: () => context.push(Routes.cart),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.iconButtonBg(context),
-                shape: BoxShape.circle,
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
-                  if (cartItemCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(
-                          minWidth: 18,
-                          minHeight: 18,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
-                        ),
-                        child: Text(
-                          cartItemCount > 9 ? '9+' : '$cartItemCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
           ),
-          const SizedBox(width: 10),
-          // Notification Icon
-          GestureDetector(
+          const SizedBox(width: 8),
+          // Notification icon
+          _buildHeaderIcon(
+            svgPath: 'assets/main icons/line icons/notification.svg',
+            badgeCount: notificationCount,
             onTap: () => context.go(Routes.notifications),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.iconButtonBg(context),
-                shape: BoxShape.circle,
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
-                  if (notificationCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
-                        ),
-                        child: Text(
-                          notificationCount > 9 ? '9+' : '$notificationCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFilterTabs(List<String> filters) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+  Widget _buildHeaderIcon({
+    IconData? icon,
+    String? svgPath,
+    required int badgeCount,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(4),
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
-          color: AppColors.filterBg(context),
-          borderRadius: BorderRadius.circular(16),
+          color: const Color(0xFF121212),
+          shape: BoxShape.circle,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
-        child: Row(
-          children: filters.map((filter) {
-            final isActive = _activeFilter == filter;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _activeFilter = filter;
-                    _currentPage = 0;
-                  });
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            svgPath != null
+                ? SvgPicture.asset(svgPath, width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))
+                : Icon(icon, size: 20, color: Colors.white),
+            if (badgeCount > 0)
+              Positioned(
+                top: -3,
+                right: -3,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                   decoration: BoxDecoration(
-                    gradient: isActive
-                        ? const LinearGradient(
-                            colors: [AppColors.primary, AppColors.primary600],
-                          )
-                        : null,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: isActive
-                        ? [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : null,
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
                   ),
-                  child: Center(
-                    child: Text(
-                      filter,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                        color: isActive ? Colors.white : AppColors.textSecondaryC(context),
-                      ),
+                  child: Text(
+                    badgeCount > 9 ? '9+' : '$badgeCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'S';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
+  Widget _buildFilterTabs(List<String> filters) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0EFEC),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: filters.map((filter) {
+          final isActive = _activeFilter == filter;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _activeFilter = filter;
+                  _currentPage = 0;
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: isActive ? const Color(0xFF121212) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: isActive
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x20000000),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    filter,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                      color: isActive ? Colors.white : _textMedium,
                     ),
                   ),
                 ),
               ),
-            );
-          }).toList(),
-        ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -343,17 +382,15 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: Theme.of(context).brightness == Brightness.dark
-              ? []
-              : [
-                  const BoxShadow(
-                    color: AppColors.shadowLight,
-                    blurRadius: 16,
-                    offset: Offset(0, 6),
-                  ),
-                ],
+          color: _cardBg,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           children: [
@@ -392,7 +429,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.textPrimaryC(context),
+                            color: _textDark,
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -401,7 +438,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w400,
-                            color: AppColors.textHintC(context),
+                            color: _textLight,
                           ),
                         ),
                         if (isSuccess && payment.paymethod != null) ...[
@@ -411,8 +448,8 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w400,
-                              color: AppColors.textHintC(context),
-                            ),
+                              color: _textLight,
+                          ),
                           ),
                         ],
                       ],
@@ -449,7 +486,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           color: isSuccess
-                              ? AppColors.textPrimaryC(context)
+                              ? _textDark
                               : AppColors.error,
                         ),
                       ),
@@ -459,7 +496,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
               ),
             ),
             // Divider
-            Divider(height: 1, color: AppColors.borderC(context).withValues(alpha: 0.3)),
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
             // Date row with chevron
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -468,7 +505,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                   Icon(
                     Icons.calendar_today_outlined,
                     size: 14,
-                    color: AppColors.textHintC(context),
+                    color: _textLight,
                   ),
                   const SizedBox(width: 8),
                   Text(
@@ -478,14 +515,14 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.textHintC(context),
+                      color: _textLight,
                     ),
                   ),
                   const Spacer(),
                   Icon(
                     Icons.chevron_right,
                     size: 20,
-                    color: AppColors.textHintC(context),
+                    color: _textLight,
                   ),
                 ],
               ),
@@ -500,7 +537,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   Widget _buildPaginationControls(int totalPages) {
     if (totalPages <= 1) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -810,7 +847,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimaryC(context),
+                color: context.isDesktop ? AppColors.textPrimaryC(context) : _textDark,
               ),
             ),
             const SizedBox(height: 8),
@@ -819,7 +856,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondaryC(context),
+                color: context.isDesktop ? AppColors.textSecondaryC(context) : _textMedium,
               ),
             ),
           ],

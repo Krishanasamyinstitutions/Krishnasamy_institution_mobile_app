@@ -15,7 +15,7 @@ class FeeGroupUtils {
     if (lower.contains('school') || lower.contains('tuition')) {
       return {
         'icon': Icons.school_rounded,
-        'color': const Color(0xFF22C55E),
+        'color': const Color(0xFF0D9B5C),
         'iconBgColor': const Color(0xFFDCFCE7),
         'badgeColor': AppColors.success,
       };

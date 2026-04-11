@@ -177,13 +177,10 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 18,
-                  color: Colors.white,
-                ),
+              child: Center(
+                child: SvgPicture.asset('assets/icons/arrow-left.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
               ),
             ),
           ),
@@ -216,12 +213,13 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
+                  SvgPicture.asset('assets/main icons/line icons/notification.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
                   if (notificationCount > 0)
                     Positioned(
                       top: -4,
@@ -541,7 +539,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: Theme.of(context).brightness == Brightness.dark
             ? []
             : [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
@@ -691,7 +689,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: Theme.of(context).brightness == Brightness.dark
             ? []
             : [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 16, offset: const Offset(0, 4))],
@@ -2143,9 +2141,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.primary600],
-                      ),
+                      color: const Color(0xFF121212),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
@@ -2183,11 +2179,9 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: (selectedAmount > 0 && !hasTermOutOfOrder)
-                            ? [AppColors.primary, AppColors.primary600]
-                            : [AppColors.primary.withValues(alpha: 0.5), AppColors.primary600.withValues(alpha: 0.5)],
-                      ),
+                      color: (selectedAmount > 0 && !hasTermOutOfOrder)
+                          ? const Color(0xFF121212)
+                          : const Color(0xFF121212).withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: (selectedAmount > 0 && !hasTermOutOfOrder)
                           ? [
@@ -2272,7 +2266,7 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
         groupKey = 'school';
         svgPath = 'assets/school Icons/school.svg';
         bgColor = const Color(0xFFDCFCE7);
-        iconColor = const Color(0xFF22C55E);
+        iconColor = const Color(0xFF0D9B5C);
       }
       if (!seen.contains(groupKey)) {
         seen.add(groupKey);
@@ -2554,7 +2548,7 @@ class _FeeAccordionState extends State<_FeeAccordion>
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.cardBg(context),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.borderC(context), width: 1),
             boxShadow: Theme.of(context).brightness == Brightness.dark
                 ? []

@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
@@ -60,7 +62,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
           final isPaid = payment.status == PaymentStatus.success;
 
           return SingleChildScrollView(
-            padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.symmetric(horizontal: 24),
+            padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Column(
               children: [
                 // Transaction Card
@@ -135,7 +137,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
     final notificationCount = ref.watch(notificationCountProvider);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -154,13 +156,10 @@ class TransactionDetailsScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 18,
-                  color: Colors.white,
-                ),
+              child: Center(
+                child: SvgPicture.asset('assets/icons/arrow-left.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
               ),
             ),
           ),
@@ -184,12 +183,13 @@ class TransactionDetailsScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
+                  SvgPicture.asset('assets/main icons/line icons/notification.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
                   if (notificationCount > 0)
                     Positioned(
                       top: -4,
@@ -232,22 +232,22 @@ class TransactionDetailsScreen extends ConsumerWidget {
     String feeName,
     bool isPaid,
   ) {
-    final headerColor = isPaid ? const Color(0xFF2DBE60) : const Color(0xFFDC2626);
-    final amountColor = isPaid ? const Color(0xFF2DBE60) : const Color(0xFFDC2626);
+    final headerColor = isPaid ? AppColors.primary : const Color(0xFFDC2626);
+    final amountColor = isPaid ? AppColors.primary : const Color(0xFFDC2626);
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Color(0x0A000000),
+            blurRadius: 16,
+            offset: Offset(0, 4),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Column(
           children: [
             // Header (Green for success, Red for failed)
@@ -344,7 +344,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
                   const SizedBox(height: 16),
                   _buildDetailRow(context, 'Class', className),
                   const SizedBox(height: 16),
-                  _buildDetailRow(context, 'Admission No', admissionNumber),
+                  _buildDetailRow(context, 'Roll No', admissionNumber),
                   if (payment.payreference != null) ...[
                     const SizedBox(height: 16),
                     _buildDetailRow(context, 'Transaction ID', payment.payreference!),
@@ -448,7 +448,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           color: Colors.orange.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.orange, width: 1.5),
         ),
         child: const Row(
@@ -480,7 +480,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFF007DFC),
+                color: const Color(0xFF121212),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -517,7 +517,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.textSecondaryC(context), width: 1.5),
+                border: Border.all(color: const Color(0xFFE8E7E4), width: 1.5),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -562,7 +562,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: AppColors.cardBg(context),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: const Column(
             mainAxisSize: MainAxisSize.min,
@@ -676,7 +676,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: AppColors.cardBg(context),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: const Column(
             mainAxisSize: MainAxisSize.min,
@@ -758,13 +758,21 @@ class TransactionDetailsScreen extends ConsumerWidget {
       final safeFilename = payment.paymentNumber.replaceAll('/', '_');
 
       if (mode == _ExportMode.share) {
-        final tempDir = await getTemporaryDirectory();
-        final file = File('${tempDir.path}/$safeFilename.pdf');
-        await file.writeAsBytes(bytes);
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: 'Payment Receipt - ${payment.paymentNumber}',
-        );
+        if (kIsWeb) {
+          // Web: use print dialog as fallback since file sharing isn't supported
+          await Printing.layoutPdf(
+            onLayout: (_) async => bytes,
+            name: '$safeFilename.pdf',
+          );
+        } else {
+          final tempDir = await getTemporaryDirectory();
+          final file = File('${tempDir.path}/$safeFilename.pdf');
+          await file.writeAsBytes(bytes);
+          await Share.shareXFiles(
+            [XFile(file.path)],
+            text: 'Payment Receipt - ${payment.paymentNumber}',
+          );
+        }
       } else if (mode == _ExportMode.download) {
         // Use system print/save dialog — works on web, desktop, and mobile
         await Printing.layoutPdf(
@@ -844,7 +852,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             icon: const Icon(Icons.check_circle, color: Color(0xFF2DBE60), size: 48),
             title: const Text('Already Paid'),
             content: const Text('All fees from this payment have already been paid.'),
@@ -994,7 +1002,7 @@ class _ReceiptPreviewDialog extends StatelessWidget {
         constraints: BoxConstraints(maxHeight: screenSize.height * 0.9),
         decoration: BoxDecoration(
           color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

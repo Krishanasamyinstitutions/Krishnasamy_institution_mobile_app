@@ -4,26 +4,26 @@ import 'package:flutter/material.dart';
 class AppColors {
   AppColors._();
 
-  // Primary Color - Vibrant Green
-  static const Color primary = Color(0xFF22C55E);
-  static const Color primary50 = Color(0xFFF0FDF4);
-  static const Color primary100 = Color(0xFFDCFCE7);
-  static const Color primary200 = Color(0xFFBBF7D0);
-  static const Color primary300 = Color(0xFF86EFAC);
-  static const Color primary400 = Color(0xFF4ADE80);
-  static const Color primary500 = Color(0xFF22C55E);
-  static const Color primary600 = Color(0xFF16A34A);
-  static const Color primary700 = Color(0xFF15803D);
-  static const Color primary800 = Color(0xFF166534);
-  static const Color primary900 = Color(0xFF14532D);
+  // Primary Color - Rich Emerald Green
+  static const Color primary = Color(0xFF0D9B5C);
+  static const Color primary50 = Color(0xFFECFDF5);
+  static const Color primary100 = Color(0xFFD1FAE5);
+  static const Color primary200 = Color(0xFFA7F3D0);
+  static const Color primary300 = Color(0xFF6EE7B7);
+  static const Color primary400 = Color(0xFF34D399);
+  static const Color primary500 = Color(0xFF0D9B5C);
+  static const Color primary600 = Color(0xFF0A8A50);
+  static const Color primary700 = Color(0xFF087643);
+  static const Color primary800 = Color(0xFF065F37);
+  static const Color primary900 = Color(0xFF064E2E);
 
   // Secondary Color - Soft Coral/Pink
   static const Color secondary = Color(0xFFFF6B8A);
   static const Color secondaryLight = Color(0xFFFFE5EB);
 
   // Accent Colors
-  static const Color accent = Color(0xFF22C55E);
-  static const Color accent2 = Color(0xFFDCFCE7);
+  static const Color accent = Color(0xFF121212);
+  static const Color accent2 = Color(0xFFD1FAE5);
 
   // Gradient Colors
   static const Color gradientStart = Color(0xFFF0FDF4);
@@ -60,7 +60,7 @@ class AppColors {
   static const Color infoDark = Color(0xFF2563EB);
 
   // Background Colors - Soft gradients
-  static const Color background = Color(0xFFF8F9FE);
+  static const Color background = Color(0xFFF0FBF6);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color bgPrimary = Color(0xFFFFFFFF);
   static const Color bgSecondary = Color(0xFFF8F9FC);
@@ -79,7 +79,7 @@ class AppColors {
   static const Color border = Color(0xFFE5E7EB);
   static const Color borderLight = Color(0xFFF3F4F6);
   static const Color divider = Color(0xFFE5E7EB);
-  static const Color borderFocus = Color(0xFF22C55E);
+  static const Color borderFocus = Color(0xFF0D9B5C);
 
   // Semantic Fee Status Colors
   static const Color feePaid = Color(0xFF10B981);
@@ -136,12 +136,12 @@ class AppColors {
   static const Color supportIcon = Color(0xFF6366F1);
 
   // Avatar Colors
-  static const Color avatarBg = Color(0xFF22C55E);
+  static const Color avatarBg = Color(0xFF0D9B5C);
   static const Color avatarText = Color(0xFFFFFFFF);
 
   // Button Colors
-  static const Color buttonPrimary = Color(0xFF22C55E);
-  static const Color buttonPrimaryHover = Color(0xFF16A34A);
+  static const Color buttonPrimary = Color(0xFF0D9B5C);
+  static const Color buttonPrimaryHover = Color(0xFF0A8A50);
   static const Color buttonSecondary = Color(0xFFFFFFFF);
   static const Color buttonSecondaryBorder = Color(0xFFE5E7EB);
   static const Color buttonDanger = Color(0xFFEF4444);
@@ -171,7 +171,7 @@ class AppColors {
 
   /// Scaffold / page background
   static Color scaffoldBg(BuildContext context) =>
-      _isDark(context) ? const Color(0xFF121218) : const Color(0xFFF8F9FB);
+      _isDark(context) ? const Color(0xFF121218) : const Color(0xFFF0FBF6);
 
   /// Card / container surface background
   static Color cardBg(BuildContext context) =>
@@ -197,9 +197,16 @@ class AppColors {
   static Color filterBg(BuildContext context) =>
       _isDark(context) ? const Color(0xFF252536) : const Color(0xFFF1F5F9);
 
-  /// Dark circle icon button background (cart, notification buttons)
+  /// Icon button background (cart, notification buttons) — dark rounded square
   static Color iconButtonBg(BuildContext context) =>
-      _isDark(context) ? const Color(0xFF374151) : const Color(0xFF1F2937);
+      _isDark(context) ? const Color(0xFF374151) : const Color(0xFF121212);
+
+  /// Icon button border (same as bg for dark style)
+  static Color iconButtonBorder(BuildContext context) =>
+      _isDark(context) ? const Color(0xFF374151) : const Color(0xFF121212);
+
+  /// Icon button icon color — white on dark bg
+  static const Color iconButtonColor = Color(0xFFFFFFFF);
 
   /// Header / app bar container background
   static Color headerBg(BuildContext context) =>
