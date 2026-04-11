@@ -412,10 +412,19 @@ final overdueFeesProvider = Provider<List<FeeModel>>((ref) {
   final pendingFees = ref.watch(pendingFeesProvider);
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
-  return pendingFees
+  // Debug: log pending fees due dates
+  if (pendingFees.isNotEmpty) {
+    debugPrint('Overdue check: today=$today, pendingFees=${pendingFees.length}');
+    for (final f in pendingFees) {
+      debugPrint('  Fee: ${f.demfeetype}, duedate=${f.duedate}, createdat=${f.createdat}, dueDate=${f.dueDate}, isBefore=${ f.dueDate.isBefore(today)}');
+    }
+  }
+  final result = pendingFees
       .where((f) => f.dueDate.isBefore(today))
       .toList()
     ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+  debugPrint('Overdue fees found: ${result.length}');
+  return result;
 });
 
 /// Get fees due soon (due date is today or in the future AND within next 30 days).

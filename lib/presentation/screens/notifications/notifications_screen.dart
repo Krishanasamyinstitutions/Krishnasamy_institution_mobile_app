@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../data/models/notification_model.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/fee_provider.dart';
 
@@ -17,6 +20,13 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+  static const Color _bg = Color(0xFFF2F1EE);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBorder = Color(0xFFE8E7E4);
+  static const Color _textDark = Color(0xFF1A1A1A);
+  static const Color _textMedium = Color(0xFF6B6B6B);
+  static const Color _textLight = Color(0xFF9E9E9E);
+
   int _currentPage = 0;
 
   @override
@@ -30,13 +40,19 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             // Desktop: no header | Mobile: shadow header
             if (!context.isDesktop)
               Container(
-                color: AppColors.headerBg(context),
+                color: _cardBg,
                 child: SafeArea(
                   bottom: false,
                   child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.headerBg(context),
-                      boxShadow: AppColors.cardShadow(context),
+                    decoration: const BoxDecoration(
+                      color: _cardBg,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
@@ -74,7 +90,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     return Container(
                       decoration: BoxDecoration(
                         color: AppColors.cardBg(context),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                         boxShadow: AppColors.cardShadow(context),
                       ),
                       clipBehavior: Clip.antiAlias,
@@ -90,7 +106,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   // Mobile: show all notifications in a scrollable list (no pagination)
                   final groupedNotifications = _groupNotificationsByDate(regularNotifications);
                   return ListView.builder(
-                    padding: const EdgeInsets.only(left: 24, right: 24, bottom: 8),
+                    padding: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
                     itemCount: groupedNotifications.length,
                     itemBuilder: (context, index) {
                       final group = groupedNotifications[index];
@@ -110,7 +126,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       children: [
         // Header row
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           color: AppColors.scaffoldBg(context),
           child: Row(
             children: [
@@ -181,7 +197,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         await context.push('/notifications/${notification.id}', extra: notification);
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         color: isUnread
             ? AppColors.primary.withValues(alpha: 0.04)
             : Colors.transparent,
@@ -254,7 +270,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Widget _buildPaginationControls(int totalPages) {
     if (totalPages <= 1) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -373,79 +389,148 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
     final cartItemCount = ref.watch(cartItemCountProvider);
+    final studentName = selectedStudent?.name ?? 'Student';
+    final className = selectedStudent?.className ?? 'N/A';
+    final courseName = selectedStudent?.courseName ?? 'N/A';
+    final hasPhoto = selectedStudent != null &&
+        selectedStudent.photoUrl != null &&
+        selectedStudent.photoUrl!.trim().isNotEmpty;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Avatar
+          GestureDetector(
+            onTap: () => context.go(Routes.profile),
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: hasPhoto
+                  ? CachedNetworkImage(
+                      imageUrl: selectedStudent.photoUrl!,
+                      fit: BoxFit.cover,
+                      width: 48,
+                      height: 48,
+                      errorWidget: (context, url, error) => Center(
+                        child: Text(
+                          _getInitials(studentName),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        _getInitials(studentName),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+                      ),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          // Greeting
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Notifications',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
-                  ),
+                  '$courseName | $className',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _textLight),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
-                  'Stay updated with alerts',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textSecondaryC(context),
-                  ),
+                  'Hey, ${studentName.split(' ').first}',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textDark, letterSpacing: -0.3),
                 ),
               ],
             ),
           ),
-          // Cart Icon - Dark theme
-          GestureDetector(
+          // Cart icon
+          _buildHeaderIcon(
+            svgPath: 'assets/icons/Cart.svg',
+            badgeCount: cartItemCount,
             onTap: () => context.push(Routes.cart),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.iconButtonBg(context),
-                shape: BoxShape.circle,
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
-                  if (cartItemCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
-                        ),
-                        child: Text(
-                          cartItemCount > 9 ? '9+' : '$cartItemCount',
-                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildHeaderIcon({
+    IconData? icon,
+    String? svgPath,
+    required int badgeCount,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFF121212),
+          shape: BoxShape.circle,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            svgPath != null
+                ? SvgPicture.asset(svgPath, width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))
+                : Icon(icon, size: 20, color: Colors.white),
+            if (badgeCount > 0)
+              Positioned(
+                top: -3,
+                right: -3,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Text(
+                    badgeCount > 9 ? '9+' : '$badgeCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'S';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
   }
 
   Widget _buildFeeReminderBanners(BuildContext context, WidgetRef ref) {
@@ -464,7 +549,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
           const SizedBox(height: 12),
@@ -529,7 +614,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: borderColor, width: 1.5),
       ),
       child: Row(
@@ -602,10 +687,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           padding: const EdgeInsets.only(top: 16, bottom: 12),
           child: Text(
             group.date,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimaryC(context),
+              fontWeight: FontWeight.w700,
+              color: _textDark,
             ),
           ),
         ),
@@ -630,17 +715,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: Theme.of(context).brightness == Brightness.dark
-              ? []
-              : [
-                  BoxShadow(
-                    color: isUnread ? AppColors.shadowPurple : AppColors.shadowLight,
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+          color: _cardBg,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 20,
+              offset: Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,7 +742,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: isUnread ? FontWeight.w600 : FontWeight.w500,
-                            color: AppColors.textPrimaryC(context),
+                            color: _textDark,
                           ),
                         ),
                       ),
@@ -683,10 +766,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                   const SizedBox(height: 6),
                   Text(
                     notification.body,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w400,
-                      color: AppColors.textSecondaryC(context),
+                      color: _textMedium,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -697,16 +780,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     children: [
                       Text(
                         _getTimestamp(notification.createdAt),
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.primary,
+                          color: _textLight,
                         ),
                       ),
-                      Icon(
+                      const Icon(
                         Icons.arrow_forward_ios_rounded,
                         size: 14,
-                        color: AppColors.textHintC(context),
+                        color: _textLight,
                       ),
                     ],
                   ),
@@ -764,7 +847,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
       height: 48,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(12),
+        shape: BoxShape.circle,
       ),
       child: Icon(icon, size: 24, color: iconColor),
     );
@@ -811,7 +894,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimaryC(context),
+                color: context.isDesktop ? AppColors.textPrimaryC(context) : _textDark,
               ),
             ),
             const SizedBox(height: 8),
@@ -820,7 +903,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondaryC(context),
+                color: context.isDesktop ? AppColors.textSecondaryC(context) : _textMedium,
               ),
             ),
           ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/routes.dart';
@@ -702,8 +703,8 @@ class MainScaffold extends ConsumerWidget {
                     index: 0,
                     selectedIndex: selectedIndex,
                     label: 'Home',
-                    outlinedIcon: Icons.dashboard_outlined,
-                    filledIcon: Icons.dashboard_rounded,
+                    lineSvg: 'assets/main icons/line icons/home.svg',
+                    fillSvg: 'assets/main icons/fill icons/home.svg',
                     onTap: () => context.go(Routes.home),
                   ),
                   _buildNavItem(
@@ -711,8 +712,8 @@ class MainScaffold extends ConsumerWidget {
                     index: 1,
                     selectedIndex: selectedIndex,
                     label: 'History',
-                    outlinedIcon: Icons.receipt_long_outlined,
-                    filledIcon: Icons.receipt_long_rounded,
+                    lineSvg: 'assets/main icons/line icons/receipt-item.svg',
+                    fillSvg: 'assets/main icons/fill icons/receipt-item.svg',
                     onTap: () => context.go(Routes.paymentHistory),
                   ),
                   _buildNavItem(
@@ -720,8 +721,8 @@ class MainScaffold extends ConsumerWidget {
                     index: 2,
                     selectedIndex: selectedIndex,
                     label: 'Alerts',
-                    outlinedIcon: Icons.notifications_outlined,
-                    filledIcon: Icons.notifications_rounded,
+                    lineSvg: 'assets/main icons/line icons/notification.svg',
+                    fillSvg: 'assets/main icons/fill icons/notification.svg',
                     onTap: () => context.go(Routes.notifications),
                   ),
                   _buildNavItem(
@@ -729,8 +730,8 @@ class MainScaffold extends ConsumerWidget {
                     index: 3,
                     selectedIndex: selectedIndex,
                     label: 'Profile',
-                    outlinedIcon: Icons.person_outline_rounded,
-                    filledIcon: Icons.person_rounded,
+                    lineSvg: 'assets/main icons/line icons/profile-circle.svg',
+                    fillSvg: 'assets/main icons/fill icons/profile-circle.svg',
                     onTap: () => context.go(Routes.profile),
                   ),
                 ],
@@ -747,8 +748,8 @@ class MainScaffold extends ConsumerWidget {
     required int index,
     required int selectedIndex,
     required String label,
-    required IconData outlinedIcon,
-    required IconData filledIcon,
+    required String lineSvg,
+    required String fillSvg,
     required VoidCallback onTap,
   }) {
     final isSelected = index == selectedIndex;
@@ -761,10 +762,14 @@ class MainScaffold extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              isSelected ? filledIcon : outlinedIcon,
-              size: 24,
-              color: isSelected ? AppColors.primary : AppColors.textHintC(context),
+            SvgPicture.asset(
+              isSelected ? fillSvg : lineSvg,
+              width: 24,
+              height: 24,
+              colorFilter: ColorFilter.mode(
+                isSelected ? AppColors.primary : AppColors.textHintC(context),
+                BlendMode.srcIn,
+              ),
             ),
             const SizedBox(height: 6),
             Text(

@@ -127,12 +127,25 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        final errorMsg = e.toString();
+        // If account has no password, redirect to sign-up flow
+        if (errorMsg.contains('Account setup incomplete')) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account not set up yet. Redirecting to sign up...'),
+              backgroundColor: AppColors.primary,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          context.push(Routes.signUp);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errorMsg),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -564,9 +577,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, AppColors.primary600],
-          ),
+          color: const Color(0xFF121212),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(

@@ -3,7 +3,7 @@ description: School Fees Payment Mobile Application
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.3.0 <4.0.0'
 
 dependencies:
   flutter:
@@ -60,6 +60,7 @@ dependencies:
 
   # Notifications & Background Tasks
   awesome_notifications: ^0.10.0
+  responsive_builder2: ^0.9.0
 
 dev_dependencies:
   flutter_test:
@@ -79,6 +80,8 @@ flutter:
     - assets/Authendication gif/
     - assets/nav bar icons/
     - assets/school Icons/
+    - assets/main icons/fill icons/
+    - assets/main icons/line icons/
 
   fonts:
     - family: Inter

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:responsive_builder2/responsive_builder2.dart'
+    as responsive_builder;
 import '../constants/app_sizes.dart';
 import '../constants/app_colors.dart';
 
@@ -18,6 +20,33 @@ extension ContextExtensions on BuildContext {
   ThemeData get theme => Theme.of(this);
   TextTheme get textTheme => Theme.of(this).textTheme;
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
+
+  /// Returns a value based on the current screen type using responsive_builder2.
+  ///
+  /// Uses the globally configured breakpoints (mobile < 640, tablet 640–1024,
+  /// desktop >= 1024). Falls back from desktop -> tablet -> mobile when a
+  /// value is not provided.
+  ///
+  /// Example:
+  /// ```dart
+  /// final padding = context.responsiveValue<double>(
+  ///   mobile: 16,
+  ///   tablet: 24,
+  ///   desktop: 32,
+  /// );
+  /// ```
+  T responsiveValue<T>({
+    required T mobile,
+    T? tablet,
+    T? desktop,
+  }) {
+    return responsive_builder.getValueForScreenType<T>(
+      context: this,
+      mobile: mobile,
+      tablet: tablet,
+      desktop: desktop,
+    );
+  }
 }
 
 extension WidgetExtensions on Widget {
