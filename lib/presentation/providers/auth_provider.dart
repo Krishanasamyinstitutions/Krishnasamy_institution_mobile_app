@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -105,6 +106,20 @@ class ParentAuthNotifier extends StateNotifier<AsyncValue<ParentAuthState>> {
             parent: parent,
             isAuthenticated: true,
           ));
+
+          // Re-scan all institutions for this parent's mobile so newly-added
+          // institutions appear without requiring logout/login.
+          if (parent.payinchargemob.isNotEmpty) {
+            unawaited(SupabaseService.findParentInstitutions(parent.payinchargemob).then((matches) {
+              if (matches.isNotEmpty) {
+                SupabaseService.setParentSchemas(matches);
+                // Keep the previously active schema (don't override student context)
+                if (savedSchema != null && savedSchema.isNotEmpty) {
+                  SupabaseService.setSchema(savedSchema);
+                }
+              }
+            }));
+          }
         }
       }
     } catch (e) {
@@ -423,10 +438,23 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       // Cache all schemas for multi-institution student fetching
       SupabaseService.setParentSchemas(matches);
 
+      // Prefer a schema where password is already set for authentication.
+      // If no school has a password, require sign-up first.
+      final authMatch = matches.firstWhere(
+        (m) => m.hasPassword,
+        orElse: () => (insId: -1, schema: '', hasPassword: false),
+      );
+      if (authMatch.insId == -1) {
+        throw Exception('Account setup incomplete. Please create your account first.');
+      }
+
+      // Ensure the active schema is the one we're authenticating against
+      SupabaseService.setSchema(authMatch.schema);
+
       await _ref.read(parentAuthStateProvider.notifier).signIn(
             mobile: mobile,
             password: password,
-            insId: matches.first.insId,
+            insId: authMatch.insId,
           );
       state = const AsyncValue.data(null);
     } catch (e, st) {

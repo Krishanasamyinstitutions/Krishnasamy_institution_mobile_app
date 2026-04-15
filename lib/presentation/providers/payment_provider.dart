@@ -531,6 +531,17 @@ Future<String?> createRazorpayOrder({
     }
 
     debugPrint('Razorpay order created: $orderId for pay_id=$payId');
+
+    // Persist order_id on the payment row so admin bank-reconciliation and
+    // webhook-driven flows can correlate Razorpay orders to mobile payments.
+    try {
+      await SupabaseService.fromSchema('payment').update({
+        'payorderid': orderId,
+      }).eq('pay_id', payId);
+    } catch (e) {
+      debugPrint('Failed to persist payorderid: $e');
+    }
+
     return orderId;
   } catch (e, stackTrace) {
     lastOrderCreationError = e.toString();
@@ -549,6 +560,7 @@ Future<bool> handlePaymentSuccess({
   required String paymethod,
   required String payreference,
   required List<FeeModel> items,
+  Map<int, double>? fineMap,
 }) async {
 
 
@@ -559,10 +571,14 @@ Future<bool> handlePaymentSuccess({
     // 1. Try atomic RPC (same as admin app) — updates payment, feedemand,
     //    and paymentdetails in a single transaction
     try {
-      final rpcItems = items.map((fee) => {
-        'dem_id': fee.demId,
-        'amount': fee.balancedue,
-        'demfeetype': fee.demfeetype,
+      final rpcItems = items.map((fee) {
+        final fine = fineMap?[fee.demId] ?? 0;
+        return {
+          'dem_id': fee.demId,
+          'amount': fee.balancedue + fine,
+          'fine': fine,
+          'demfeetype': fee.demfeetype,
+        };
       }).toList();
 
       await SupabaseService.client.rpc('complete_payment_grouped', params: {
@@ -606,12 +622,18 @@ Future<bool> handlePaymentSuccess({
         final newPaid = currentPaid + paidAmount;
         final newBalance = currentBalance - paidAmount;
 
-        await SupabaseService.fromSchema('feedemand').update({
+        final fine = fineMap?[demId] ?? 0;
+        final updateMap = <String, dynamic>{
           'paidamount': newPaid,
           'balancedue': newBalance <= 0 ? 0 : newBalance,
           'paidstatus': newBalance <= 0 ? 'P' : 'U',
           'pay_id': payId,
-        }).eq('dem_id', demId);
+        };
+        if (fine > 0) updateMap['fineamount'] = fine;
+
+        await SupabaseService.fromSchema('feedemand')
+            .update(updateMap)
+            .eq('dem_id', demId);
       }
     }
 

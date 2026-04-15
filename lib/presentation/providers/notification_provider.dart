@@ -190,6 +190,7 @@ final notificationsProvider =
     if (overdueFees.isNotEmpty) {
       final totalOverdue = overdueFees.fold(
           0.0, (sum, f) => sum + ((f['balancedue'] as num?)?.toDouble() ?? 0));
+      final studentName = selectedStudent.name;
       notifications.add(NotificationModel(
         id: 'fee_overdue_summary',
         schoolId: overdueFees.first['ins_id']?.toString() ?? '',
@@ -197,7 +198,7 @@ final notificationsProvider =
         studentId: overdueFees.first['stu_id']?.toString(),
         title: 'Fee Overdue',
         message:
-            'Outstanding balance of ${_currencyFmt.format(totalOverdue)}. Please pay immediately.',
+            '$studentName has an outstanding balance of ${_currencyFmt.format(totalOverdue)}. Please pay immediately.',
         type: NotificationType.feeReminder,
         data: {'dem_ids': overdueFees.map((f) => f['dem_id']).toList()},
         isRead: false,
@@ -221,6 +222,7 @@ final notificationsProvider =
           : daysLeft == 1
               ? 'tomorrow'
               : 'in $daysLeft days';
+      final studentName = selectedStudent.name;
       notifications.add(NotificationModel(
         id: 'fee_upcoming_summary',
         schoolId: upcomingFees.first['ins_id']?.toString() ?? '',
@@ -228,7 +230,7 @@ final notificationsProvider =
         studentId: upcomingFees.first['stu_id']?.toString(),
         title: 'Upcoming Fee Due',
         message:
-            'Total of ${_currencyFmt.format(totalUpcoming)} due $daysText. Please pay within the due date.',
+            '$studentName has a fee of ${_currencyFmt.format(totalUpcoming)} due $daysText. Please pay within the due date.',
         type: NotificationType.dueDateApproaching,
         data: {'dem_ids': upcomingFees.map((f) => f['dem_id']).toList()},
         isRead: false,
