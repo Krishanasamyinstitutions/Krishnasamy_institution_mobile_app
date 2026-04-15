@@ -119,10 +119,11 @@ class SupabaseService {
   }
 
   /// Find ALL institutions where a parent exists (by mobile number).
-  /// Returns list of (insId, schema) pairs.
-  /// Sets the schema to the FIRST match for immediate use (login).
-  static Future<List<({int insId, String schema})>> findParentInstitutions(String mobile) async {
-    final matches = <({int insId, String schema})>[];
+  /// Returns list of (insId, schema, hasPassword) records.
+  /// Active schema is set to the FIRST match that has a password already configured
+  /// (falls back to first match overall if none have passwords yet).
+  static Future<List<({int insId, String schema, bool hasPassword})>> findParentInstitutions(String mobile) async {
+    final matches = <({int insId, String schema, bool hasPassword})>[];
 
     try {
       // 1. Get all active institutions with their short names
@@ -147,25 +148,32 @@ class SupabaseService {
         try {
           final result = await client.schema(schema)
               .from('parents')
-              .select('par_id')
+              .select('par_id, parpassword')
               .eq('payinchargemob', mobile)
               .eq('activestatus', 1)
               .limit(1)
               .maybeSingle();
 
           if (result != null) {
-            debugPrint('Found parent in schema: $schema (ins_id=$insId)');
-            matches.add((insId: insId, schema: schema));
+            final pwd = result['parpassword']?.toString();
+            final hasPassword = pwd != null && pwd.isNotEmpty;
+            debugPrint('Found parent in schema: $schema (ins_id=$insId, hasPassword=$hasPassword)');
+            matches.add((insId: insId, schema: schema, hasPassword: hasPassword));
           }
         } catch (e) {
           debugPrint('Schema $schema search failed: $e');
         }
       }
 
-      // Set schema to first match for immediate login use
+      // Prefer a schema where the password is already set (for login).
+      // Fall back to first match if none have passwords (sign-up flow).
       if (matches.isNotEmpty) {
-        _currentInsId = matches.first.insId;
-        setSchema(matches.first.schema);
+        final authMatch = matches.firstWhere(
+          (m) => m.hasPassword,
+          orElse: () => matches.first,
+        );
+        _currentInsId = authMatch.insId;
+        setSchema(authMatch.schema);
       }
     } catch (e) {
       debugPrint('Error finding parent institutions: $e');
@@ -183,10 +191,10 @@ class SupabaseService {
 
   /// Cached list of schemas where the current parent exists.
   /// Populated during login, used by studentsByParentProvider.
-  static List<({int insId, String schema})> _parentSchemas = [];
-  static List<({int insId, String schema})> get parentSchemas => _parentSchemas;
+  static List<({int insId, String schema, bool hasPassword})> _parentSchemas = [];
+  static List<({int insId, String schema, bool hasPassword})> get parentSchemas => _parentSchemas;
 
-  static void setParentSchemas(List<({int insId, String schema})> schemas) {
+  static void setParentSchemas(List<({int insId, String schema, bool hasPassword})> schemas) {
     _parentSchemas = schemas;
   }
 

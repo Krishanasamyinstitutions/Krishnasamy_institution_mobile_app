@@ -11,6 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/services/fine_service.dart';
 import '../../../core/services/razorpay_checkout.dart' as razorpay_web;
 import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
@@ -50,6 +51,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   int? _currentCarId;
   String? _currentOrderId;
   List<FeeModel>? _currentPaymentItems;
+  /// Fine per dem_id for current payment (keyed by dem_id).
+  Map<int, double> _currentFineMap = {};
   /// Captured before opening Razorpay so callbacks can clean up even after widget disposal.
   SupabaseClient? _capturedClient;
 
@@ -807,6 +810,36 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final student = ref.read(selectedStudentProvider);
     if (cartState.isEmpty || student == null) return;
 
+    // Step 0: Calculate fines for overdue items and confirm with user
+    final rules = await FineService.loadRules(student.insId);
+    final fineMap = <int, double>{};
+    double totalFine = 0;
+    for (final fee in cartState.items) {
+      final fine = FineService.calculateFine(
+        demfeetype: fee.demfeetype,
+        dueDate: fee.dueDate,
+        feeAmount: fee.balancedue,
+        rules: rules,
+      );
+      if (fine > 0) {
+        fineMap[fee.demId] = fine;
+        totalFine += fine;
+      }
+    }
+
+    if (totalFine > 0) {
+      final confirmed = await _showFineConfirmationDialog(
+        fineMap: fineMap,
+        items: cartState.items,
+        baseTotal: cartState.totalAmount,
+        totalFine: totalFine,
+      );
+      if (confirmed != true) return; // User cancelled
+    }
+
+    _currentFineMap = fineMap;
+    final grandTotal = cartState.totalAmount + totalFine;
+
     setState(() {
       _isProcessing = true;
       _isPaymentLoading = true;  // Show local overlay (auto-clears if widget disposes)
@@ -864,8 +897,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       }
       debugPrint('PAYMENT STEP 2 OK: payId=$payId');
 
-      // Step 3: Create Razorpay order via Edge Function
-      final amountInPaise = (cartState.totalAmount * 100).toInt();
+      // Step 3: Create Razorpay order via Edge Function (include fines in total)
+      final amountInPaise = (grandTotal * 100).toInt();
       debugPrint('PAYMENT STEP 3: Creating Razorpay order (amount=$amountInPaise paise)...');
 
       final orderId = await createRazorpayOrder(
@@ -1074,6 +1107,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           paymethod: 'razorpay',
           payreference: paymentId,
           items: items,
+          fineMap: _currentFineMap,
         );
       } catch (e) {
         debugPrint('Error in handlePaymentSuccess (widget may be disposed): $e');
@@ -1177,6 +1211,117 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   /// Desktop payment: opens Razorpay JS checkout in system browser,
   /// then polls the Edge Function for payment status (same as admin app).
+  /// Shows a dialog listing overdue fees and the fine applied to each.
+  /// Returns true if the user confirms, false/null otherwise.
+  Future<bool?> _showFineConfirmationDialog({
+    required Map<int, double> fineMap,
+    required List<FeeModel> items,
+    required double baseTotal,
+    required double totalFine,
+  }) {
+    final currencyFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+
+    final finedItems = items.where((f) => fineMap.containsKey(f.demId)).toList();
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 10),
+            Text('Late Fee Applicable'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'The following fees are overdue and a late fee will be applied:',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 14),
+              ...finedItems.map((fee) {
+                final fine = fineMap[fee.demId] ?? 0;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              fee.demfeetype,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              'Due: ${DateFormat('dd MMM yyyy').format(fee.dueDate)}',
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '+ ${currencyFmt.format(fine)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              const Divider(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Fees Total', style: TextStyle(fontSize: 13)),
+                  Text(currencyFmt.format(baseTotal),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Late Fee', style: TextStyle(fontSize: 13, color: Colors.orange)),
+                  Text('+ ${currencyFmt.format(totalFine)}',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.orange)),
+                ],
+              ),
+              const Divider(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Grand Total',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  Text(currencyFmt.format(baseTotal + totalFine),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: Text('Pay ${currencyFmt.format(baseTotal + totalFine)}'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openDesktopRazorpayCheckout({
     required int payId,
     required int carId,
@@ -1285,6 +1430,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               paymethod: 'razorpay',
               payreference: rpPaymentId ?? orderId,
               items: items,
+              fineMap: _currentFineMap,
             );
           } else if (status == 'failed') {
             timer.cancel();
