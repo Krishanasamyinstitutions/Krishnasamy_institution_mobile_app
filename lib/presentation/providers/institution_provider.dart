@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/services/supabase_service.dart';
 import '../../data/models/institution_model.dart';
 import 'auth_provider.dart' show supabaseClientProvider;
 import 'student_provider.dart' show selectedStudentProvider;
@@ -73,6 +74,22 @@ final selectedStudentInstitutionProvider = FutureProvider<InstitutionModel?>((re
     debugPrint('Error fetching institution for student: $e');
     return null;
   }
+});
+
+/// Fetch the active academic year label for the selected student's institution.
+/// Falls back to current calendar-year guess if not available.
+final activeYearLabelProvider = FutureProvider<String>((ref) async {
+  final student = ref.watch(selectedStudentProvider);
+  if (student == null) {
+    final now = DateTime.now();
+    return now.month >= 6 ? '${now.year}-${now.year + 1}' : '${now.year - 1}-${now.year}';
+  }
+
+  final label = await SupabaseService.fetchActiveYearLabel(student.insId);
+  if (label != null && label.isNotEmpty) return label;
+
+  final now = DateTime.now();
+  return now.month >= 6 ? '${now.year}-${now.year + 1}' : '${now.year - 1}-${now.year}';
 });
 
 /// Fetch all active institutions

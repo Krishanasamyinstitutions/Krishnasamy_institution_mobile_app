@@ -12,6 +12,7 @@ import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/institution_provider.dart';
 import '../../../core/utils/extensions.dart';
 import '../../widgets/common/desktop_content_card.dart';
 import '../../../core/utils/birthday_utils.dart';
@@ -317,10 +318,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final selectedStudent = ref.watch(selectedStudentProvider);
     final studentName = selectedStudent?.name ?? 'Student';
 
+    final academicYearAsync = ref.watch(activeYearLabelProvider);
     final now = DateTime.now();
-    final academicYear = now.month >= 6
-        ? '${now.year}-${now.year + 1}'
-        : '${now.year - 1}-${now.year}';
+    final academicYear = academicYearAsync.valueOrNull ??
+        (now.month >= 6
+            ? '${now.year}-${now.year + 1}'
+            : '${now.year - 1}-${now.year}');
 
     return Container(
       width: double.infinity,
