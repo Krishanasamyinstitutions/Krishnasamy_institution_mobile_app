@@ -11,6 +11,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/supabase_service.dart';
+import '../../../core/services/fine_service.dart';
 import '../../../core/services/razorpay_checkout.dart' as razorpay_web;
 import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
@@ -33,6 +34,14 @@ class CartScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScreenState extends ConsumerState<CartScreen> {
+  // Warm gray UI palette — used for mobile layout only
+  static const Color _bg = Color(0xFFF2F1EE);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _cardBorder = Color(0xFFE8E7E4);
+  static const Color _textDark = Color(0xFF1A1A1A);
+  static const Color _textMedium = Color(0xFF6B6B6B);
+  static const Color _textLight = Color(0xFF9E9E9E);
+
   Razorpay? _razorpay;
   bool _isProcessing = false;
   /// Local loading overlay — replaces showDialog so it auto-clears when widget disposes.
@@ -42,6 +51,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   int? _currentCarId;
   String? _currentOrderId;
   List<FeeModel>? _currentPaymentItems;
+  /// Fine per dem_id for current payment (keyed by dem_id).
+  Map<int, double> _currentFineMap = {};
   /// Captured before opening Razorpay so callbacks can clean up even after widget disposal.
   SupabaseClient? _capturedClient;
 
@@ -135,6 +146,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildHeader(BuildContext context, WidgetRef ref, CartState cartState) {
+    final isMobile = !context.isDesktop;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
@@ -155,13 +167,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
-              child: const Center(
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 18,
-                  color: Colors.white,
-                ),
+              child: Center(
+                child: SvgPicture.asset('assets/icons/arrow-left.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
               ),
             ),
           ),
@@ -174,8 +183,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 'Payment Summary',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimaryC(context),
+                  fontWeight: FontWeight.w700,
+                  color: isMobile ? _textDark : AppColors.textPrimaryC(context),
+                  letterSpacing: -0.3,
                 ),
               ),
               if (cartState.isNotEmpty) ...[
@@ -183,9 +193,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 Text(
                   '${cartState.items.length} item${cartState.items.length > 1 ? 's' : ''} selected',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w400,
-                    color: AppColors.textSecondaryC(context),
+                    color: isMobile ? _textMedium : AppColors.textSecondaryC(context),
                   ),
                 ),
               ],
@@ -223,7 +233,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: const Text('Clear Queue?'),
         content: const Text('Are you sure you want to remove all items from your queue?'),
         actions: [
@@ -248,6 +258,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final isMobile = !context.isDesktop;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -256,11 +267,11 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             width: 100,
             height: 100,
             decoration: BoxDecoration(
-              color: AppColors.filterBg(context),
+              color: isMobile ? _bg : AppColors.filterBg(context),
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: Icon(Icons.shopping_cart_outlined, size: 48, color: AppColors.textHintC(context)),
+              child: Icon(Icons.shopping_cart_outlined, size: 48, color: isMobile ? _textLight : AppColors.textHintC(context)),
             ),
           ),
           const SizedBox(height: 24),
@@ -269,7 +280,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimaryC(context),
+              color: isMobile ? _textDark : AppColors.textPrimaryC(context),
             ),
           ),
           const SizedBox(height: 8),
@@ -280,7 +291,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondaryC(context),
+                color: isMobile ? _textMedium : AppColors.textSecondaryC(context),
                 height: 1.5,
               ),
             ),
@@ -453,12 +464,15 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final categoryStyle = _getCategoryStyle(category);
     final svgPath = categoryStyle['svgPath'] as String;
 
+    final isMobile = !context.isDesktop;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBg(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderC(context)),
-        boxShadow: AppColors.cardShadow(context),
+        color: isMobile ? _cardBg : AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(isMobile ? 24 : 12),
+        border: isMobile ? null : Border.all(color: AppColors.borderC(context)),
+        boxShadow: isMobile
+            ? const [BoxShadow(color: Color(0x0F000000), blurRadius: 20, offset: Offset(0, 8))]
+            : AppColors.cardShadow(context),
       ),
       child: Column(
         children: [
@@ -504,7 +518,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   '${fees.length} item${fees.length > 1 ? 's' : ''}',
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondaryC(context),
+                    color: isMobile ? _textMedium : AppColors.textSecondaryC(context),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -533,7 +547,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ),
 
           // Divider
-          Container(height: 1, color: AppColors.borderC(context)),
+          Container(height: 1, color: isMobile ? const Color(0xFFF0F0F0) : AppColors.borderC(context)),
 
           // Table Header
           Padding(
@@ -546,7 +560,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimaryC(context),
+                      color: isMobile ? _textDark : AppColors.textPrimaryC(context),
                     ),
                   ),
                 ),
@@ -555,14 +569,14 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimaryC(context),
+                    color: isMobile ? _textDark : AppColors.textPrimaryC(context),
                   ),
                 ),
               ],
             ),
           ),
 
-          Container(height: 1, color: AppColors.borderC(context)),
+          Container(height: 1, color: isMobile ? const Color(0xFFF0F0F0) : AppColors.borderC(context)),
 
           // Fee Items
           ...fees.map((fee) => _buildFeeItem(fee, categoryStyle['showMonth'] as bool)),
@@ -571,10 +585,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.filterBg(context),
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(12),
-                bottomRight: Radius.circular(12),
+              color: isMobile ? _bg : AppColors.filterBg(context),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(isMobile ? 20 : 12),
+                bottomRight: Radius.circular(isMobile ? 20 : 12),
               ),
             ),
             child: Row(
@@ -585,7 +599,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
+                    color: isMobile ? _textDark : AppColors.textPrimaryC(context),
                   ),
                 ),
                 Text(
@@ -593,7 +607,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
+                    color: isMobile ? _textDark : AppColors.textPrimaryC(context),
                   ),
                 ),
               ],
@@ -608,7 +622,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: const Text('Remove Group?'),
         content: Text('Remove all ${fees.length} item${fees.length > 1 ? 's' : ''} from $category?'),
         actions: [
@@ -641,11 +655,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildFeeItem(FeeModel fee, bool showMonth) {
+    final isMobile = !context.isDesktop;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(color: AppColors.borderC(context), width: 1),
+          bottom: BorderSide(color: isMobile ? const Color(0xFFF0F0F0) : AppColors.borderC(context), width: 1),
         ),
       ),
       child: Row(
@@ -659,7 +674,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimaryC(context),
+                    color: isMobile ? _textDark : AppColors.textPrimaryC(context),
                     height: 1.4,
                   ),
                 ),
@@ -669,7 +684,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     _extractMonthFromDate(fee),
                     style: TextStyle(
                       fontSize: 12,
-                      color: AppColors.textHintC(context),
+                      color: isMobile ? _textLight : AppColors.textHintC(context),
                     ),
                   ),
                 ],
@@ -681,7 +696,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimaryC(context),
+              color: isMobile ? _textDark : AppColors.textPrimaryC(context),
             ),
           ),
         ],
@@ -695,6 +710,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
   }
 
   Widget _buildBottomBar(BuildContext context, WidgetRef ref, CartState cartState) {
+    final isMobile = !context.isDesktop;
     final bottomContent = Padding(
       padding: const EdgeInsets.all(20),
       child: Row(
@@ -708,7 +724,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 'Total Amount',
                 style: TextStyle(
                   fontSize: 13,
-                  color: AppColors.textSecondaryC(context),
+                  color: isMobile ? _textMedium : AppColors.textSecondaryC(context),
                 ),
               ),
               const SizedBox(height: 4),
@@ -717,7 +733,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
+                  color: isMobile ? _textDark : AppColors.textPrimaryC(context),
                 ),
               ),
             ],
@@ -727,9 +743,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.primary, AppColors.primary600],
-                ),
+                color: const Color(0xFF121212),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -763,23 +777,24 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     // On desktop, DesktopDetailScaffold wraps in a card — return just the inner content
     if (context.isDesktop) return bottomContent;
 
-    // On mobile, keep existing decoration
+    // On mobile, soft rounded decoration
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBg(context),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(28),
-          topRight: Radius.circular(28),
+      decoration: const BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
         ),
-        boxShadow: Theme.of(context).brightness == Brightness.dark
-            ? []
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  offset: const Offset(0, -8),
-                ),
-              ],
+        border: Border(
+          top: BorderSide(color: Color(0xFFF0F0F0), width: 1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 20,
+            offset: Offset(0, -4),
+          ),
+        ],
       ),
       child: SafeArea(
         top: false,
@@ -794,6 +809,36 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final cartState = ref.read(cartProvider);
     final student = ref.read(selectedStudentProvider);
     if (cartState.isEmpty || student == null) return;
+
+    // Step 0: Calculate fines for overdue items and confirm with user
+    final rules = await FineService.loadRules(student.insId);
+    final fineMap = <int, double>{};
+    double totalFine = 0;
+    for (final fee in cartState.items) {
+      final fine = FineService.calculateFine(
+        demfeetype: fee.demfeetype,
+        dueDate: fee.dueDate,
+        feeAmount: fee.balancedue,
+        rules: rules,
+      );
+      if (fine > 0) {
+        fineMap[fee.demId] = fine;
+        totalFine += fine;
+      }
+    }
+
+    if (totalFine > 0) {
+      final confirmed = await _showFineConfirmationDialog(
+        fineMap: fineMap,
+        items: cartState.items,
+        baseTotal: cartState.totalAmount,
+        totalFine: totalFine,
+      );
+      if (confirmed != true) return; // User cancelled
+    }
+
+    _currentFineMap = fineMap;
+    final grandTotal = cartState.totalAmount + totalFine;
 
     setState(() {
       _isProcessing = true;
@@ -852,8 +897,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       }
       debugPrint('PAYMENT STEP 2 OK: payId=$payId');
 
-      // Step 3: Create Razorpay order via Edge Function
-      final amountInPaise = (cartState.totalAmount * 100).toInt();
+      // Step 3: Create Razorpay order via Edge Function (include fines in total)
+      final amountInPaise = (grandTotal * 100).toInt();
       debugPrint('PAYMENT STEP 3: Creating Razorpay order (amount=$amountInPaise paise)...');
 
       final orderId = await createRazorpayOrder(
@@ -1062,6 +1107,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           paymethod: 'razorpay',
           payreference: paymentId,
           items: items,
+          fineMap: _currentFineMap,
         );
       } catch (e) {
         debugPrint('Error in handlePaymentSuccess (widget may be disposed): $e');
@@ -1165,6 +1211,117 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
   /// Desktop payment: opens Razorpay JS checkout in system browser,
   /// then polls the Edge Function for payment status (same as admin app).
+  /// Shows a dialog listing overdue fees and the fine applied to each.
+  /// Returns true if the user confirms, false/null otherwise.
+  Future<bool?> _showFineConfirmationDialog({
+    required Map<int, double> fineMap,
+    required List<FeeModel> items,
+    required double baseTotal,
+    required double totalFine,
+  }) {
+    final currencyFmt = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
+
+    final finedItems = items.where((f) => fineMap.containsKey(f.demId)).toList();
+
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 10),
+            Text('Late Fee Applicable'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'The following fees are overdue and a late fee will be applied:',
+                style: TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 14),
+              ...finedItems.map((fee) {
+                final fine = fineMap[fee.demId] ?? 0;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              fee.demfeetype,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                            ),
+                            Text(
+                              'Due: ${DateFormat('dd MMM yyyy').format(fee.dueDate)}',
+                              style: const TextStyle(fontSize: 11, color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '+ ${currencyFmt.format(fine)}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              const Divider(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Fees Total', style: TextStyle(fontSize: 13)),
+                  Text(currencyFmt.format(baseTotal),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Late Fee', style: TextStyle(fontSize: 13, color: Colors.orange)),
+                  Text('+ ${currencyFmt.format(totalFine)}',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.orange)),
+                ],
+              ),
+              const Divider(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Grand Total',
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  Text(currencyFmt.format(baseTotal + totalFine),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: Text('Pay ${currencyFmt.format(baseTotal + totalFine)}'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _openDesktopRazorpayCheckout({
     required int payId,
     required int carId,
@@ -1273,6 +1430,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               paymethod: 'razorpay',
               payreference: rpPaymentId ?? orderId,
               items: items,
+              fineMap: _currentFineMap,
             );
           } else if (status == 'failed') {
             timer.cancel();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/routes.dart';
@@ -74,74 +75,113 @@ class _NotificationDetailScreenState
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.symmetric(horizontal: 24),
+          padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.symmetric(horizontal: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 24),
-              // Type Badge
-              _buildTypeBadge(notification.type),
-              const SizedBox(height: 16),
-              // Title
-              Text(
-                notification.title,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Date & Time
-              Row(
-                children: [
-                  Icon(
-                    Icons.schedule_rounded,
-                    size: 16,
-                    color: AppColors.textHintC(context),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    _formatDateTime(notification.createdAt),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: AppColors.textSecondaryC(context),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              // Message Card
+              // Main card — combines icon, badge, title, time, message
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.cardBg(context),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: AppColors.cardShadow(context),
+                  color: const Color(0xFFFFFFFF),
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x0A000000),
+                      blurRadius: 16,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Icon
-                    _buildNotificationIcon(notification.type),
-                    const SizedBox(height: 20),
-                    // Message
-                    Text(
-                      notification.body,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w400,
-                        color: AppColors.textPrimaryC(context),
-                        height: 1.7,
+                    // Top colored banner
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: _getBannerColor(notification.type),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                      ),
+                      child: Row(
+                        children: [
+                          // Icon
+                          _buildNotificationIcon(notification.type),
+                          const SizedBox(width: 16),
+                          // Title + Badge
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildTypeBadge(notification.type),
+                                const SizedBox(height: 8),
+                                Text(
+                                  notification.title,
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1A1A1A),
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Body content
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Date & Time row
+                          Row(
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF5F5F3),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.schedule_rounded, size: 16, color: Color(0xFF9E9E9E)),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                _formatDateTime(notification.createdAt),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF9E9E9E),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+                          // Divider
+                          Container(height: 1, color: const Color(0xFFF0F0F0)),
+                          const SizedBox(height: 20),
+                          // Message
+                          Text(
+                            notification.body,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF1A1A1A),
+                              height: 1.7,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               // Action Button (if applicable)
               if (_hasAction(notification.type))
                 _buildActionButton(notification),
@@ -155,7 +195,7 @@ class _NotificationDetailScreenState
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
           // Back Button - Dark theme
@@ -167,11 +207,10 @@ class _NotificationDetailScreenState
               decoration: BoxDecoration(
                 color: AppColors.iconButtonBg(context),
                 shape: BoxShape.circle,
+                border: Border.all(color: AppColors.iconButtonBorder(context)),
               ),
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 18,
-                color: Colors.white,
+              child: Center(
+                child: SvgPicture.asset('assets/icons/arrow-left.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
               ),
             ),
           ),
@@ -244,6 +283,24 @@ class _NotificationDetailScreenState
     );
   }
 
+  Color _getBannerColor(NotificationType type) {
+    switch (type) {
+      case NotificationType.feeReminder:
+      case NotificationType.dueDateApproaching:
+        return const Color(0xFFFFF8E1);
+      case NotificationType.paymentSuccess:
+        return const Color(0xFFE8F5E9);
+      case NotificationType.paymentFailed:
+        return const Color(0xFFFFEBEE);
+      case NotificationType.alert:
+        return const Color(0xFFFFEBEE);
+      case NotificationType.announcement:
+        return const Color(0xFFE3F2FD);
+      default:
+        return const Color(0xFFF5F5F5);
+    }
+  }
+
   Widget _buildNotificationIcon(NotificationType type) {
     IconData icon;
     Color bgColor;
@@ -287,7 +344,7 @@ class _NotificationDetailScreenState
       height: 56,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(14),
+        shape: BoxShape.circle,
       ),
       child: Icon(
         icon,
@@ -429,7 +486,7 @@ class _NotificationDetailScreenState
           context: context,
           builder: (context) => AlertDialog(
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             icon: const Icon(Icons.check_circle,
                 color: Color(0xFF2DBE60), size: 48),
             title: const Text('Already Paid'),
@@ -439,7 +496,7 @@ class _NotificationDetailScreenState
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: const Color(0xFF121212),
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('OK'),
@@ -522,7 +579,7 @@ class _NotificationDetailScreenState
           context: context,
           builder: (context) => AlertDialog(
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             icon: const Icon(Icons.check_circle,
                 color: Color(0xFF2DBE60), size: 48),
             title: const Text('All Paid'),
@@ -532,7 +589,7 @@ class _NotificationDetailScreenState
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: const Color(0xFF121212),
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('OK'),
@@ -580,7 +637,7 @@ class _NotificationDetailScreenState
       case NotificationType.dueDateApproaching:
         buttonText = 'Pay Now';
         buttonIcon = Icons.payment_rounded;
-        buttonColor = AppColors.accent;
+        buttonColor = const Color(0xFF121212);
         final demIds = notification.data?['dem_ids'] as List<dynamic>? ?? [];
         onTap = () => _handlePayFees(
               demIds,

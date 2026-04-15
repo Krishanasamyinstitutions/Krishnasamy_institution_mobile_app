@@ -12,6 +12,7 @@ import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/institution_provider.dart';
 import '../../../core/utils/extensions.dart';
 import '../../widgets/common/desktop_content_card.dart';
 import '../../../core/utils/birthday_utils.dart';
@@ -25,6 +26,13 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  // Warm gray palette — matches reference design
+  static const Color _bg = Color(0xFFF2F1EE);
+  static const Color _cardBg = Color(0xFFFFFFFF);
+  static const Color _textDark = Color(0xFF1A1A1A);
+  static const Color _textMedium = Color(0xFF6B6B6B);
+  static const Color _textLight = Color(0xFF9E9E9E);
+
   bool _birthdayChecked = false;
   ProviderSubscription? _studentSubscription;
 
@@ -87,19 +95,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // Desktop: no page title (shown in top bar) | Mobile: header with nav icons
           if (!context.isDesktop)
             Container(
-              color: AppColors.headerBg(context),
+              color: _cardBg,
               child: SafeArea(
                 bottom: false,
                 child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.headerBg(context),
-                    boxShadow: AppColors.cardShadow(context),
+                  decoration: const BoxDecoration(
+                    color: _cardBg,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x0A000000),
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [
                       const SizedBox(height: 16),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: _buildHeader(context, selectedStudent, cartItemCount, notificationCount),
                       ),
                       const SizedBox(height: 16),
@@ -114,11 +128,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: SingleChildScrollView(
               padding: context.isDesktop
                   ? EdgeInsets.zero
-                  : const EdgeInsets.symmetric(horizontal: 24),
+                  : const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (!context.isDesktop) const SizedBox(height: 28),
+                  if (!context.isDesktop) const SizedBox(height: 24),
                   if (context.isDesktop) const SizedBox(height: 4),
 
                   // Desktop: summary stat cards
@@ -127,16 +141,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: 20),
                   ],
 
-                  // Mobile only: balance
+                  // Mobile only: balance card
                   if (!context.isDesktop) ...[
-                    _buildBalanceSection(context, feeSummaryAsync),
+                    _buildBalanceCard(context, feeSummaryAsync),
                     const SizedBox(height: 28),
                   ],
 
                   // Spending/Fee Categories Section
                   _buildSpendingSection(context, feesByGroup),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
                   // Activity Section - Overdue & Due Soon
                   _buildActivitySection(context, overdueGroups, dueSoonGroups),
@@ -154,270 +168,295 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _buildHeader(BuildContext context, dynamic selectedStudent, int cartItemCount, int notificationCount) {
     final studentName = selectedStudent?.name ?? 'Student';
     final className = selectedStudent?.className ?? 'N/A';
-    final admissionNumber = selectedStudent?.admissionNumber ?? 'N/A';
+    final courseName = selectedStudent?.courseName ?? 'N/A';
+    final hasPhoto = selectedStudent != null &&
+        selectedStudent.photoUrl != null &&
+        selectedStudent.photoUrl!.trim().isNotEmpty;
 
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Profile Avatar
+        // Avatar
         GestureDetector(
           onTap: () => context.go(Routes.profile),
           child: Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.primary, AppColors.primary600],
-              ),
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
+              color: AppColors.primary,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             clipBehavior: Clip.antiAlias,
-            child: (selectedStudent?.photoUrl != null && selectedStudent!.photoUrl!.trim().isNotEmpty)
+            child: hasPhoto
                 ? CachedNetworkImage(
                     imageUrl: selectedStudent.photoUrl!,
                     fit: BoxFit.cover,
-                    width: 44,
-                    height: 44,
+                    width: 48,
+                    height: 48,
                     errorWidget: (context, url, error) => Center(
                       child: Text(
                         _getInitials(studentName),
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
                       ),
                     ),
                   )
                 : Center(
                     child: Text(
                       _getInitials(studentName),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
                     ),
                   ),
           ),
         ),
-        const SizedBox(width: 12),
-        // Student Info
+        const SizedBox(width: 14),
+        // Greeting
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                studentName,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
-                ),
-                overflow: TextOverflow.ellipsis,
+                '$courseName | $className',
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: _textLight),
               ),
-              const SizedBox(height: 4),
-              RichText(
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-                text: TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Adm No: ',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondaryC(context),
-                      ),
-                    ),
-                    TextSpan(
-                      text: admissionNumber,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimaryC(context),
-                      ),
-                    ),
-                    TextSpan(
-                      text: ' | Class: ',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondaryC(context),
-                      ),
-                    ),
-                    TextSpan(
-                      text: className,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimaryC(context),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 2),
+              Text(
+                'Hey, ${studentName.split(' ').first}',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textDark, letterSpacing: -0.3),
               ),
             ],
           ),
         ),
-        // Cart Icon - Dark theme (same as View Details button)
-        GestureDetector(
+        // Cart icon
+        _buildHeaderIcon(
+          svgPath: 'assets/icons/Cart.svg',
+          badgeCount: cartItemCount,
           onTap: () => context.push(Routes.cart),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.iconButtonBg(context),
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
-                if (cartItemCount > 0)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(
-                        minWidth: 18,
-                        minHeight: 18,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
-                      ),
-                      child: Text(
-                        cartItemCount > 9 ? '9+' : '$cartItemCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
         ),
-        const SizedBox(width: 10),
-        // Notification Icon - Dark theme with badge
-        GestureDetector(
+        const SizedBox(width: 8),
+        // Notification icon
+        _buildHeaderIcon(
+          svgPath: 'assets/main icons/line icons/notification.svg',
+          badgeCount: notificationCount,
           onTap: () => context.go(Routes.notifications),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.iconButtonBg(context),
-              shape: BoxShape.circle,
-            ),
-            child: Stack(
-              clipBehavior: Clip.none,
-              alignment: Alignment.center,
-              children: [
-                const Icon(Icons.notifications_outlined, size: 20, color: Colors.white),
-                if (notificationCount > 0)
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
-                      ),
-                      child: Text(
-                        notificationCount > 9 ? '9+' : '$notificationCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
         ),
       ],
     );
   }
 
-  Widget _buildBalanceSection(BuildContext context, AsyncValue<FeeSummary> feeSummaryAsync) {
-    final feeSummary = feeSummaryAsync.valueOrNull;
-    final totalPending = feeSummary?.totalPending ?? 0;
-
-    // Get current academic year
-    final now = DateTime.now();
-    final academicYear = now.month >= 6
-        ? '${now.year}-${now.year + 1}'
-        : '${now.year - 1}-${now.year}';
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          'Balance Fees Due',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondaryC(context),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              '₹${NumberFormat('#,##,###').format(totalPending.clamp(0, double.infinity))}',
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textPrimaryC(context),
-                letterSpacing: -1,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '/',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w400,
-                color: AppColors.textHintC(context),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              academicYear,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textSecondaryC(context),
-              ),
+  Widget _buildHeaderIcon({
+    IconData? icon,
+    String? svgPath,
+    required int badgeCount,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFF121212),
+          shape: BoxShape.circle,
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
             ),
           ],
         ),
-      ],
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            svgPath != null
+                ? SvgPicture.asset(svgPath, width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))
+                : Icon(icon, size: 20, color: Colors.white),
+            if (badgeCount > 0)
+              Positioned(
+                top: -3,
+                right: -3,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Text(
+                    badgeCount > 9 ? '9+' : '$badgeCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getInitials(String name) {
+    if (name.isEmpty) return 'S';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
+
+  Widget _buildBalanceCard(BuildContext context, AsyncValue<FeeSummary> feeSummaryAsync) {
+    final feeSummary = feeSummaryAsync.valueOrNull;
+    final totalPending = feeSummary?.totalPending ?? 0;
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final studentName = selectedStudent?.name ?? 'Student';
+
+    final academicYearAsync = ref.watch(activeYearLabelProvider);
+    final now = DateTime.now();
+    final academicYear = academicYearAsync.valueOrNull ??
+        (now.month >= 6
+            ? '${now.year}-${now.year + 1}'
+            : '${now.year - 1}-${now.year}');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Subtle diagonal lines pattern overlay
+          Positioned(
+            top: -20,
+            right: -20,
+            child: Opacity(
+              opacity: 0.06,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white, width: 1),
+                  borderRadius: BorderRadius.circular(80),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: -40,
+            right: -40,
+            child: Opacity(
+              opacity: 0.04,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white, width: 1),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+              ),
+            ),
+          ),
+          // Content
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top row: label + icon
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Balance Fees Due',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.9),
+                    ),
+                  ),
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.account_balance_wallet_rounded,
+                      size: 20,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Amount
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '₹${NumberFormat('#,##,###').format(totalPending.clamp(0, double.infinity))}',
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: -1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Bottom row: student name + academic year
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        studentName.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    academicYear,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF121212),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildSpendingSection(BuildContext context, Map<String, double> feesByGroup) {
     final categories = [
-      {'name': 'School Fees', 'icon': Icons.school_rounded, 'color': const Color(0xFF22C55E), 'iconBgColor': const Color(0xFFDCFCE7)},
+      {'name': 'School Fees', 'icon': Icons.school_rounded, 'color': const Color(0xFF0D9B5C), 'iconBgColor': const Color(0xFFDCFCE7)},
       {'name': 'Van Fees', 'icon': Icons.directions_bus_rounded, 'color': const Color(0xFFF59E0B), 'iconBgColor': const Color(0xFFFEF3C7)},
       {'name': 'Exam Fees', 'icon': Icons.assignment_rounded, 'color': const Color(0xFF06B6D4), 'iconBgColor': const Color(0xFFCFFAFE)},
       {'name': 'Other', 'icon': Icons.more_horiz_rounded, 'color': AppColors.cardPurple, 'iconBgColor': const Color(0xFFF3E8FF)},
@@ -430,31 +469,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Column(
       children: [
         if (!context.isDesktop)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Fees Breakup',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => context.push(Routes.payAllFees),
-                child: Text(
-                  'Show all',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textLink,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        if (!context.isDesktop) const SizedBox(height: 16),
+          _buildMobileFeeBreakupCard(context, feesByGroup, sortedEntries, categories),
         if (context.isDesktop)
           DesktopContentCard(
             title: 'Fees Breakup',
@@ -512,44 +527,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           )
         else
-          SizedBox(
-            height: 165,
-            child: ListView.separated(
-              clipBehavior: Clip.none,
-              scrollDirection: Axis.horizontal,
-              itemCount: feesByGroup.isEmpty ? categories.length : sortedEntries.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                if (feesByGroup.isEmpty) {
-                  final cat = categories[index];
-                  return _buildSpendingCard(
-                    context: context,
-                    icon: cat['icon'] as IconData?,
-                    svgPath: cat['svgPath'] as String?,
-                    label: cat['name'] as String,
-                    groupName: cat['name'] as String,
-                    amount: 0,
-                    primaryColor: cat['color'] as Color,
-                    iconBgColor: cat['iconBgColor'] as Color,
-                    isFirst: index == 0,
-                  );
-                }
-                final entry = sortedEntries[index];
-                final iconData = _getIconForFeeGroup(entry.key);
-                return _buildSpendingCard(
-                  context: context,
-                  icon: iconData['icon'] as IconData?,
-                  svgPath: iconData['svgPath'] as String?,
-                  label: _toTitleCase(entry.key),
-                  groupName: entry.key,
-                  amount: entry.value,
-                  primaryColor: iconData['color'] as Color,
-                  iconBgColor: iconData['iconBgColor'] as Color,
-                  isFirst: index == 0,
-                );
-              },
-            ),
-          ),
+          const SizedBox.shrink(), // Mobile uses _buildMobileFeeBreakupCard above
       ],
     );
   }
@@ -576,7 +554,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: hasColoredBg ? primaryColor : AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: hasColoredBg
               ? null
               : Border.all(
@@ -609,7 +587,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     color: hasColoredBg
                         ? Colors.white.withValues(alpha: 0.2)
                         : iconBgColor,
-                    borderRadius: BorderRadius.circular(12),
+                    shape: BoxShape.circle,
                   ),
                   child: Center(
                     child: svgPath != null
@@ -706,47 +684,335 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  /// Mobile fee breakup — reference-style card with 2-column grid
+  Widget _buildMobileFeeBreakupCard(
+    BuildContext context,
+    Map<String, double> feesByGroup,
+    List<MapEntry<String, double>> sortedEntries,
+    List<Map<String, dynamic>> categories,
+  ) {
+    // Build grid items from fee data or placeholders
+    final List<_FeeGridItem> items = [];
+    if (feesByGroup.isEmpty) {
+      for (final cat in categories) {
+        items.add(_FeeGridItem(
+          label: cat['name'] as String,
+          amount: 0,
+          color: cat['color'] as Color,
+          iconBgColor: cat['iconBgColor'] as Color,
+          icon: cat['icon'] as IconData?,
+          svgPath: cat['svgPath'] as String?,
+          groupName: cat['name'] as String,
+        ));
+      }
+    } else {
+      for (final entry in sortedEntries) {
+        final iconData = _getIconForFeeGroup(entry.key);
+        items.add(_FeeGridItem(
+          label: _toTitleCase(entry.key),
+          amount: entry.value,
+          color: iconData['color'] as Color,
+          iconBgColor: iconData['iconBgColor'] as Color,
+          icon: iconData['icon'] as IconData?,
+          svgPath: iconData['svgPath'] as String?,
+          groupName: entry.key,
+        ));
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Title row
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Fees Breakup',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textDark),
+              ),
+            ),
+            GestureDetector(
+              onTap: () => context.push(Routes.payAllFees),
+              child: const Text(
+                'Show all',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: _textMedium,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Horizontal carousel of fee cards
+        SizedBox(
+          height: 155,
+          child: ListView.separated(
+            clipBehavior: Clip.none,
+            scrollDirection: Axis.horizontal,
+            itemCount: items.length,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) => _buildFeeCarouselCard(context, items[index], isFirst: index == 0),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFeeCarouselCard(BuildContext context, _FeeGridItem item, {bool isFirst = false}) {
+    final bool isDark = isFirst && item.amount > 0;
+
+    return GestureDetector(
+      onTap: () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(item.groupName)}'),
+      child: Container(
+        width: 170,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.primary : _cardBg,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? AppColors.primary.withValues(alpha: 0.3)
+                  : const Color(0x0F000000),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Icon + Arrow row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.15)
+                        : item.iconBgColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: item.svgPath != null
+                        ? SvgPicture.asset(
+                            item.svgPath!,
+                            width: 20,
+                            height: 20,
+                            colorFilter: ColorFilter.mode(
+                              isDark ? Colors.white : item.color,
+                              BlendMode.srcIn,
+                            ),
+                          )
+                        : Icon(
+                            item.icon,
+                            size: 20,
+                            color: isDark ? Colors.white : item.color,
+                          ),
+                  ),
+                ),
+                // Arrow up-right icon
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.15)
+                        : const Color(0xFFF0F0F0),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/icons/arrow-up-right.svg',
+                      width: 14,
+                      height: 14,
+                      colorFilter: ColorFilter.mode(
+                        isDark ? Colors.white : const Color(0xFF6B6B6B),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            // Amount — big and bold
+            Text(
+              item.amount > 0
+                  ? '₹${NumberFormat('#,##,###').format(item.amount.toInt())}'
+                  : '₹0',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : _textDark,
+                letterSpacing: -0.5,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            // Fee group name
+            Text(
+              item.label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.85)
+                    : _textMedium,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// "Nearby jobs" style fee item — white card row with icon, title, subtitle, amount
+  Widget _buildNearbyFeeItem(BuildContext context, FeeGroupSummary group, Color statusColor, {required String filterStatus, bool isDisabled = false}) {
+    final now = DateTime.now();
+    String timeInfo = '';
+    if (group.nearestDueDate != null) {
+      if (group.isOverdue) {
+        final days = now.difference(group.nearestDueDate!).inDays;
+        timeInfo = '$days days overdue';
+      } else {
+        final days = group.nearestDueDate!.difference(now).inDays;
+        timeInfo = days == 0 ? 'Due today' : 'Due in $days days';
+      }
+    }
+
+    final iconData = _getIconForFeeGroup(group.groupName);
+
+    return Opacity(
+      opacity: isDisabled ? 0.5 : 1.0,
+      child: GestureDetector(
+        onTap: isDisabled ? null : () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(group.groupName)}&status=$filterStatus'),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _cardBg,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0A000000),
+                blurRadius: 16,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Icon
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: iconData['iconBgColor'] as Color,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    iconData['icon'] as IconData? ?? Icons.receipt_rounded,
+                    size: 22,
+                    color: iconData['color'] as Color,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              // Title + subtitle
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _toTitleCase(group.groupName),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: _textDark,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      [
+                        if (group.periodText.isNotEmpty) group.periodText,
+                        if (timeInfo.isNotEmpty) timeInfo,
+                      ].join(' · '),
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        color: timeInfo.isNotEmpty ? statusColor : _textLight,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              // Amount
+              Text(
+                '₹${NumberFormat('#,##,###').format(group.totalAmount.toInt())}',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: _textDark,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildActivitySection(BuildContext context, List<FeeGroupSummary> overdueGroups, List<FeeGroupSummary> dueSoonGroups) {
     final hasOverdue = overdueGroups.isNotEmpty;
     final hasDueSoon = dueSoonGroups.isNotEmpty;
     final hasAnyFees = hasOverdue || hasDueSoon;
 
-    // Calculate totals
-    final totalOverdue = overdueGroups.fold(0.0, (sum, g) => sum + g.totalAmount);
-    final totalDueSoon = dueSoonGroups.fold(0.0, (sum, g) => sum + g.totalAmount);
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (!context.isDesktop) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        if (!hasAnyFees && !context.isDesktop)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Fee Status',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimaryC(context),
-                ),
-              ),
-              GestureDetector(
-                onTap: () => context.push(Routes.allPendingFees),
-                child: Text(
-                  'View all',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textLink,
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Fee Status',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textDark),
+                    ),
                   ),
-                ),
+                  GestureDetector(
+                    onTap: () => context.push(Routes.allPendingFees),
+                    child: const Text(
+                      'View all',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: _textMedium,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+              const SizedBox(height: 16),
+              _buildEmptyActivity(context),
             ],
-          ),
-          const SizedBox(height: 16),
-        ],
-        if (!hasAnyFees)
-          _buildEmptyActivity(context)
+          )
         else if (context.isDesktop)
           DesktopContentCard(
             title: 'Fee Status',
@@ -764,38 +1030,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             hasPadding: false,
             child: _buildDesktopFeeTable(context, overdueGroups, dueSoonGroups, hasOverdue, hasDueSoon),
           )
-        else ...[
-          // Overdue Section
-          if (hasOverdue) ...[
-            _buildSectionTitle(
-              title: 'Overdue',
-              totalAmount: totalOverdue,
-              color: AppColors.error,
-              icon: Icons.warning_amber_rounded,
-            ),
-            const SizedBox(height: 12),
-            ...overdueGroups.map((group) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _buildFeeGroupCard(context, group, AppColors.error, filterStatus: 'overdue'),
-            )),
-          ],
-          if (hasOverdue && hasDueSoon)
-            const SizedBox(height: 16),
-          // Due Soon Section
-          if (hasDueSoon) ...[
-            _buildSectionTitle(
-              title: 'Upcoming Due',
-              totalAmount: totalDueSoon,
-              color: AppColors.warning,
-              icon: Icons.schedule_rounded,
-            ),
-            const SizedBox(height: 12),
-            ...dueSoonGroups.map((group) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _buildFeeGroupCard(context, group, AppColors.warning, filterStatus: 'dueSoon', isDisabled: hasOverdue),
-            )),
-          ],
-        ],
+        else
+          // Mobile: Fee Status — flat list like "Nearby jobs"
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Section title
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Fee Status',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _textDark),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => context.push(Routes.allPendingFees),
+                    child: const Text(
+                      'View all',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: _textMedium,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Overdue items
+              if (hasOverdue)
+                ...overdueGroups.map((group) =>
+                  _buildNearbyFeeItem(context, group, AppColors.error, filterStatus: 'overdue'),
+                ),
+              // Due soon items
+              if (hasDueSoon)
+                ...dueSoonGroups.map((group) =>
+                  _buildNearbyFeeItem(context, group, AppColors.warning, filterStatus: 'dueSoon', isDisabled: hasOverdue),
+                ),
+            ],
+          ),
       ],
     );
   }
@@ -888,7 +1162,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               Container(
                 width: 44,
                 height: 44,
-                decoration: BoxDecoration(color: groupBg, borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: groupBg, shape: BoxShape.circle),
                 child: Center(
                   child: Icon(groupIcon, size: 22, color: groupIconColor),
                 ),
@@ -943,237 +1217,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildSectionTitle({
-    required String title,
-    required double totalAmount,
-    required Color color,
-    IconData? icon,
-    String? svgPath,
-  }) {
-    return Row(
-      children: [
-        Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(8),
+  Widget _buildEmptyActivity(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: _cardBg,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 16,
+            offset: Offset(0, 4),
           ),
-          child: Center(
-            child: svgPath != null
-                ? SvgPicture.asset(
-                    svgPath,
-                    width: 16,
-                    height: 16,
-                    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-                  )
-                : Icon(icon, size: 16, color: color),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-        const Spacer(),
-        Text(
-          '₹${NumberFormat('#,##,###').format(totalAmount.toInt())}',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFeeGroupCard(BuildContext context, FeeGroupSummary group, Color statusColor, {required String filterStatus, bool isDisabled = false}) {
-    final isOverdue = group.isOverdue;
-    final now = DateTime.now();
-    String timeInfo = '';
-
-    if (group.nearestDueDate != null) {
-      if (isOverdue) {
-        final days = now.difference(group.nearestDueDate!).inDays;
-        timeInfo = '$days days overdue';
-      } else {
-        final days = group.nearestDueDate!.difference(now).inDays;
-        timeInfo = days == 0 ? 'Due today' : 'Due in $days days';
-      }
-    }
-
-    // Get icon based on group name
-    IconData groupIcon = Icons.receipt_rounded;
-    Color groupBg = AppColors.cardPurple;
-    Color groupIconColor = AppColors.cardPurpleDark;
-
-    final lowerName = group.groupName.toLowerCase();
-    if (lowerName.contains('school') || lowerName.contains('tuition')) {
-      groupIcon = Icons.school_rounded;
-      groupBg = AppColors.cardGreen;
-      groupIconColor = AppColors.cardGreenDark;
-    } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
-      groupIcon = Icons.directions_bus_rounded;
-      groupBg = const Color(0xFFFEF3C7);
-      groupIconColor = const Color(0xFFF59E0B);
-    } else if (lowerName.contains('hostel')) {
-      groupIcon = Icons.hotel_rounded;
-      groupBg = const Color(0xFFDBEAFE);
-      groupIconColor = const Color(0xFF3B82F6);
-    } else if (lowerName.contains('exam')) {
-      groupIcon = Icons.assignment_rounded;
-      groupBg = const Color(0xFFCFFAFE);
-      groupIconColor = const Color(0xFF06B6D4);
-    }
-
-    return Opacity(
-      opacity: isDisabled ? 0.5 : 1.0,
-      child: GestureDetector(
-      onTap: isDisabled ? null : () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(group.groupName)}&status=$filterStatus'),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: statusColor.withValues(alpha: 0.15),
-            width: 1,
-          ),
-          boxShadow: AppColors.cardShadow(context),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: groupBg,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Icon(groupIcon, size: 22, color: groupIconColor),
-              ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Green circle with checkmark
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _toTitleCase(group.groupName),
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimaryC(context),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          group.periodText,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w400,
-                            color: AppColors.textSecondaryC(context),
-                          ),
-                        ),
-                      ),
-                      if (timeInfo.isNotEmpty) ...[
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 6),
-                          width: 3,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: AppColors.textHint,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        Text(
-                          timeInfo,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: statusColor,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                Text(
-                  '₹${NumberFormat('#,##,###').format(group.totalAmount.toInt())}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimaryC(context),
-                  ),
-                ),
-                const SizedBox(height: 4),
                 Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: AppColors.textPrimaryC(context),
+                  Icons.shield_rounded,
+                  size: 28,
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                ),
+                const Positioned(
+                  bottom: 10,
+                  right: 10,
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    size: 18,
+                    color: AppColors.primary,
+                  ),
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    ),
-    );
-  }
-
-  Widget _buildEmptyActivity(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      decoration: BoxDecoration(
-        color: AppColors.cardBg(context),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: AppColors.cardShadow(context),
-      ),
-      child: Column(
-        children: [
+          ),
+          const SizedBox(width: 16),
+          // Text content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'All caught up!',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: _textDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'No overdue or upcoming fees. You\'re all set!',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    color: _textLight,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Arrow
           Container(
-            width: 64,
-            height: 64,
-            decoration: const BoxDecoration(
-              color: AppColors.cardGreen,
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.check_circle_rounded,
-              size: 32,
-              color: AppColors.cardGreenDark,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'All caught up!',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimaryC(context),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'No overdue or upcoming fees',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondaryC(context),
+              Icons.arrow_forward_rounded,
+              size: 18,
+              color: AppColors.primary,
             ),
           ),
         ],
@@ -1194,7 +1321,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (lowerName.contains('school') || lowerName.contains('tuition')) {
       return {
         'icon': Icons.school_rounded,
-        'color': const Color(0xFF22C55E),
+        'color': const Color(0xFF0D9B5C),
         'iconBgColor': const Color(0xFFDCFCE7),
       };
     } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
@@ -1222,15 +1349,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         'iconBgColor': const Color(0xFFF3E8FF),
       };
     }
-  }
-
-  String _getInitials(String name) {
-    if (name.isEmpty) return 'S';
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    }
-    return name[0].toUpperCase();
   }
 
   // ────────────────────────────────────────────────────────────────
@@ -1316,7 +1434,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: AppColors.cardShadow(context),
         ),
         child: Row(
@@ -1326,7 +1444,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               height: 48,
               decoration: BoxDecoration(
                 color: iconBg,
-                borderRadius: BorderRadius.circular(14),
+                shape: BoxShape.circle,
               ),
               child: Icon(icon, size: 24, color: iconColor),
             ),
@@ -1365,4 +1483,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
     );
   }
+}
+
+class _FeeGridItem {
+  final String label;
+  final double amount;
+  final Color color;
+  final Color iconBgColor;
+  final IconData? icon;
+  final String? svgPath;
+  final String groupName;
+
+  const _FeeGridItem({
+    required this.label,
+    required this.amount,
+    required this.color,
+    required this.iconBgColor,
+    this.icon,
+    this.svgPath,
+    required this.groupName,
+  });
 }

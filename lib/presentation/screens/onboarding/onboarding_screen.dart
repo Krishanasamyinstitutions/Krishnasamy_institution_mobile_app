@@ -161,68 +161,129 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  // ─── Mobile layout (existing design) ───────────────────────────────
+  // ─── Mobile layout — reference image style ───────────────────────────────
   Widget _buildMobileLayout(bool isLastPage) {
-    return SafeArea(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Column(
-            children: [
-              // Top Navigation - Back Button
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: AppSizes.s4,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildBackButton(),
-                    const SizedBox(width: 44),
-                  ],
-                ),
-              ),
+    final currentData = _pages[_currentPage];
 
-              // Main Content with PageView
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: _onPageChanged,
-                  itemCount: _pages.length,
-                  itemBuilder: (context, index) {
-                    return FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: _OnboardingPage(data: _pages[index]),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F1EE),
+      body: Column(
+        children: [
+          // Top illustration area — takes ~55% of screen
+          Expanded(
+            flex: 55,
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: _onPageChanged,
+              itemCount: _pages.length,
+              itemBuilder: (context, index) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: _pages[index].backgroundColor,
+                    borderRadius: const BorderRadius.vertical(
+                      bottom: Radius.circular(40),
+                    ),
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: _buildOnboardIllustration(index, isDark: false),
                       ),
-                    );
-                  },
-                ),
-              ),
-
-              // Pagination Dots
-              _buildPaginationDots(),
-
-              const SizedBox(height: AppSizes.s8),
-
-              // Bottom Navigation - Skip and Next
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildSkipButton(),
-                    _buildNextButton(isLastPage),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: AppSizes.s6),
-            ],
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
+
+          // Bottom content area — title, description, dots, button
+          Expanded(
+            flex: 45,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: SlideTransition(
+                position: _slideAnimation,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    children: [
+                      const Spacer(flex: 2),
+                      // Title
+                      Text(
+                        currentData.title,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF1A1A1A),
+                          height: 1.2,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Description
+                      Text(
+                        currentData.description,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w400,
+                          color: Color(0xFF9E9E9E),
+                          height: 1.5,
+                        ),
+                      ),
+                      const Spacer(flex: 2),
+                      // Pagination dots
+                      _buildPaginationDots(),
+                      const Spacer(flex: 1),
+                      // Full-width dark Next button
+                      GestureDetector(
+                        onTap: _nextPage,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF121212),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Center(
+                            child: Text(
+                              isLastPage ? 'Get Started' : 'Next',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Skip link below button
+                      if (!isLastPage) ...[
+                        const SizedBox(height: 12),
+                        GestureDetector(
+                          onTap: _completeOnboarding,
+                          child: const Text(
+                            'Skip',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF9E9E9E),
+                            ),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -477,9 +538,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, AppColors.primary600],
-          ),
+          color: const Color(0xFF121212),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(

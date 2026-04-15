@@ -226,7 +226,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           border: isSelected
               ? Border.all(color: AppColors.primary, width: 2)
               : null,
@@ -399,9 +399,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
   Widget _buildContinueButton() {
     final isEnabled = _selectedStudentIndex != null;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: GestureDetector(
+    return GestureDetector(
         onTap: isEnabled
             ? () async {
                 final studentsAsync = ref.read(studentsByParentProvider);
@@ -417,19 +415,14 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            gradient: isEnabled
-                ? const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primary600],
-                  )
-                : null,
-            color: isEnabled ? null : AppColors.borderC(context),
+            color: isEnabled ? const Color(0xFF121212) : AppColors.borderC(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: isEnabled
-                ? [
+                ? const [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.4),
+                      color: Color(0x30000000),
                       blurRadius: 16,
-                      offset: const Offset(0, 8),
+                      offset: Offset(0, 8),
                     ),
                   ]
                 : null,
@@ -454,7 +447,6 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
             ],
           ),
         ),
-      ),
     );
   }
 }

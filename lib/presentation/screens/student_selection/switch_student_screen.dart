@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../config/routes.dart';
@@ -77,18 +78,27 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 }
               },
               child: Container(
-                width: 40,
-                height: 40,
+                width: 44,
+                height: 44,
                 margin: const EdgeInsets.only(right: 14),
-                decoration: BoxDecoration(
-                  color: AppColors.scaffoldBg(context),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.borderC(context)),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF121212),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x26000000),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 18,
-                  color: AppColors.textPrimaryC(context),
+                child: Center(
+                  child: SvgPicture.asset(
+                    'assets/icons/arrow-left.svg',
+                    width: 18,
+                    height: 18,
+                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                  ),
                 ),
               ),
             ),
@@ -99,7 +109,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 Text(
                   'Switch Student',
                   style: TextStyle(
-                    fontSize: context.isDesktop ? 20 : 22,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimaryC(context),
                   ),
@@ -108,8 +118,8 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 Text(
                   'Select a different student profile',
                   style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                     color: AppColors.textSecondaryC(context),
                   ),
                 ),
@@ -151,7 +161,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.borderC(context),
             width: isSelected ? 2 : 1,
@@ -249,7 +259,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Adm No: ${student.admissionNumber} | Class: ${student.className}',
+                    'Roll No: ${student.admissionNumber} | Class: ${student.className}',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -318,17 +328,12 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            gradient: isNewSelection
-                ? const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primary600],
-                  )
-                : null,
-            color: isNewSelection ? null : AppColors.borderC(context),
+            color: isNewSelection ? const Color(0xFF121212) : AppColors.borderC(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: isNewSelection
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.4),
+                      color: const Color(0x30000000),
                       blurRadius: 16,
                       offset: const Offset(0, 8),
                     ),
