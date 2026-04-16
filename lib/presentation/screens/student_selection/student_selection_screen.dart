@@ -7,6 +7,7 @@ import '../../../config/routes.dart';
 import '../../../data/models/student_model.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/institution_provider.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/auth_desktop_wrapper.dart';
 import '../../widgets/common/screen_illustrations.dart';
 
@@ -184,10 +185,12 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
                     color: AppColors.cardPurple,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.person_off_rounded,
-                    size: 40,
-                    color: AppColors.cardPurpleDark,
+                  child: Center(
+                    child: AppIcon(
+                      'profile-delete',
+                      size: 40,
+                      color: AppColors.cardPurpleDark,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -378,7 +381,7 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
                 ),
               ),
               child: isSelected
-                  ? const Icon(Icons.check_rounded, size: 18, color: Colors.white)
+                  ? const AppIcon('tick-circle', size: 18, color: Colors.white)
                   : null,
             ),
           ],
@@ -439,8 +442,8 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Icons.arrow_forward_rounded,
+              AppIcon(
+                'arrow-right-1',
                 size: 20,
                 color: isEnabled ? Colors.white : AppColors.textHintC(context),
               ),

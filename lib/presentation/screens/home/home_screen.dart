@@ -16,6 +16,7 @@ import '../../providers/institution_provider.dart';
 import '../../../core/utils/extensions.dart';
 import '../../widgets/common/desktop_content_card.dart';
 import '../../../core/utils/birthday_utils.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/birthday_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -26,8 +27,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  // Warm gray palette — matches reference design
-  static const Color _bg = Color(0xFFF2F1EE);
+  // Mobile background — matches desktop scaffold
+  static const Color _bg = Color(0xFFF1F5F9);
   static const Color _cardBg = Color(0xFFFFFFFF);
   static const Color _textDark = Color(0xFF1A1A1A);
   static const Color _textMedium = Color(0xFF6B6B6B);
@@ -135,8 +136,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   if (!context.isDesktop) const SizedBox(height: 24),
                   if (context.isDesktop) const SizedBox(height: 4),
 
-                  // Desktop: summary stat cards
+                  // Desktop: dark greeting banner + dashboard title + stat cards
                   if (context.isDesktop) ...[
+                    _buildDesktopGreetingBanner(context, feeSummaryAsync),
+                    const SizedBox(height: 18),
+                    _buildDesktopDashboardTitle(context, selectedStudent),
+                    const SizedBox(height: 20),
                     _buildDesktopStatCards(context, feeSummaryAsync, overdueGroups, dueSoonGroups),
                     const SizedBox(height: 20),
                   ],
@@ -395,8 +400,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       color: Colors.white.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      Icons.account_balance_wallet_rounded,
+                    child: AppIcon(
+                      'wallet-3',
                       size: 20,
                       color: Colors.white.withValues(alpha: 0.7),
                     ),
@@ -439,10 +444,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                   Text(
                     academicYear,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF121212),
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -456,10 +461,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildSpendingSection(BuildContext context, Map<String, double> feesByGroup) {
     final categories = [
-      {'name': 'School Fees', 'icon': Icons.school_rounded, 'color': const Color(0xFF0D9B5C), 'iconBgColor': const Color(0xFFDCFCE7)},
-      {'name': 'Van Fees', 'icon': Icons.directions_bus_rounded, 'color': const Color(0xFFF59E0B), 'iconBgColor': const Color(0xFFFEF3C7)},
-      {'name': 'Exam Fees', 'icon': Icons.assignment_rounded, 'color': const Color(0xFF06B6D4), 'iconBgColor': const Color(0xFFCFFAFE)},
-      {'name': 'Other', 'icon': Icons.more_horiz_rounded, 'color': AppColors.cardPurple, 'iconBgColor': const Color(0xFFF3E8FF)},
+      {'name': 'School Fees', 'icon': 'book', 'color': const Color(0xFF0D9B5C), 'iconBgColor': const Color(0xFFDCFCE7)},
+      {'name': 'Van Fees', 'icon': 'bus', 'color': const Color(0xFFF59E0B), 'iconBgColor': const Color(0xFFFEF3C7)},
+      {'name': 'Exam Fees', 'icon': 'task-square', 'color': const Color(0xFF06B6D4), 'iconBgColor': const Color(0xFFCFFAFE)},
+      {'name': 'Other', 'icon': 'more', 'color': AppColors.cardPurple, 'iconBgColor': const Color(0xFFF3E8FF)},
     ];
 
     // Sort fee groups by amount in descending order
@@ -486,44 +491,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             child: SizedBox(
               height: 165,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (int i = 0; i < (feesByGroup.isEmpty ? categories.length : sortedEntries.length).clamp(0, 4); i++) ...[
-                    if (i > 0) const SizedBox(width: 12),
-                    if (feesByGroup.isEmpty)
-                      Expanded(
-                        child: _buildSpendingCard(
-                          context: context,
-                          icon: categories[i]['icon'] as IconData?,
-                          svgPath: categories[i]['svgPath'] as String?,
-                          label: categories[i]['name'] as String,
-                          groupName: categories[i]['name'] as String,
-                          amount: 0,
-                          primaryColor: categories[i]['color'] as Color,
-                          iconBgColor: categories[i]['iconBgColor'] as Color,
-                          isFirst: i == 0,
-                          fixedWidth: false,
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: _buildSpendingCard(
-                          context: context,
-                          icon: _getIconForFeeGroup(sortedEntries[i].key)['icon'] as IconData?,
-                          svgPath: _getIconForFeeGroup(sortedEntries[i].key)['svgPath'] as String?,
-                          label: _toTitleCase(sortedEntries[i].key),
-                          groupName: sortedEntries[i].key,
-                          amount: sortedEntries[i].value,
-                          primaryColor: _getIconForFeeGroup(sortedEntries[i].key)['color'] as Color,
-                          iconBgColor: _getIconForFeeGroup(sortedEntries[i].key)['iconBgColor'] as Color,
-                          isFirst: i == 0,
-                          fixedWidth: false,
-                        ),
-                      ),
-                  ],
-                ],
-              ),
+              child: sortedEntries.length > 4
+                  ? _buildSpendingCarousel(context, sortedEntries)
+                  : _buildSpendingFourSlots(context, sortedEntries),
             ),
           )
         else
@@ -532,9 +502,91 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  /// ≤ 4 groups: render each real group as a card in a fixed 4-slot row,
+  /// padded with empty placeholder slots (no label, no number) for unused slots.
+  Widget _buildSpendingFourSlots(
+      BuildContext context, List<MapEntry<String, double>> entries) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (int i = 0; i < 4; i++) ...[
+          if (i > 0) const SizedBox(width: 12),
+          Expanded(
+            child: i < entries.length
+                ? _buildSpendingCardForGroup(
+                    context: context,
+                    groupName: entries[i].key,
+                    amount: entries[i].value,
+                    isFirst: i == 0,
+                  )
+                : _buildEmptySpendingSlot(context),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// > 4 groups: horizontal carousel of fee-group cards.
+  Widget _buildSpendingCarousel(
+      BuildContext context, List<MapEntry<String, double>> entries) {
+    return ListView.separated(
+      scrollDirection: Axis.horizontal,
+      padding: EdgeInsets.zero,
+      itemCount: entries.length,
+      separatorBuilder: (_, __) => const SizedBox(width: 12),
+      itemBuilder: (_, i) => SizedBox(
+        width: 180,
+        child: _buildSpendingCardForGroup(
+          context: context,
+          groupName: entries[i].key,
+          amount: entries[i].value,
+          isFirst: i == 0,
+        ),
+      ),
+    );
+  }
+
+  /// Wraps [_buildSpendingCard] with per-group icon/color lookup so slot and
+  /// carousel rendering stay consistent.
+  Widget _buildSpendingCardForGroup({
+    required BuildContext context,
+    required String groupName,
+    required double amount,
+    required bool isFirst,
+  }) {
+    final meta = _getIconForFeeGroup(groupName);
+    return _buildSpendingCard(
+      context: context,
+      icon: meta['icon'] as String?,
+      svgPath: meta['svgPath'] as String?,
+      label: _toTitleCase(groupName),
+      groupName: groupName,
+      amount: amount,
+      primaryColor: meta['color'] as Color,
+      iconBgColor: meta['iconBgColor'] as Color,
+      isFirst: isFirst,
+      fixedWidth: false,
+    );
+  }
+
+  /// Placeholder used when a student has no fees for a given category.
+  /// Keeps the slot visually reserved without labelling it.
+  Widget _buildEmptySpendingSlot(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.filterBg(context).withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.borderC(context).withValues(alpha: 0.4),
+          width: 1,
+        ),
+      ),
+    );
+  }
+
   Widget _buildSpendingCard({
     required BuildContext context,
-    IconData? icon,
+    String? icon,
     String? svgPath,
     required String label,
     required String groupName,
@@ -600,8 +652,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               BlendMode.srcIn,
                             ),
                           )
-                        : Icon(
-                            icon,
+                        : AppIcon(
+                            icon ?? 'receipt',
                             size: 22,
                             color: hasColoredBg ? Colors.white : primaryColor,
                           ),
@@ -631,8 +683,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ),
                         ),
                         const SizedBox(width: 2),
-                        Icon(
-                          Icons.arrow_upward_rounded,
+                        AppIcon(
+                          'arrow-up',
                           size: 12,
                           color: hasColoredBg
                               ? Colors.white
@@ -671,8 +723,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                 ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
+                AppIcon(
+                  'arrow-right-1',
                   size: 14,
                   color: hasColoredBg ? Colors.white : AppColors.textSecondaryC(context),
                 ),
@@ -700,7 +752,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           amount: 0,
           color: cat['color'] as Color,
           iconBgColor: cat['iconBgColor'] as Color,
-          icon: cat['icon'] as IconData?,
+          icon: cat['icon'] as String?,
           svgPath: cat['svgPath'] as String?,
           groupName: cat['name'] as String,
         ));
@@ -713,7 +765,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           amount: entry.value,
           color: iconData['color'] as Color,
           iconBgColor: iconData['iconBgColor'] as Color,
-          icon: iconData['icon'] as IconData?,
+          icon: iconData['icon'] as String?,
           svgPath: iconData['svgPath'] as String?,
           groupName: entry.key,
         ));
@@ -809,8 +861,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               BlendMode.srcIn,
                             ),
                           )
-                        : Icon(
-                            item.icon,
+                        : AppIcon(
+                            item.icon ?? 'receipt',
                             size: 20,
                             color: isDark ? Colors.white : item.color,
                           ),
@@ -920,8 +972,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: Center(
-                  child: Icon(
-                    iconData['icon'] as IconData? ?? Icons.receipt_rounded,
+                  child: AppIcon(
+                    iconData['icon'] as String? ?? 'receipt',
                     size: 22,
                     color: iconData['color'] as Color,
                   ),
@@ -950,7 +1002,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         if (timeInfo.isNotEmpty) timeInfo,
                       ].join(' · '),
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 11,
                         fontWeight: FontWeight.w400,
                         color: timeInfo.isNotEmpty ? statusColor : _textLight,
                       ),
@@ -968,6 +1020,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   fontWeight: FontWeight.w700,
                   color: _textDark,
                 ),
+              ),
+              const SizedBox(width: 8),
+              const AppIcon(
+                'arrow-right-1',
+                size: 14,
+                color: _textLight,
               ),
             ],
           ),
@@ -1075,7 +1133,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildDesktopFeeTable(BuildContext context, List<FeeGroupSummary> overdueGroups, List<FeeGroupSummary> dueSoonGroups, bool hasOverdue, bool hasDueSoon) {
-    final headerStyle = TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.textSecondaryC(context), letterSpacing: 0.5);
+    const headerStyle = TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white, letterSpacing: 0.5);
     final allRows = <Widget>[];
 
     if (hasOverdue) {
@@ -1094,18 +1152,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     return Column(
       children: [
-        // Header row
+        // Header row — green band with white labels
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          color: AppColors.scaffoldBg(context),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          color: AppColors.primary,
           child: Row(
-            children: [
-              const SizedBox(width: 56), // icon (44) + gap (12)
+            children: const [
+              SizedBox(width: 52), // icon (40) + gap (12)
               Expanded(flex: 3, child: Text('Fee Group', style: headerStyle)),
               Expanded(flex: 2, child: Text('Period', style: headerStyle)),
               SizedBox(width: 140, child: Text('Status', style: headerStyle)),
-              SizedBox(width: 100, child: Text('Amount', textAlign: TextAlign.right, style: headerStyle)),
-              const SizedBox(width: 32),
+              SizedBox(
+                  width: 100,
+                  child: Text('Amount',
+                      textAlign: TextAlign.right, style: headerStyle)),
+              SizedBox(width: 26), // trailing chevron column
             ],
           ),
         ),
@@ -1129,24 +1190,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
-    IconData groupIcon = Icons.receipt_rounded;
+    String groupIcon = 'receipt';
     Color groupBg = AppColors.cardPurple;
     Color groupIconColor = AppColors.cardPurpleDark;
     final lowerName = group.groupName.toLowerCase();
     if (lowerName.contains('school') || lowerName.contains('tuition')) {
-      groupIcon = Icons.school_rounded;
+      groupIcon = 'book';
       groupBg = AppColors.cardGreen;
       groupIconColor = AppColors.cardGreenDark;
     } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
-      groupIcon = Icons.directions_bus_rounded;
+      groupIcon = 'bus';
       groupBg = const Color(0xFFFEF3C7);
       groupIconColor = const Color(0xFFF59E0B);
     } else if (lowerName.contains('hostel')) {
-      groupIcon = Icons.hotel_rounded;
+      groupIcon = 'home-2';
       groupBg = const Color(0xFFDBEAFE);
       groupIconColor = const Color(0xFF3B82F6);
     } else if (lowerName.contains('exam')) {
-      groupIcon = Icons.assignment_rounded;
+      groupIcon = 'task-square';
       groupBg = const Color(0xFFCFFAFE);
       groupIconColor = const Color(0xFF06B6D4);
     }
@@ -1156,60 +1217,69 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: InkWell(
         onTap: isDisabled ? null : () => context.push('${Routes.allPendingFees}?group=${Uri.encodeComponent(group.groupName)}&status=$filterStatus'),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           child: Row(
             children: [
+              // Icon chip — rounded square to match reference's Latest Orders look
               Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: groupBg, shape: BoxShape.circle),
-                child: Center(
-                  child: Icon(groupIcon, size: 22, color: groupIconColor),
-                ),
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: groupBg, borderRadius: BorderRadius.circular(10)),
+                child: AppIcon(groupIcon, size: 20, color: groupIconColor),
               ),
               const SizedBox(width: 12),
               Expanded(
                 flex: 3,
                 child: Text(
                   _toTitleCase(group.groupName),
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimaryC(context)),
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimaryC(context)),
                 ),
               ),
               Expanded(
                 flex: 2,
                 child: Text(
                   group.periodText,
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondaryC(context)),
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondaryC(context)),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
+              // Status — colored text only (no pill), matching reference
               SizedBox(
                 width: 140,
-                child: timeInfo.isNotEmpty
-                    ? Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          timeInfo,
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusColor),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      )
-                    : const SizedBox.shrink(),
+                child: Text(
+                  timeInfo,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: statusColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               SizedBox(
                 width: 100,
                 child: Text(
                   '₹${NumberFormat('#,##,###').format(group.totalAmount.toInt())}',
                   textAlign: TextAlign.right,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimaryC(context)),
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimaryC(context)),
                 ),
               ),
-              const SizedBox(width: 8),
-              Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.textHintC(context)),
+              const SizedBox(width: 12),
+              AppIcon(
+                'arrow-right-1',
+                size: 14,
+                color: AppColors.textHintC(context),
+              ),
             ],
           ),
         ),
@@ -1244,16 +1314,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Icon(
-                  Icons.shield_rounded,
+                AppIcon(
+                  'shield',
                   size: 28,
                   color: AppColors.primary.withValues(alpha: 0.3),
                 ),
                 const Positioned(
                   bottom: 10,
                   right: 10,
-                  child: Icon(
-                    Icons.check_circle_rounded,
+                  child: AppIcon(
+                    'tick-circle',
                     size: 18,
                     color: AppColors.primary,
                   ),
@@ -1297,8 +1367,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               color: AppColors.primary.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.arrow_forward_rounded,
+            child: const AppIcon(
+              'arrow-right-1',
               size: 18,
               color: AppColors.primary,
             ),
@@ -1320,31 +1390,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     if (lowerName.contains('school') || lowerName.contains('tuition')) {
       return {
-        'icon': Icons.school_rounded,
+        'icon': 'book',
         'color': const Color(0xFF0D9B5C),
         'iconBgColor': const Color(0xFFDCFCE7),
       };
     } else if (lowerName.contains('van') || lowerName.contains('bus') || lowerName.contains('transport')) {
       return {
-        'icon': Icons.directions_bus_rounded,
+        'icon': 'bus',
         'color': const Color(0xFFF59E0B),
         'iconBgColor': const Color(0xFFFEF3C7),
       };
     } else if (lowerName.contains('hostel')) {
       return {
-        'icon': Icons.hotel_rounded,
+        'icon': 'home-2',
         'color': const Color(0xFF3B82F6),
         'iconBgColor': const Color(0xFFDBEAFE),
       };
     } else if (lowerName.contains('exam') || lowerName.contains('test')) {
       return {
-        'icon': Icons.assignment_rounded,
+        'icon': 'task-square',
         'color': const Color(0xFF06B6D4),
         'iconBgColor': const Color(0xFFCFFAFE),
       };
     } else {
       return {
-        'icon': Icons.receipt_rounded,
+        'icon': 'receipt',
         'color': AppColors.cardPurple,
         'iconBgColor': const Color(0xFFF3E8FF),
       };
@@ -1354,6 +1424,103 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   // ────────────────────────────────────────────────────────────────
   // Desktop-only widgets
   // ────────────────────────────────────────────────────────────────
+
+  Widget _buildDesktopGreetingBanner(
+      BuildContext context, AsyncValue<FeeSummary> feeSummaryAsync) {
+    final summary = feeSummaryAsync.valueOrNull;
+    final pendingCount = summary?.pendingCount ?? 0;
+    final hasPending = pendingCount > 0;
+    final message = hasPending
+        ? "Hi! You have $pendingCount pending "
+            "${pendingCount == 1 ? 'fee' : 'fees'}."
+        : "Hi! You're all caught up.";
+    final ctaLabel = hasPending ? 'Pay' : null;
+
+    return GestureDetector(
+      onTap: hasPending ? () => context.push(Routes.payAllFees) : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF121212),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Text(
+                    message,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (ctaLabel != null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      ctaLabel,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primary,
+                        decoration: TextDecoration.underline,
+                        decorationColor: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const AppIcon(
+              'arrow-right-1',
+              size: 18,
+              color: Colors.white,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopDashboardTitle(
+      BuildContext context, dynamic selectedStudent) {
+    final studentName =
+        (selectedStudent?.name as String?)?.trim().split(' ').first ?? 'Student';
+    final admissionNo = (selectedStudent?.admissionNumber as String?) ?? '—';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "$studentName's Dashboard",
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimaryC(context),
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'ID $admissionNo',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textHintC(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
   Widget _buildDesktopStatCards(
     BuildContext context,
@@ -1373,7 +1540,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             context: context,
             label: 'Total Dues',
             amount: totalPending,
-            icon: Icons.account_balance_wallet_rounded,
+            icon: 'wallet-3',
             iconBg: AppColors.primary.withValues(alpha: 0.12),
             iconColor: AppColors.primary,
             onTap: () => context.push(Routes.payAllFees),
@@ -1385,7 +1552,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             context: context,
             label: 'Overdue',
             amount: totalOverdue,
-            icon: Icons.warning_amber_rounded,
+            icon: 'warning-2',
             iconBg: AppColors.errorLight,
             iconColor: AppColors.error,
             onTap: () => context.push('${Routes.allPendingFees}?status=overdue'),
@@ -1397,7 +1564,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             context: context,
             label: 'Total Paid',
             amount: feeSummary?.totalPaid ?? 0,
-            icon: Icons.check_circle_rounded,
+            icon: 'tick-circle',
             iconBg: AppColors.primary.withValues(alpha: 0.12),
             iconColor: AppColors.primary,
             onTap: () => context.push(Routes.paidFees),
@@ -1409,7 +1576,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             context: context,
             label: 'Due Soon',
             amount: totalDueSoon,
-            icon: Icons.schedule_rounded,
+            icon: 'clock',
             iconBg: AppColors.warningLight,
             iconColor: AppColors.warning,
             onTap: () => context.push('${Routes.allPendingFees}?status=dueSoon'),
@@ -1423,7 +1590,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     required BuildContext context,
     required String label,
     required double amount,
-    required IconData icon,
+    required String icon,
     required Color iconBg,
     required Color iconColor,
     required VoidCallback onTap,
@@ -1431,29 +1598,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: AppColors.cardShadow(context),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: iconBg,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 24, color: iconColor),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+            // Row: dark icon tile + label (reference style)
+            Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: AppIcon(icon, size: 16, color: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
                     label,
                     style: TextStyle(
                       fontSize: 13,
@@ -1461,22 +1630,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       color: AppColors.textSecondaryC(context),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '₹${NumberFormat('#,##,###').format(amount.clamp(0, double.infinity).toInt())}',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimaryC(context),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                AppIcon(
+                  'arrow-right-1',
+                  size: 14,
+                  color: AppColors.textHintC(context),
+                ),
+              ],
             ),
-            Icon(
-              Icons.arrow_forward_ios_rounded,
-              size: 16,
-              color: AppColors.textHintC(context),
+            const SizedBox(height: 14),
+            // Amount
+            Text(
+              '₹${NumberFormat('#,##,###').format(amount.clamp(0, double.infinity).toInt())}',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimaryC(context),
+                letterSpacing: -0.3,
+              ),
             ),
           ],
         ),
@@ -1490,7 +1661,7 @@ class _FeeGridItem {
   final double amount;
   final Color color;
   final Color iconBgColor;
-  final IconData? icon;
+  final String? icon; // AppIcon name from assets/icons/linear
   final String? svgPath;
   final String groupName;
 

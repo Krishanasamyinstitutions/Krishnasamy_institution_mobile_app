@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../config/routes.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/desktop_left_panel.dart';
 import '../../widgets/common/screen_illustrations.dart';
 
@@ -166,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final currentData = _pages[_currentPage];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE),
+      backgroundColor: const Color(0xFFF1F5F9),
       body: Column(
         children: [
           // Top illustration area — takes ~55% of screen
@@ -412,8 +413,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     return TextButton.icon(
       onPressed: _previousPage,
-      icon: Icon(
-        Icons.arrow_back_rounded,
+      icon: AppIcon(
+        'arrow-left-1',
         size: 18,
         color: AppColors.textSecondaryC(context),
       ),
@@ -520,8 +521,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
             ),
             const SizedBox(width: 10),
-            const Icon(
-              Icons.arrow_forward_rounded,
+            const AppIcon(
+              'arrow-right-1',
               size: 20,
               color: Colors.white,
             ),
@@ -560,8 +561,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
             ),
             const SizedBox(width: 10),
-            const Icon(
-              Icons.arrow_forward_rounded,
+            const AppIcon(
+              'arrow-right-1',
               size: 20,
               color: Colors.white,
             ),

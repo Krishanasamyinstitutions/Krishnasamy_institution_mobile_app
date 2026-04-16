@@ -12,6 +12,7 @@ import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/institution_provider.dart';
+import '../../widgets/common/app_icon.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -22,14 +23,14 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // Profile palette — uses app primary colors
-  static const Color _bg = Color(0xFFF0FBF6);
+  static const Color _bg = Color(0xFFF1F5F9);
   static const Color _cardBg = Color(0xFFFFFFFF);
-  static const Color _cardBorder = Color(0xFFD6F5E5);
+  static const Color _cardBorder = Colors.transparent;
   static const Color _textDark = Color(0xFF1A1A1A);
   static const Color _textMedium = Color(0xFF6B6B6B);
   static const Color _textLight = Color(0xFF9E9E9E);
   static const Color _divider = Color(0xFFD6F5E5);
-  static const Color _iconBg = Color(0xFFF0FBF6);
+  static const Color _iconBg = Color(0xFFF1F5F9);
 
   String _formatDate(DateTime date) {
     final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -178,8 +179,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final cartItemCount = ref.watch(cartItemCountProvider);
     final notificationCount = ref.watch(notificationCountProvider);
     final firstName = studentData['name']!.split(' ').first;
+    final bool isDesktop = context.isDesktop;
 
-    return Row(
+    final headerRow = Row(
       children: [
         // Avatar
         GestureDetector(
@@ -248,20 +250,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ],
           ),
         ),
-        // Cart icon
-        _buildHeaderIcon(
-          svgPath: 'assets/icons/Cart.svg',
-          badgeCount: cartItemCount,
-          onTap: () => context.push(Routes.cart),
-        ),
-        const SizedBox(width: 8),
-        // Notification icon
-        _buildHeaderIcon(
-          svgPath: 'assets/main icons/line icons/notification.svg',
-          badgeCount: notificationCount,
-          onTap: () => context.go(Routes.notifications),
-        ),
+        // Cart + notification icons — mobile only (global header handles them on desktop)
+        if (!isDesktop) ...[
+          _buildHeaderIcon(
+            svgPath: 'assets/icons/Cart.svg',
+            badgeCount: cartItemCount,
+            onTap: () => context.push(Routes.cart),
+          ),
+          const SizedBox(width: 8),
+          _buildHeaderIcon(
+            svgPath: 'assets/main icons/line icons/notification.svg',
+            badgeCount: notificationCount,
+            onTap: () => context.go(Routes.notifications),
+          ),
+        ],
       ],
+    );
+
+    // On desktop, wrap the greeting row in a card; on mobile, keep it bare
+    if (!isDesktop) return headerRow;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderC(context)),
+        boxShadow: AppColors.cardShadow(context),
+      ),
+      child: headerRow,
     );
   }
 
@@ -397,16 +414,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       decoration: BoxDecoration(
         color: _iconBg,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE0E0DC), width: 1),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x18000000),
-            blurRadius: 4,
-            spreadRadius: -1,
-            offset: Offset(0, 2),
-            blurStyle: BlurStyle.inner,
-          ),
-        ],
       ),
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -475,14 +482,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       height: 48,
                       fit: BoxFit.contain,
                       placeholder: (context, url) => const Center(
-                        child: Icon(Icons.school_rounded, size: 24, color: _textMedium),
+                        child: AppIcon('book', size: 24, color: _textMedium),
                       ),
                       errorWidget: (context, url, error) => const Center(
-                        child: Icon(Icons.school_rounded, size: 24, color: _textMedium),
+                        child: AppIcon('book', size: 24, color: _textMedium),
                       ),
                     )
                   : const Center(
-                      child: Icon(Icons.school_rounded, size: 24, color: _textMedium),
+                      child: AppIcon('book', size: 24, color: _textMedium),
                     ),
             ),
           ),
@@ -498,7 +505,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 3),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_outlined, size: 13, color: _textLight),
+                    const AppIcon('location', size: 13, color: _textLight),
                     const SizedBox(width: 3),
                     Expanded(
                       child: Text(
@@ -638,7 +645,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (hasMultipleStudents) ...[
             Expanded(
               child: _buildMinimalButton(
-                icon: Icons.swap_horiz_rounded,
+                iconName: 'arrow-swap-horizontal',
                 label: 'Switch Student',
                 filled: true,
                 onTap: () => context.push(Routes.switchStudent),
@@ -648,7 +655,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ],
           Expanded(
             child: _buildMinimalButton(
-              icon: Icons.support_agent_rounded,
+              iconName: '24-support',
               label: 'Get Support',
               filled: !hasMultipleStudents,
               onTap: () => context.push(Routes.support),
@@ -660,7 +667,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildMinimalButton({
-    required IconData icon,
+    required String iconName,
     required String label,
     required bool filled,
     required VoidCallback onTap,
@@ -677,7 +684,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: filled ? Colors.white : const Color(0xFF121212)),
+            AppIcon(iconName, size: 18, color: filled ? Colors.white : const Color(0xFF121212)),
             const SizedBox(width: 8),
             Text(
               label,
@@ -707,7 +714,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.logout_rounded, size: 18, color: _textMedium),
+            AppIcon('logout', size: 18, color: _textMedium),
             SizedBox(width: 8),
             Text(
               'Sign Out',
@@ -724,69 +731,67 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildDesktopProfile(
       BuildContext context, Map<String, String> studentData, bool hasMultipleStudents) {
     return SingleChildScrollView(
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              children: [
-                _buildHeader(context, studentData),
-                const SizedBox(height: 24),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _buildStudentSummaryCard(studentData),
-                          const SizedBox(height: 16),
-                          _buildDesktopActionButtons(context, hasMultipleStudents),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        children: [
-                          _buildDesktopSchoolCard(context),
-                          const SizedBox(height: 16),
-                          _buildContactCard(studentData),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Column 1 — student profile card, student details, action buttons
+            Expanded(
+              child: Column(
+                children: [
+                  _buildHeader(context, studentData),
+                  const SizedBox(height: 16),
+                  _buildStudentSummaryCard(studentData),
+                  const SizedBox(height: 16),
+                  _buildDesktopActionButtons(context, hasMultipleStudents),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            // Column 2 — institution detail + contact information
+            Expanded(
+              child: Column(
+                children: [
+                  _buildDesktopSchoolCard(context),
+                  const SizedBox(height: 16),
+                  _buildContactCard(studentData),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  /// Desktop action buttons — standalone dark buttons without card wrapper
+  /// Desktop action buttons — side-by-side in a single row
   Widget _buildDesktopActionButtons(BuildContext context, bool hasMultipleStudents) {
-    return Column(
+    return Row(
       children: [
         if (hasMultipleStudents) ...[
-          _buildDesktopActionButton(
-            icon: Icons.swap_horiz_rounded,
-            label: 'Switch Student',
-            onTap: () => context.push(Routes.switchStudent),
+          Expanded(
+            child: _buildDesktopActionButton(
+              iconName: 'arrow-swap-horizontal',
+              label: 'Switch Student',
+              onTap: () => context.push(Routes.switchStudent),
+            ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(width: 10),
         ],
-        _buildDesktopActionButton(
-          icon: Icons.support_agent_rounded,
-          label: 'Get Support',
-          onTap: () => context.push(Routes.support),
+        Expanded(
+          child: _buildDesktopActionButton(
+            iconName: '24-support',
+            label: 'Get Support',
+            onTap: () => context.push(Routes.support),
+          ),
         ),
       ],
     );
   }
 
   Widget _buildDesktopActionButton({
-    required IconData icon,
+    required String iconName,
     required String label,
     required VoidCallback onTap,
   }) {
@@ -802,7 +807,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 20, color: Colors.white),
+            AppIcon(iconName, size: 20, color: Colors.white),
             const SizedBox(width: 10),
             Text(
               label,
@@ -866,14 +871,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             height: 48,
                             fit: BoxFit.contain,
                             placeholder: (context, url) => const Center(
-                              child: Icon(Icons.school_rounded, size: 24, color: _textMedium),
+                              child: AppIcon('book', size: 24, color: _textMedium),
                             ),
                             errorWidget: (context, url, error) => const Center(
-                              child: Icon(Icons.school_rounded, size: 24, color: _textMedium),
+                              child: AppIcon('book', size: 24, color: _textMedium),
                             ),
                           )
                         : const Center(
-                            child: Icon(Icons.school_rounded, size: 24, color: _textMedium),
+                            child: AppIcon('book', size: 24, color: _textMedium),
                           ),
                   ),
                 ),
@@ -889,7 +894,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          const Icon(Icons.location_on_outlined, size: 14, color: _textLight),
+                          const AppIcon('location', size: 14, color: _textLight),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
@@ -917,7 +922,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.format_quote_rounded, size: 18, color: _textLight),
+                    const AppIcon('quote-up', size: 18, color: _textLight),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -942,7 +947,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(color: _iconBg, borderRadius: BorderRadius.circular(8)),
-                        child: const Center(child: Icon(Icons.email_outlined, size: 18, color: _textMedium)),
+                        child: const Center(child: AppIcon('sms', size: 18, color: _textMedium)),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -965,7 +970,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(color: _iconBg, borderRadius: BorderRadius.circular(8)),
-                      child: const Center(child: Icon(Icons.phone_outlined, size: 18, color: _textMedium)),
+                      child: const Center(child: AppIcon('call', size: 18, color: _textMedium)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1008,7 +1013,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                  child: const AppIcon('close-circle', color: Colors.white, size: 20),
                 ),
               ),
             ),

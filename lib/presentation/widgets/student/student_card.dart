@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../data/models/student_model.dart';
 import '../common/app_card.dart';
+import '../common/app_icon.dart';
 
 class StudentCard extends StatelessWidget {
   final StudentModel student;
@@ -33,8 +34,8 @@ class StudentCard extends StatelessWidget {
             child: _buildStudentInfo(),
           ),
           if (onTap != null)
-            Icon(
-              Icons.chevron_right_rounded,
+            AppIcon(
+              'arrow-right-1',
               color: AppColors.textTertiary,
             ),
         ],
@@ -82,13 +83,13 @@ class StudentCard extends StatelessWidget {
           children: [
             if (student.className != null) ...[
               _buildInfoChip(
-                Icons.class_rounded,
+                'book',
                 student.className!,
               ),
               const SizedBox(width: AppSizes.s3),
             ],
             _buildInfoChip(
-              Icons.badge_rounded,
+              'card-tick',
               student.admissionNumber,
             ),
           ],
@@ -97,11 +98,11 @@ class StudentCard extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoChip(IconData icon, String text) {
+  Widget _buildInfoChip(String icon, String text) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
+        AppIcon(
           icon,
           size: 14,
           color: AppColors.textTertiary,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/routes.dart';
 import '../../../core/constants/app_colors.dart';
+import 'app_icon.dart';
 
 /// A breadcrumb navigation bar with a back button and path segments.
 ///
@@ -43,8 +44,8 @@ class BreadcrumbBar extends StatelessWidget {
                 color: AppColors.textLink.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
+              child: const AppIcon(
+                'arrow-left-1',
                 size: 14,
                 color: AppColors.textLink,
               ),

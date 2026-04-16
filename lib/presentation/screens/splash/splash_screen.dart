@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../config/routes.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/desktop_left_panel.dart';
 import '../../providers/auth_provider.dart' show parentAuthStateProvider;
 import '../../providers/student_provider.dart';
@@ -364,8 +365,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             ),
                             borderRadius: BorderRadius.circular(size * 0.15),
                           ),
-                          child: Icon(
-                            Icons.school_rounded,
+                          child: AppIcon(
+                            'book',
                             size: size * 0.3,
                             color: context.isDesktop ? AppColors.primary : Colors.white,
                           ),
@@ -400,8 +401,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                 ),
                               ],
                             ),
-                            child: Icon(
-                              Icons.currency_rupee_rounded,
+                            child: AppIcon(
+                              'empty-wallet',
                               size: size * 0.13,
                               color: Colors.white,
                             ),
@@ -452,8 +453,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       color: AppColors.cardGreenDark,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
-                      Icons.verified_rounded,
+                    child: const AppIcon(
+                      'verify',
                       size: 12,
                       color: Colors.white,
                     ),
