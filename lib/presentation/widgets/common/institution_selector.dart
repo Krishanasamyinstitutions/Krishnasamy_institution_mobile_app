@@ -5,6 +5,7 @@ import '../../../data/models/institution_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/institution_provider.dart';
 import '../../../core/services/supabase_service.dart';
+import 'app_icon.dart';
 
 /// Reusable institution selector dropdown for auth screens.
 /// Sets [selectedAuthInstitutionProvider] and calls
@@ -92,8 +93,8 @@ class _InstitutionSelectorState extends ConsumerState<InstitutionSelector> {
               child: _buildContainer(
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.school_outlined,
+                    AppIcon(
+                      'book',
                       size: 22,
                       color: AppColors.textSecondaryC(context),
                     ),
@@ -130,8 +131,8 @@ class _InstitutionSelectorState extends ConsumerState<InstitutionSelector> {
                               overflow: TextOverflow.ellipsis,
                             ),
                     ),
-                    Icon(
-                      Icons.keyboard_arrow_down_rounded,
+                    AppIcon(
+                      'arrow-down',
                       size: 22,
                       color: AppColors.textSecondaryC(context),
                     ),
@@ -208,8 +209,8 @@ class _InstitutionSelectorState extends ConsumerState<InstitutionSelector> {
                         : CircleAvatar(
                             radius: 20,
                             backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                            child: Icon(
-                              Icons.school,
+                            child: AppIcon(
+                              'book',
                               color: AppColors.primary,
                               size: 20,
                             ),
@@ -233,7 +234,7 @@ class _InstitutionSelectorState extends ConsumerState<InstitutionSelector> {
                           )
                         : null,
                     trailing: isSelected
-                        ? Icon(Icons.check_circle,
+                        ? AppIcon('tick-circle',
                             color: AppColors.primary, size: 22)
                         : null,
                     onTap: () {

@@ -21,6 +21,7 @@ import '../../providers/fee_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../../core/utils/extensions.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -34,8 +35,8 @@ class CartScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScreenState extends ConsumerState<CartScreen> {
-  // Warm gray UI palette — used for mobile layout only
-  static const Color _bg = Color(0xFFF2F1EE);
+  // Mobile background — matches desktop scaffold
+  static const Color _bg = Color(0xFFF1F5F9);
   static const Color _cardBg = Color(0xFFFFFFFF);
   static const Color _cardBorder = Color(0xFFE8E7E4);
   static const Color _textDark = Color(0xFF1A1A1A);
@@ -95,7 +96,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               padding: const EdgeInsets.only(right: 8),
               child: TextButton.icon(
                 onPressed: () => _showClearCartDialog(context, ref),
-                icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                icon: const AppIcon('trash', size: 18),
                 label: const Text('Clear All'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.error,
@@ -214,8 +215,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
-                  child: Icon(
-                    Icons.delete_outline_rounded,
+                  child: AppIcon(
+                    'trash',
                     size: 20,
                     color: AppColors.error,
                   ),
@@ -271,7 +272,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               shape: BoxShape.circle,
             ),
             child: Center(
-              child: Icon(Icons.shopping_cart_outlined, size: 48, color: isMobile ? _textLight : AppColors.textHintC(context)),
+              child: AppIcon('shopping-cart', size: 48, color: isMobile ? _textLight : AppColors.textHintC(context)),
             ),
           ),
           const SizedBox(height: 24),
@@ -315,7 +316,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.home_rounded, size: 20, color: Colors.white),
+                  AppIcon('home-2', size: 20, color: Colors.white),
                   SizedBox(width: 8),
                   Text(
                     'Go to Home',
@@ -327,6 +328,178 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                   ),
                 ],
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopGreetingBanner(
+      BuildContext context, CartState cartState) {
+    final count = cartState.itemCount;
+    final hasItems = count > 0;
+    final message = hasItems
+        ? "$count ${count == 1 ? 'fee' : 'fees'} ready to pay — review and check out below."
+        : 'Your payment queue is empty.';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(BuildContext context, WidgetRef ref) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final firstName =
+        selectedStudent?.name.trim().split(' ').first ?? 'Student';
+    final admissionNo = selectedStudent?.admissionNumber ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$firstName's Payment Queue",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopStatCards(BuildContext context, CartState cartState) {
+    final items = cartState.items;
+    final total = items.fold<double>(0, (sum, f) => sum + f.totalAmount);
+    final categories = items.map((f) {
+      final t = f.demfeetype.toLowerCase();
+      if (t.contains('bus') || t.contains('transport') || t.contains('van')) {
+        return 'bus';
+      }
+      if (t.contains('tuition')) return 'tuition';
+      if (t.contains('hostel')) return 'hostel';
+      if (t.contains('exam')) return 'exam';
+      return f.demfeeterm;
+    }).toSet().length;
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Total to Pay',
+            value: '₹${NumberFormat('#,##,###').format(total.toInt())}',
+            icon: 'wallet-3',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Items in Queue',
+            value: '${items.length}',
+            icon: 'shopping-cart',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Categories',
+            value: '$categories',
+            icon: 'task-square',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Avg. per Item',
+            value: items.isEmpty
+                ? '—'
+                : '₹${NumberFormat('#,##,###').format((total / items.length).toInt())}',
+            icon: 'receipt-text',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCardTile({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required String icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: AppColors.cardShadow(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF121212),
+                  shape: BoxShape.circle,
+                ),
+                child: AppIcon(icon, size: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondaryC(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimaryC(context),
+              letterSpacing: -0.3,
             ),
           ),
         ],
@@ -375,6 +548,16 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     return ListView(
       padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.all(16),
       children: [
+        // Dashboard-style header (desktop only)
+        if (context.isDesktop) ...[
+          _buildDesktopGreetingBanner(context, cartState),
+          const SizedBox(height: 18),
+          _buildDesktopTitle(context, ref),
+          const SizedBox(height: 20),
+          _buildDesktopStatCards(context, cartState),
+          const SizedBox(height: 20),
+        ],
+
         // Fee Category Cards (sequential: can only remove last term first, backward order)
         ...sortedCategories.asMap().entries.map((entry) {
           final index = entry.key;
@@ -534,8 +717,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         color: AppColors.error.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Icon(
-                        Icons.close_rounded,
+                      child: const AppIcon(
+                        'close-circle',
                         size: 16,
                         color: AppColors.error,
                       ),
@@ -765,7 +948,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     ),
                   ),
                   SizedBox(width: 8),
-                  Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+                  AppIcon('arrow-right-1', size: 20, color: Colors.white),
                 ],
               ),
             ),
@@ -1229,7 +1412,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       builder: (dialogCtx) => AlertDialog(
         title: Row(
           children: const [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            AppIcon('warning-2', color: Colors.orange, size: 28),
             SizedBox(width: 10),
             Text('Late Fee Applicable'),
           ],

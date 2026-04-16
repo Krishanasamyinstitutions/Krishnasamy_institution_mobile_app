@@ -9,6 +9,7 @@ import '../../../config/routes.dart';
 import '../../../data/models/student_model.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/institution_provider.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -132,21 +133,91 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
   }
 
   Widget _buildStudentList(List<StudentModel> students, StudentModel? currentStudent) {
+    final padding = context.isDesktop
+        ? const EdgeInsets.all(24)
+        : const EdgeInsets.symmetric(horizontal: 24, vertical: 16);
     return ListView.separated(
-      padding: context.isDesktop
-          ? const EdgeInsets.all(24)
-          : const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      itemCount: students.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      padding: padding,
+      // +3 leading slots on desktop: banner + title + spacer
+      itemCount: students.length + (context.isDesktop ? 3 : 0),
+      separatorBuilder: (_, idx) {
+        if (context.isDesktop && idx < 2) return const SizedBox(height: 18);
+        if (context.isDesktop && idx == 2) return const SizedBox(height: 4);
+        return const SizedBox(height: 12);
+      },
       itemBuilder: (context, index) {
-        final student = students[index];
-        final isSelected = _selectedIndex == index;
+        if (context.isDesktop && index == 0) {
+          return _buildDesktopGreetingBanner(context, students.length);
+        }
+        if (context.isDesktop && index == 1) {
+          return _buildDesktopTitle(context, currentStudent);
+        }
+        if (context.isDesktop && index == 2) {
+          return const SizedBox.shrink();
+        }
+        final realIndex = index - (context.isDesktop ? 3 : 0);
+        final student = students[realIndex];
+        final isSelected = _selectedIndex == realIndex;
         final isCurrent = currentStudent != null &&
             currentStudent.stuId == student.stuId &&
             currentStudent.insId == student.insId;
 
-        return _buildStudentCard(student, isSelected, isCurrent, index);
+        return _buildStudentCard(student, isSelected, isCurrent, realIndex);
       },
+    );
+  }
+
+  Widget _buildDesktopGreetingBanner(BuildContext context, int count) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Pick a student to switch — $count linked to this account.',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(
+      BuildContext context, StudentModel? currentStudent) {
+    final firstName =
+        currentStudent?.name.trim().split(' ').first ?? 'Student';
+    final admissionNo = currentStudent?.admissionNumber ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Switch Student",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Currently $firstName · ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
     );
   }
 
@@ -299,8 +370,8 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 ),
               ),
               child: isSelected
-                  ? const Icon(
-                      Icons.check_rounded,
+                  ? const AppIcon(
+                      'tick-circle',
                       size: 16,
                       color: Colors.white,
                     )
@@ -353,8 +424,8 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
               ),
               if (isNewSelection) ...[
                 const SizedBox(width: 10),
-                const Icon(
-                  Icons.swap_horiz_rounded,
+                const AppIcon(
+                  'arrow-swap-horizontal',
                   size: 22,
                   color: Colors.white,
                 ),

@@ -4,6 +4,7 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/payment_model.dart';
 import '../common/app_card.dart';
+import '../common/app_icon.dart';
 
 class PaymentCard extends StatelessWidget {
   final PaymentModel payment;
@@ -87,10 +88,12 @@ class PaymentCard extends StatelessWidget {
         color: _getStatusColor().withOpacity(0.1),
         borderRadius: BorderRadius.circular(AppSizes.roundedLg),
       ),
-      child: Icon(
-        _getStatusIcon(),
-        color: _getStatusColor(),
-        size: 22,
+      child: Center(
+        child: AppIcon(
+          _getStatusIcon(),
+          color: _getStatusColor(),
+          size: 22,
+        ),
       ),
     );
   }
@@ -150,16 +153,16 @@ class PaymentCard extends StatelessWidget {
     }
   }
 
-  IconData _getStatusIcon() {
+  String _getStatusIcon() {
     switch (payment.status) {
       case PaymentStatus.success:
-        return Icons.check_circle_rounded;
+        return 'tick-circle';
       case PaymentStatus.pending:
-        return Icons.schedule_rounded;
+        return 'clock';
       case PaymentStatus.failed:
-        return Icons.cancel_rounded;
+        return 'close-circle';
       case PaymentStatus.refunded:
-        return Icons.replay_rounded;
+        return 'refresh';
     }
   }
 

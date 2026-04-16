@@ -12,6 +12,7 @@ import '../../../core/services/supabase_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -79,7 +80,13 @@ class _NotificationDetailScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
+              if (context.isDesktop) ...[
+                _buildDesktopGreetingBanner(context, notification),
+                const SizedBox(height: 18),
+                _buildDesktopTitle(context, notification),
+                const SizedBox(height: 20),
+              ] else
+                const SizedBox(height: 24),
               // Main card — combines icon, badge, title, time, message
               Container(
                 width: double.infinity,
@@ -148,7 +155,7 @@ class _NotificationDetailScreenState
                                   color: const Color(0xFFF5F5F3),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Icon(Icons.schedule_rounded, size: 16, color: Color(0xFF9E9E9E)),
+                                child: const Center(child: AppIcon('clock', size: 16, color: Color(0xFF9E9E9E))),
                               ),
                               const SizedBox(width: 10),
                               Text(
@@ -190,6 +197,66 @@ class _NotificationDetailScreenState
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildDesktopGreetingBanner(
+      BuildContext context, NotificationModel notification) {
+    final isUnread = !notification.isRead;
+    final message = isUnread
+        ? "You're viewing a new notification."
+        : 'Notification details.';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(
+      BuildContext context, NotificationModel notification) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final firstName =
+        selectedStudent?.name.trim().split(' ').first ?? 'Student';
+    final admissionNo = selectedStudent?.admissionNumber ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$firstName's Notification",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
     );
   }
 
@@ -265,8 +332,8 @@ class _NotificationDetailScreenState
       elevation: 0,
       leading: IconButton(
         onPressed: () => context.pop(),
-        icon: Icon(
-          Icons.arrow_back_ios_new_rounded,
+        icon: AppIcon(
+          'arrow-left-1',
           size: 18,
           color: AppColors.textPrimaryC(context),
         ),
@@ -302,39 +369,39 @@ class _NotificationDetailScreenState
   }
 
   Widget _buildNotificationIcon(NotificationType type) {
-    IconData icon;
+    String icon;
     Color bgColor;
     Color iconColor;
 
     switch (type) {
       case NotificationType.feeReminder:
       case NotificationType.dueDateApproaching:
-        icon = Icons.notifications_active_rounded;
+        icon = 'notification';
         bgColor = const Color(0xFFFEF3C7);
         iconColor = const Color(0xFFF59E0B);
         break;
       case NotificationType.paymentSuccess:
-        icon = Icons.check_circle_rounded;
+        icon = 'tick-circle';
         bgColor = const Color(0xFFD1FAE5);
         iconColor = const Color(0xFF10B981);
         break;
       case NotificationType.paymentFailed:
-        icon = Icons.error_rounded;
+        icon = 'close-circle';
         bgColor = const Color(0xFFFEE2E2);
         iconColor = const Color(0xFFEF4444);
         break;
       case NotificationType.alert:
-        icon = Icons.warning_rounded;
+        icon = 'warning-2';
         bgColor = const Color(0xFFFEE2E2);
         iconColor = const Color(0xFFEF4444);
         break;
       case NotificationType.announcement:
-        icon = Icons.campaign_rounded;
+        icon = 'message';
         bgColor = const Color(0xFFDBEAFE);
         iconColor = const Color(0xFF3B82F6);
         break;
       default:
-        icon = Icons.notifications_rounded;
+        icon = 'notification';
         bgColor = const Color(0xFFF3F4F6);
         iconColor = const Color(0xFF6B7280);
     }
@@ -346,10 +413,12 @@ class _NotificationDetailScreenState
         color: bgColor,
         shape: BoxShape.circle,
       ),
-      child: Icon(
-        icon,
-        size: 28,
-        color: iconColor,
+      child: Center(
+        child: AppIcon(
+          icon,
+          size: 28,
+          color: iconColor,
+        ),
       ),
     );
   }
@@ -487,7 +556,7 @@ class _NotificationDetailScreenState
           builder: (context) => AlertDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            icon: const Icon(Icons.check_circle,
+            icon: const AppIcon('tick-circle',
                 color: Color(0xFF2DBE60), size: 48),
             title: const Text('Already Paid'),
             content: const Text(
@@ -580,7 +649,7 @@ class _NotificationDetailScreenState
           builder: (context) => AlertDialog(
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            icon: const Icon(Icons.check_circle,
+            icon: const AppIcon('tick-circle',
                 color: Color(0xFF2DBE60), size: 48),
             title: const Text('All Paid'),
             content:
@@ -625,7 +694,7 @@ class _NotificationDetailScreenState
 
   Widget _buildActionButton(NotificationModel notification) {
     String buttonText;
-    IconData buttonIcon;
+    String buttonIcon;
     Color buttonColor;
     VoidCallback onTap;
 
@@ -636,7 +705,7 @@ class _NotificationDetailScreenState
       case NotificationType.feeReminder:
       case NotificationType.dueDateApproaching:
         buttonText = 'Pay Now';
-        buttonIcon = Icons.payment_rounded;
+        buttonIcon = 'wallet-3';
         buttonColor = const Color(0xFF121212);
         final demIds = notification.data?['dem_ids'] as List<dynamic>? ?? [];
         onTap = () => _handlePayFees(
@@ -648,7 +717,7 @@ class _NotificationDetailScreenState
         return const SizedBox.shrink();
       case NotificationType.paymentFailed:
         buttonText = 'Retry Payment';
-        buttonIcon = Icons.refresh_rounded;
+        buttonIcon = 'refresh';
         buttonColor = const Color(0xFFEF4444);
         onTap = () => _handleRetryPayment(payId);
         break;
@@ -672,7 +741,7 @@ class _NotificationDetailScreenState
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(buttonIcon, size: 20),
+            AppIcon(buttonIcon, size: 20, color: Colors.white),
             const SizedBox(width: 10),
             Text(
               buttonText,

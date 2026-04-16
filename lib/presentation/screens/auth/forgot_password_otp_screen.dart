@@ -6,6 +6,7 @@ import 'package:pinput/pinput.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/auth_desktop_wrapper.dart';
 import '../../widgets/common/screen_illustrations.dart';
 
@@ -194,8 +195,8 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(
-                                  Icons.timer_off_outlined,
+                                AppIcon(
+                                  'timer',
                                   size: 18,
                                   color: AppColors.error,
                                 ),
@@ -379,8 +380,8 @@ class _ForgotPasswordOtpScreenState extends ConsumerState<ForgotPasswordOtpScree
                 ),
               ),
               const SizedBox(width: 10),
-              const Icon(
-                Icons.check_circle_outline,
+              const AppIcon(
+                'tick-circle',
                 size: 22,
                 color: Colors.white,
               ),

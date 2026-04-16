@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
+import 'app_icon.dart';
 
 class AppTextField extends StatefulWidget {
   final TextEditingController? controller;
@@ -11,7 +12,7 @@ class AppTextField extends StatefulWidget {
   final bool isPassword;
   final bool enabled;
   final bool readOnly;
-  final IconData? prefixIcon;
+  final String? prefixIcon;
   final Widget? suffix;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
@@ -93,18 +94,21 @@ class _AppTextFieldState extends State<AppTextField> {
             hintText: widget.hint,
             errorText: widget.errorText,
             prefixIcon: widget.prefixIcon != null
-                ? Icon(
-                    widget.prefixIcon,
-                    size: 20,
-                    color: AppColors.textTertiary,
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: AppIcon(
+                      widget.prefixIcon!,
+                      size: 20,
+                      color: AppColors.textTertiary,
+                    ),
                   )
                 : null,
+            prefixIconConstraints:
+                const BoxConstraints(minWidth: 48, minHeight: 20),
             suffixIcon: widget.isPassword
                 ? IconButton(
-                    icon: Icon(
-                      _obscureText
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
+                    icon: AppIcon(
+                      _obscureText ? 'eye' : 'eye-slash',
                       size: 20,
                       color: AppColors.textTertiary,
                     ),

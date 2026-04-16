@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../providers/cart_provider.dart';
+import '../common/app_icon.dart';
 
 class FloatingCartButton extends ConsumerWidget {
   const FloatingCartButton({super.key});
@@ -37,7 +38,7 @@ class FloatingCartButton extends ConsumerWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              const Icon(Icons.shopping_cart_outlined, size: 28, color: Colors.white),
+              const AppIcon('shopping-cart', size: 28, color: Colors.white),
               // Badge
               Positioned(
                 top: 8,

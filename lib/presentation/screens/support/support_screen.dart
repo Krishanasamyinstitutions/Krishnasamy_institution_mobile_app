@@ -9,6 +9,7 @@ import '../../providers/cart_provider.dart';
 import '../../providers/institution_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -20,7 +21,7 @@ class SupportScreen extends ConsumerStatefulWidget {
 }
 
 class _SupportScreenState extends ConsumerState<SupportScreen> {
-  static const Color _bg = Color(0xFFF2F1EE);
+  static const Color _bg = Color(0xFFF1F5F9);
   static const Color _cardBg = Color(0xFFFFFFFF);
   static const Color _cardBorder = Color(0xFFE8E7E4);
   static const Color _textDark = Color(0xFF1A1A1A);
@@ -75,7 +76,14 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 24),
+              // Dashboard-style header (desktop only)
+              if (context.isDesktop) ...[
+                _buildDesktopGreetingBanner(context),
+                const SizedBox(height: 18),
+                _buildDesktopTitle(context),
+                const SizedBox(height: 20),
+              ] else
+                const SizedBox(height: 24),
               // Contact School Card
               _buildContactCard(institutionAsync),
               const SizedBox(height: 24),
@@ -113,6 +121,60 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
         ),
       ),
       ),
+    );
+  }
+
+  Widget _buildDesktopGreetingBanner(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Need help? Reach out to your school or browse the FAQs below.',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(BuildContext context) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final firstName =
+        selectedStudent?.name.trim().split(' ').first ?? 'Student';
+    final admissionNo = selectedStudent?.admissionNumber ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$firstName's Help & Support",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
     );
   }
 
@@ -311,10 +373,12 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                   color: AppColors.cardBlue,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.support_agent_rounded,
-                  size: 26,
-                  color: AppColors.cardBlueDark,
+                child: Center(
+                  child: AppIcon(
+                    '24-support',
+                    size: 26,
+                    color: AppColors.cardBlueDark,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -337,7 +401,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
           const SizedBox(height: 20),
           // Email Row
           _buildContactRow(
-            icon: Icons.email_rounded,
+            icon: 'sms',
             iconBg: AppColors.cardPurple,
             iconColor: AppColors.cardPurpleDark,
             label: 'Email',
@@ -350,7 +414,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
           const SizedBox(height: 16),
           // Phone Row
           _buildContactRow(
-            icon: Icons.phone_rounded,
+            icon: 'call',
             iconBg: AppColors.cardGreen,
             iconColor: AppColors.cardGreenDark,
             label: 'Phone',
@@ -366,7 +430,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
   }
 
   Widget _buildContactRow({
-    required IconData icon,
+    required String icon,
     required Color iconBg,
     required Color iconColor,
     required String label,
@@ -381,7 +445,7 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
             color: iconBg,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, size: 20, color: iconColor),
+          child: Center(child: AppIcon(icon, size: 20, color: iconColor)),
         ),
         const SizedBox(width: 14),
         Expanded(
@@ -452,10 +516,14 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                       color: isOpen ? AppColors.cardPurple : AppColors.cardCyan,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(
-                      Icons.help_outline_rounded,
-                      size: 20,
-                      color: isOpen ? AppColors.cardPurpleDark : AppColors.cardCyanDark,
+                    child: Center(
+                      child: AppIcon(
+                        'message-question',
+                        size: 20,
+                        color: isOpen
+                            ? AppColors.cardPurpleDark
+                            : AppColors.cardCyanDark,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -476,10 +544,12 @@ class _SupportScreenState extends ConsumerState<SupportScreen> {
                       color: isOpen ? AppColors.primary : AppColors.filterBg(context),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
-                      isOpen ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                      size: 20,
-                      color: isOpen ? Colors.white : AppColors.textHintC(context),
+                    child: Center(
+                      child: AppIcon(
+                        isOpen ? 'arrow-up' : 'arrow-down',
+                        size: 20,
+                        color: isOpen ? Colors.white : AppColors.textHintC(context),
+                      ),
                     ),
                   ),
                 ],

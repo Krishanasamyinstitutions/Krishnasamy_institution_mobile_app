@@ -4,6 +4,7 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/fee_model.dart';
 import '../common/app_card.dart';
+import '../common/app_icon.dart';
 
 class FeeCard extends StatelessWidget {
   final FeeModel fee;
@@ -85,10 +86,12 @@ class FeeCard extends StatelessWidget {
         color: _getStatusColor().withOpacity(0.1),
         borderRadius: BorderRadius.circular(AppSizes.roundedLg),
       ),
-      child: Icon(
-        _getStatusIcon(),
-        color: _getStatusColor(),
-        size: 22,
+      child: Center(
+        child: AppIcon(
+          _getStatusIcon(),
+          color: _getStatusColor(),
+          size: 22,
+        ),
       ),
     );
   }
@@ -117,8 +120,8 @@ class FeeCard extends StatelessWidget {
   Widget _buildDueDateInfo() {
     return Row(
       children: [
-        Icon(
-          Icons.calendar_today_rounded,
+        AppIcon(
+          'calendar',
           size: 14,
           color: AppColors.textTertiary,
         ),
@@ -169,16 +172,16 @@ class FeeCard extends StatelessWidget {
     return AppColors.textPrimary;
   }
 
-  IconData _getStatusIcon() {
+  String _getStatusIcon() {
     switch (fee.status) {
       case FeeStatus.paid:
-        return Icons.check_circle_rounded;
+        return 'tick-circle';
       case FeeStatus.pending:
-        return Icons.schedule_rounded;
+        return 'clock';
       case FeeStatus.overdue:
-        return Icons.warning_rounded;
+        return 'warning-2';
       case FeeStatus.partial:
-        return Icons.timelapse_rounded;
+        return 'timer';
     }
   }
 
