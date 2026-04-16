@@ -12,6 +12,7 @@ import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../widgets/common/app_icon.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
   final String? initialTab;
@@ -24,8 +25,8 @@ class PaymentHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
-  // Warm gray UI colors (mobile only)
-  static const Color _bg = Color(0xFFF2F1EE);
+  // Mobile background — matches desktop scaffold
+  static const Color _bg = Color(0xFFF1F5F9);
   static const Color _cardBg = Color(0xFFFFFFFF);
   static const Color _cardBorder = Color(0xFFE8E7E4);
   static const Color _textDark = Color(0xFF1A1A1A);
@@ -120,25 +121,42 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     final paged = filtered.isEmpty ? <PaymentModel>[] : filtered.skip(_currentPage * pageSize).take(pageSize).toList();
 
     if (context.isDesktop) {
-      return Container(
-        decoration: BoxDecoration(
-          color: AppColors.cardBg(context),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: AppColors.cardShadow(context),
-        ),
-        clipBehavior: Clip.antiAlias,
+      return SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: _buildFilterTabs(['All', 'Paid', 'Failed']),
+            _buildDesktopGreetingBanner(context, payments),
+            const SizedBox(height: 18),
+            _buildDesktopTitle(context),
+            const SizedBox(height: 20),
+            _buildDesktopStatCards(context, payments),
+            const SizedBox(height: 20),
+            // Filter + table card (existing layout)
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.cardBg(context),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: AppColors.cardShadow(context),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  // Filter tab band — white background so it stands out from page bg
+                  Container(
+                    width: double.infinity,
+                    color: AppColors.cardBg(context),
+                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+                    child: _buildFilterTabs(['All', 'Paid', 'Failed']),
+                  ),
+                  if (filtered.isEmpty)
+                    _buildEmptyState()
+                  else ...[
+                    _buildDesktopTable(paged),
+                    _buildPaginationControls(totalPages),
+                  ],
+                ],
+              ),
             ),
-            if (filtered.isEmpty)
-              Expanded(child: _buildEmptyState())
-            else ...[
-              Expanded(child: _buildDesktopTable(paged)),
-              _buildPaginationControls(totalPages),
-            ],
           ],
         ),
       );
@@ -155,6 +173,172 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
       itemCount: filtered.length,
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) => _buildTransactionCard(filtered[index]),
+    );
+  }
+
+  Widget _buildDesktopGreetingBanner(
+      BuildContext context, List<PaymentModel> payments) {
+    final successful = payments.where((p) => p.paystatus == 'C').length;
+    final hasPayments = successful > 0;
+    final message = hasPayments
+        ? "Great! You've made $successful successful "
+            "${successful == 1 ? 'payment' : 'payments'}."
+        : "No successful payments yet. Start by clearing a fee.";
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(BuildContext context) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final firstName =
+        (selectedStudent?.name as String?)?.trim().split(' ').first ??
+            'Student';
+    final admissionNo =
+        (selectedStudent?.admissionNumber as String?) ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$firstName's Payment History",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopStatCards(
+      BuildContext context, List<PaymentModel> payments) {
+    final successful = payments.where((p) => p.paystatus == 'C').toList();
+    final failed = payments.where((p) => p.paystatus == 'F').toList();
+    final totalPaid =
+        successful.fold<double>(0, (sum, p) => sum + p.amount);
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            context: context,
+            label: 'Total Paid',
+            value: '₹${NumberFormat('#,##,###').format(totalPaid.toInt())}',
+            icon: 'wallet-3',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCard(
+            context: context,
+            label: 'Successful',
+            value: '${successful.length}',
+            icon: 'tick-circle',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCard(
+            context: context,
+            label: 'Failed',
+            value: '${failed.length}',
+            icon: 'close-circle',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCard(
+            context: context,
+            label: 'Total Records',
+            value: '${payments.length}',
+            icon: 'receipt-text',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required String icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: AppColors.cardShadow(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: AppIcon(icon, size: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondaryC(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimaryC(context),
+              letterSpacing: -0.3,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -410,8 +594,8 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                           : AppColors.cardRose,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      isSuccess ? Icons.check : Icons.close,
+                    child: AppIcon(
+                      isSuccess ? 'tick-circle' : 'close-circle',
                       size: 18,
                       color: isSuccess
                           ? AppColors.cardGreenDark
@@ -502,8 +686,8 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.calendar_today_outlined,
+                  AppIcon(
+                    'calendar',
                     size: 14,
                     color: _textLight,
                   ),
@@ -519,8 +703,8 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                     ),
                   ),
                   const Spacer(),
-                  Icon(
-                    Icons.chevron_right,
+                  AppIcon(
+                    'arrow-right-1',
                     size: 20,
                     color: _textLight,
                   ),
@@ -543,7 +727,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
         children: [
           // Previous
           _buildPageButton(
-            icon: Icons.chevron_left,
+            icon: 'arrow-left-1',
             enabled: _currentPage > 0,
             onTap: () => setState(() => _currentPage--),
           ),
@@ -588,7 +772,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
           const SizedBox(width: 8),
           // Next
           _buildPageButton(
-            icon: Icons.chevron_right,
+            icon: 'arrow-right-1',
             enabled: _currentPage < totalPages - 1,
             onTap: () => setState(() => _currentPage++),
           ),
@@ -598,7 +782,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   }
 
   Widget _buildPageButton({
-    required IconData icon,
+    required String icon,
     required bool enabled,
     required VoidCallback onTap,
   }) {
@@ -612,10 +796,14 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
           border: Border.all(color: AppColors.borderC(context)),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: enabled ? AppColors.textPrimaryC(context) : AppColors.textHintC(context),
+        child: Center(
+          child: AppIcon(
+            icon,
+            size: 20,
+            color: enabled
+                ? AppColors.textPrimaryC(context)
+                : AppColors.textHintC(context),
+          ),
         ),
       ),
     );
@@ -758,7 +946,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                             child: isSuccess
                                 ? payment.isReconciled
                                     ? IconButton(
-                                        icon: Icon(Icons.download_rounded, size: 20, color: AppColors.primary),
+                                        icon: AppIcon('document-download', size: 20, color: AppColors.primary),
                                         tooltip: 'Download Receipt',
                                         padding: EdgeInsets.zero,
                                         constraints: const BoxConstraints(),
@@ -799,7 +987,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   Widget _buildEmptyState() {
     String title;
     String subtitle;
-    IconData icon;
+    String icon;
     Color iconBgColor;
     Color iconColor;
 
@@ -807,21 +995,21 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
       case 'Paid':
         title = 'No Paid Payments';
         subtitle = 'Your successful payments will appear here.';
-        icon = Icons.check_circle_outline_rounded;
+        icon = 'tick-circle';
         iconBgColor = AppColors.cardGreen;
         iconColor = AppColors.cardGreenDark;
         break;
       case 'Failed':
         title = 'No Failed Payments';
         subtitle = 'Failed payment attempts will appear here.';
-        icon = Icons.error_outline_rounded;
+        icon = 'close-circle';
         iconBgColor = AppColors.cardRose;
         iconColor = AppColors.cardRoseDark;
         break;
       default:
         title = 'No Payments Yet';
         subtitle = 'Your payment history will appear here once you make a payment.';
-        icon = Icons.receipt_long_rounded;
+        icon = 'receipt-text';
         iconBgColor = AppColors.cardPurple;
         iconColor = AppColors.cardPurpleDark;
     }
@@ -839,7 +1027,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                 color: iconBgColor,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 48, color: iconColor),
+              child: Center(child: AppIcon(icon, size: 48, color: iconColor)),
             ),
             const SizedBox(height: 24),
             Text(

@@ -21,6 +21,7 @@ import '../../providers/notification_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../../core/utils/extensions.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -64,7 +65,16 @@ class TransactionDetailsScreen extends ConsumerWidget {
           return SingleChildScrollView(
             padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Dashboard-style header (desktop only)
+                if (context.isDesktop) ...[
+                  _buildDesktopGreetingBanner(context, isPaid),
+                  const SizedBox(height: 18),
+                  _buildDesktopTitle(context, selectedStudent),
+                  const SizedBox(height: 20),
+                ],
+
                 // Transaction Card
                 _buildTransactionCard(
                   context,
@@ -85,6 +95,64 @@ class TransactionDetailsScreen extends ConsumerWidget {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildDesktopGreetingBanner(BuildContext context, bool isPaid) {
+    final message = isPaid
+        ? 'Payment successful — your receipt is ready below.'
+        : 'This payment did not go through. Tap retry to try again.';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(BuildContext context, dynamic selectedStudent) {
+    final firstName =
+        (selectedStudent?.name as String?)?.trim().split(' ').first ??
+            'Student';
+    final admissionNo =
+        (selectedStudent?.admissionNumber as String?) ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$firstName's Transaction",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
     );
   }
 
@@ -454,7 +522,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.hourglass_top_rounded, size: 22, color: Colors.orange),
+            AppIcon('timer', size: 22, color: Colors.orange),
             SizedBox(width: 10),
             Text(
               'Pending Approval',
@@ -486,8 +554,8 @@ class TransactionDetailsScreen extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    isPaid ? Icons.download_rounded : Icons.refresh,
+                  AppIcon(
+                    isPaid ? 'document-download' : 'refresh',
                     size: 24,
                     color: Colors.white,
                   ),
@@ -522,8 +590,8 @@ class TransactionDetailsScreen extends ConsumerWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.share,
+                  AppIcon(
+                    'share',
                     size: 24,
                     color: AppColors.textSecondaryC(context),
                   ),
@@ -853,7 +921,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
           context: context,
           builder: (context) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            icon: const Icon(Icons.check_circle, color: Color(0xFF2DBE60), size: 48),
+            icon: const AppIcon('tick-circle', color: Color(0xFF2DBE60), size: 48),
             title: const Text('Already Paid'),
             content: const Text('All fees from this payment have already been paid.'),
             actions: [
@@ -1014,7 +1082,7 @@ class _ReceiptPreviewDialog extends StatelessWidget {
                 children: [
                   // Download button
                   _ActionButton(
-                    icon: Icons.download_rounded,
+                    icon: 'document-download',
                     label: 'Download',
                     onTap: onDownload,
                     filled: false,
@@ -1022,7 +1090,7 @@ class _ReceiptPreviewDialog extends StatelessWidget {
                   const SizedBox(width: 12),
                   // Print button
                   _ActionButton(
-                    icon: Icons.print_rounded,
+                    icon: 'printer',
                     label: 'Print',
                     onTap: onPrint,
                     filled: true,
@@ -1031,7 +1099,7 @@ class _ReceiptPreviewDialog extends StatelessWidget {
                   // Close button
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close, size: 24),
+                    icon: const AppIcon('close-circle', size: 24),
                     style: IconButton.styleFrom(
                       backgroundColor: Colors.grey.shade200,
                       shape: const CircleBorder(),
@@ -1076,7 +1144,7 @@ class _ReceiptPreviewDialog extends StatelessWidget {
 }
 
 class _ActionButton extends StatelessWidget {
-  final IconData icon;
+  final String icon;
   final String label;
   final VoidCallback onTap;
   final bool filled;
@@ -1102,7 +1170,7 @@ class _ActionButton extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: filled ? Colors.white : AppColors.textSecondaryC(context)),
+            AppIcon(icon, size: 18, color: filled ? Colors.white : AppColors.textSecondaryC(context)),
             const SizedBox(width: 8),
             Text(
               label,

@@ -12,6 +12,7 @@ import '../../../data/models/student_model.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -58,9 +59,21 @@ class PaidFeesScreen extends ConsumerWidget {
           return ListView(
             padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.fromLTRB(24, 20, 24, 24),
             children: [
-              // Total paid summary
-              _buildTotalSummary(context, totalPaid, sortedPayIds.length),
-              const SizedBox(height: 20),
+              // Dashboard-style header (desktop only)
+              if (context.isDesktop) ...[
+                _buildDesktopGreetingBanner(
+                    context, sortedPayIds.length, totalPaid),
+                const SizedBox(height: 18),
+                _buildDesktopTitle(context, ref),
+                const SizedBox(height: 20),
+                _buildDesktopStatCards(
+                    context, groups, sortedPayIds.length, totalPaid),
+                const SizedBox(height: 20),
+              ] else ...[
+                // Total paid summary (mobile keeps the existing card)
+                _buildTotalSummary(context, totalPaid, sortedPayIds.length),
+                const SizedBox(height: 20),
+              ],
 
               // Payment accordion items
               ...sortedPayIds.map((payId) => _PaymentAccordion(
@@ -70,6 +83,179 @@ class PaidFeesScreen extends ConsumerWidget {
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildDesktopGreetingBanner(
+      BuildContext context, int paymentCount, double totalPaid) {
+    final hasPayments = paymentCount > 0;
+    final message = hasPayments
+        ? "Awesome! You've paid ₹${NumberFormat('#,##,###').format(totalPaid.toInt())} across $paymentCount ${paymentCount == 1 ? 'payment' : 'payments'}."
+        : 'No paid fees yet.';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(BuildContext context, WidgetRef ref) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final firstName =
+        selectedStudent?.name.trim().split(' ').first ?? 'Student';
+    final admissionNo = selectedStudent?.admissionNumber ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$firstName's Paid Fees",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopStatCards(
+    BuildContext context,
+    Map<dynamic, dynamic> groups,
+    int paymentCount,
+    double totalPaid,
+  ) {
+    final allFees = groups.values
+        .expand<dynamic>((g) => g.fees as List<dynamic>)
+        .toList();
+    final feeCount = allFees.length;
+    final lastPayment = groups.values
+        .map<DateTime?>((g) => g.payment.createdat as DateTime?)
+        .whereType<DateTime>()
+        .fold<DateTime?>(null,
+            (acc, d) => (acc == null || d.isAfter(acc)) ? d : acc);
+    final lastPaymentLabel =
+        lastPayment != null ? DateFormat('dd MMM yyyy').format(lastPayment) : '—';
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Total Paid',
+            value: '₹${NumberFormat('#,##,###').format(totalPaid.toInt())}',
+            icon: 'tick-circle',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Payments',
+            value: '$paymentCount',
+            icon: 'wallet-3',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Fees Cleared',
+            value: '$feeCount',
+            icon: 'receipt-text',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Last Payment',
+            value: lastPaymentLabel,
+            icon: 'calendar',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCardTile({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required String icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: AppColors.cardShadow(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: AppIcon(icon, size: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondaryC(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimaryC(context),
+              letterSpacing: -0.3,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -235,8 +421,8 @@ class PaidFeesScreen extends ConsumerWidget {
                 color: AppColors.cardGreen,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.check_circle_outline_rounded,
+              child: const AppIcon(
+                'tick-circle',
                 size: 48,
                 color: AppColors.cardGreenDark,
               ),
@@ -387,8 +573,8 @@ class _PaymentAccordionState extends State<_PaymentAccordion>
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Center(
-                        child: Icon(
-                          Icons.check_rounded,
+                        child: AppIcon(
+                          'tick-circle',
                           size: 20,
                           color: AppColors.cardGreenDark,
                         ),
@@ -446,8 +632,8 @@ class _PaymentAccordionState extends State<_PaymentAccordion>
                     const SizedBox(width: 8),
                     RotationTransition(
                       turns: _rotateAnimation,
-                      child: Icon(
-                        Icons.keyboard_arrow_down_rounded,
+                      child: AppIcon(
+                        'arrow-down',
                         size: 22,
                         color: AppColors.textSecondaryC(context),
                       ),
@@ -482,8 +668,8 @@ class _PaymentAccordionState extends State<_PaymentAccordion>
                         child: Row(
                           children: [
                             if (paymentNumber.isNotEmpty) ...[
-                              Icon(
-                                Icons.receipt_outlined,
+                              AppIcon(
+                                'receipt',
                                 size: 14,
                                 color: AppColors.textSecondaryC(context),
                               ),
@@ -546,8 +732,8 @@ class _PaymentAccordionState extends State<_PaymentAccordion>
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.receipt_long_outlined,
+                            AppIcon(
+                              'receipt-text',
                               size: 16,
                               color: AppColors.primary,
                             ),
@@ -581,8 +767,8 @@ class _PaymentAccordionState extends State<_PaymentAccordion>
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
-          const Icon(
-            Icons.check_circle_rounded,
+          const AppIcon(
+            'tick-circle',
             size: 16,
             color: AppColors.cardGreenDark,
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/extensions.dart';
+import 'app_icon.dart';
 import 'desktop_left_panel.dart';
 
 /// Wraps auth screen content with a desktop split-screen layout.
@@ -63,8 +64,8 @@ class AuthDesktopWrapper extends StatelessWidget {
                   left: 32,
                   child: TextButton.icon(
                     onPressed: onBack,
-                    icon: Icon(
-                      Icons.arrow_back_rounded,
+                    icon: AppIcon(
+                      'arrow-left-1',
                       size: 18,
                       color: AppColors.textSecondaryC(context),
                     ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/extensions.dart';
@@ -22,7 +23,7 @@ class WelcomeScreen extends StatelessWidget {
   // ─── Mobile layout — reference image style ───────────────────────────────
   Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F1EE),
+      backgroundColor: const Color(0xFFF1F5F9),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -57,7 +58,7 @@ class WelcomeScreen extends StatelessWidget {
                   // Feature items
                   _buildFeatureItem(
                     context: context,
-                    icon: Icons.speed_rounded,
+                    iconAsset: 'assets/icons/linear/flash.svg',
                     text: 'Quick & Easy Payments',
                     color: AppColors.cardGreen,
                     iconColor: AppColors.cardGreenDark,
@@ -65,7 +66,7 @@ class WelcomeScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   _buildFeatureItem(
                     context: context,
-                    icon: Icons.security_rounded,
+                    iconAsset: 'assets/icons/linear/shield-tick.svg',
                     text: '100% Secure Transactions',
                     color: AppColors.cardGreen,
                     iconColor: AppColors.cardGreenDark,
@@ -73,7 +74,7 @@ class WelcomeScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   _buildFeatureItem(
                     context: context,
-                    icon: Icons.receipt_long_rounded,
+                    iconAsset: 'assets/icons/linear/receipt-text.svg',
                     text: 'Instant Digital Receipts',
                     color: AppColors.cardGreen,
                     iconColor: AppColors.cardGreenDark,
@@ -140,7 +141,7 @@ class WelcomeScreen extends StatelessWidget {
                     const SizedBox(height: 36),
                     _buildFeatureItem(
                       context: context,
-                      icon: Icons.speed_rounded,
+                      iconAsset: 'assets/icons/linear/flash.svg',
                       text: 'Quick & Easy Payments',
                       color: AppColors.cardPurple,
                       iconColor: AppColors.cardPurpleDark,
@@ -148,7 +149,7 @@ class WelcomeScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     _buildFeatureItem(
                       context: context,
-                      icon: Icons.security_rounded,
+                      iconAsset: 'assets/icons/linear/shield-tick.svg',
                       text: '100% Secure Transactions',
                       color: AppColors.cardGreen,
                       iconColor: AppColors.cardGreenDark,
@@ -156,7 +157,7 @@ class WelcomeScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     _buildFeatureItem(
                       context: context,
-                      icon: Icons.receipt_long_rounded,
+                      iconAsset: 'assets/icons/linear/receipt-text.svg',
                       text: 'Instant Digital Receipts',
                       color: AppColors.cardBlue,
                       iconColor: AppColors.cardBlueDark,
@@ -191,10 +192,10 @@ class WelcomeScreen extends StatelessWidget {
           color: const Color(0xFF121212),
           borderRadius: BorderRadius.circular(16),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
+            const Text(
               'Sign In',
               style: TextStyle(
                 fontSize: 16,
@@ -202,8 +203,14 @@ class WelcomeScreen extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            SizedBox(width: 10),
-            Icon(Icons.login_rounded, size: 20, color: Colors.white),
+            const SizedBox(width: 10),
+            SvgPicture.asset(
+              'assets/icons/linear/login.svg',
+              width: 20,
+              height: 20,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            ),
           ],
         ),
       ),
@@ -237,10 +244,14 @@ class WelcomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Icon(
-              Icons.person_add_rounded,
-              size: 20,
-              color: isMobile ? const Color(0xFF1A1A1A) : AppColors.primary,
+            SvgPicture.asset(
+              'assets/icons/linear/user-add.svg',
+              width: 20,
+              height: 20,
+              colorFilter: ColorFilter.mode(
+                isMobile ? const Color(0xFF1A1A1A) : AppColors.primary,
+                BlendMode.srcIn,
+              ),
             ),
           ],
         ),
@@ -250,7 +261,7 @@ class WelcomeScreen extends StatelessWidget {
 
   Widget _buildFeatureItem({
     required BuildContext context,
-    required IconData icon,
+    required String iconAsset,
     required String text,
     required Color color,
     required Color iconColor,
@@ -269,14 +280,16 @@ class WelcomeScreen extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: color,
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              size: 22,
-              color: iconColor,
+            child: SvgPicture.asset(
+              iconAsset,
+              width: 22,
+              height: 22,
+              colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
             ),
           ),
           const SizedBox(width: 14),
@@ -290,10 +303,14 @@ class WelcomeScreen extends StatelessWidget {
               ),
             ),
           ),
-          Icon(
-            Icons.check_circle_rounded,
-            size: 20,
-            color: AppColors.success,
+          SvgPicture.asset(
+            'assets/icons/linear/tick-circle.svg',
+            width: 20,
+            height: 20,
+            colorFilter: const ColorFilter.mode(
+              AppColors.success,
+              BlendMode.srcIn,
+            ),
           ),
         ],
       ),

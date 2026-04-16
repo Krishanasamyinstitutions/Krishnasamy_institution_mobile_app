@@ -12,6 +12,7 @@ import '../../providers/fee_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../widgets/common/error_widget.dart';
 
@@ -23,8 +24,8 @@ class FeesScreen extends ConsumerStatefulWidget {
 }
 
 class _FeesScreenState extends ConsumerState<FeesScreen> {
-  // Warm gray UI color palette (mobile)
-  static const Color _bg = Color(0xFFF2F1EE);
+  // Mobile background — matches desktop scaffold
+  static const Color _bg = Color(0xFFF1F5F9);
   static const Color _cardBg = Color(0xFFFFFFFF);
   static const Color _cardBorder = Color(0xFFE8E7E4);
   static const Color _textDark = Color(0xFF1A1A1A);
@@ -575,7 +576,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
                 SnackBar(
                   content: const Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                      AppIcon('warning-2', color: Colors.white, size: 20),
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -648,8 +649,8 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
                     ),
                   ),
                   child: isSelected
-                      ? const Icon(
-                          Icons.check,
+                      ? const AppIcon(
+                          'tick-circle',
                           size: 16,
                           color: Colors.white,
                         )
@@ -723,7 +724,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
+                const AppIcon('shopping-cart', size: 20, color: Colors.white),
                 const SizedBox(width: AppSizes.s2),
                 Text(
                   'View Cart ($cartItemCount)',
@@ -734,8 +735,8 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
                   ),
                 ),
                 const SizedBox(width: AppSizes.s3),
-                Icon(
-                  Icons.arrow_forward,
+                AppIcon(
+                  'arrow-right-1',
                   size: 24,
                   color: isEnabled ? Colors.white : _textLight,
                 ),
@@ -781,8 +782,8 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
                 color: AppColors.cardPurple,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.receipt_long_rounded,
+              child: AppIcon(
+                'receipt-text',
                 size: 48,
                 color: AppColors.cardPurpleDark,
               ),

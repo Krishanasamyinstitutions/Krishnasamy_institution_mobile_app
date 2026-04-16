@@ -12,6 +12,7 @@ import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -352,6 +353,172 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
     );
   }
 
+  Widget _buildDesktopGreetingBanner(
+      BuildContext context, List<FeeModel> fees) {
+    final count = fees.length;
+    final hasFees = count > 0;
+    final message = hasFees
+        ? "Pick the fees you want to pay — $count available."
+        : 'No fees available to pay right now.';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(BuildContext context) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final firstName =
+        selectedStudent?.name.trim().split(' ').first ?? 'Student';
+    final admissionNo = selectedStudent?.admissionNumber ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$firstName's Pay All Fees",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopStatCards(
+      BuildContext context, List<FeeModel> fees, CartState cartState) {
+    final totalAmount = fees.fold<double>(0, (sum, f) => sum + f.totalAmount);
+    final selectedFees = fees
+        .where((f) => _localSelectedFeeIds.contains(f.id) ||
+            cartState.feeIds.contains(f.id))
+        .toList();
+    final selectedAmount =
+        selectedFees.fold<double>(0, (sum, f) => sum + f.totalAmount);
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Total Available',
+            value: '₹${NumberFormat('#,##,###').format(totalAmount.toInt())}',
+            icon: 'wallet-3',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Selected',
+            value: '₹${NumberFormat('#,##,###').format(selectedAmount.toInt())}',
+            icon: 'tick-circle',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Items Selected',
+            value: '${selectedFees.length}',
+            icon: 'task-square',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Total Items',
+            value: '${fees.length}',
+            icon: 'receipt-text',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCardTile({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required String icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: AppColors.cardShadow(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: AppIcon(icon, size: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondaryC(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimaryC(context),
+              letterSpacing: -0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader(BuildContext context) {
     final notificationCount = ref.watch(notificationCountProvider);
 
@@ -519,6 +686,16 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           child: ListView(
             padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.all(16),
             children: [
+              // Dashboard-style header (desktop only)
+              if (context.isDesktop) ...[
+                _buildDesktopGreetingBanner(context, filteredFees),
+                const SizedBox(height: 18),
+                _buildDesktopTitle(context),
+                const SizedBox(height: 20),
+                _buildDesktopStatCards(context, filteredFees, cartState),
+                const SizedBox(height: 20),
+              ],
+
               // Fee Group Filter Card
               _buildFeeGroupFilter(feeGroupOptions, filteredFees),
               const SizedBox(height: 16),
@@ -644,8 +821,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        Icon(
-                          _isDropdownOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        AppIcon(
+                          _isDropdownOpen ? 'arrow-up' : 'arrow-down',
                           color: AppColors.textSecondaryC(context),
                           size: 24,
                         ),
@@ -669,8 +846,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.filter_list_rounded,
+                        AppIcon(
+                          'filter',
                           size: 18,
                           color: hasSelection ? Colors.white : AppColors.textHintC(context),
                         ),
@@ -767,7 +944,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                                       ),
                                     ),
                                     if (isGroupSelected)
-                                      const Icon(Icons.check_rounded, size: 20, color: AppColors.primary),
+                                      const AppIcon('tick-circle', size: 20, color: AppColors.primary),
                                   ],
                                 ),
                               ),
@@ -784,8 +961,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                               child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                                 color: Colors.transparent,
-                                child: Icon(
-                                  isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                                child: AppIcon(
+                                  isExpanded ? 'arrow-up' : 'arrow-down',
                                   size: 22,
                                   color: AppColors.textSecondaryC(context),
                                 ),
@@ -851,7 +1028,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                                   ),
                                 ),
                                 if (isSubSelected)
-                                  const Icon(Icons.check_rounded, size: 18, color: AppColors.primary),
+                                  const AppIcon('tick-circle', size: 18, color: AppColors.primary),
                               ],
                             ),
                           ),
@@ -1001,7 +1178,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       ),
                     ),
                     child: allSelected
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        ? const AppIcon('tick-circle', size: 16, color: Colors.white)
                         : null,
                   ),
                 ),
@@ -1178,8 +1355,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.menu_book_rounded,
+                      const AppIcon(
+                        'book',
                         size: 14,
                         color: Colors.white,
                       ),
@@ -1225,7 +1402,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       ),
                     ),
                     child: allSelected
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        ? const AppIcon('tick-circle', size: 16, color: Colors.white)
                         : null,
                   ),
                 ),
@@ -1362,8 +1539,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     color: AppColors.info.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
-                    Icons.menu_book_outlined,
+                  child: const AppIcon(
+                    'book',
                     size: 16,
                     color: AppColors.info,
                   ),
@@ -1385,8 +1562,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
+                          AppIcon(
+                            'calendar',
                             size: 12,
                             color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
@@ -1468,8 +1645,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     color: AppColors.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
-                    Icons.receipt_outlined,
+                  child: const AppIcon(
+                    'receipt',
                     size: 16,
                     color: AppColors.success,
                   ),
@@ -1491,8 +1668,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
+                          AppIcon(
+                            'calendar',
                             size: 12,
                             color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
@@ -1619,8 +1796,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.hotel_rounded,
+                      const AppIcon(
+                        'home-2',
                         size: 14,
                         color: Colors.white,
                       ),
@@ -1666,7 +1843,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       ),
                     ),
                     child: allSelected
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        ? const AppIcon('tick-circle', size: 16, color: Colors.white)
                         : null,
                   ),
                 ),
@@ -1803,8 +1980,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(
-                    Icons.hotel_outlined,
+                  child: const AppIcon(
+                    'home-2',
                     size: 16,
                     color: Color(0xFF3B82F6),
                   ),
@@ -1826,8 +2003,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
+                          AppIcon(
+                            'calendar',
                             size: 12,
                             color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
@@ -1966,8 +2143,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
-                        Icons.assignment_rounded,
+                      const AppIcon(
+                        'task-square',
                         size: 14,
                         color: Colors.white,
                       ),
@@ -1997,7 +2174,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     ),
                   ),
                   child: allSelected
-                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                      ? const AppIcon('tick-circle', size: 16, color: Colors.white)
                       : null,
                 ),
               ],
@@ -2146,8 +2323,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
+                          AppIcon(
+                            'calendar',
                             size: 12,
                             color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
@@ -2320,7 +2497,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       ),
                     ),
                     child: allSelected
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        ? const AppIcon('tick-circle', size: 16, color: Colors.white)
                         : null,
                   ),
                 ],
@@ -2454,8 +2631,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
+                          AppIcon(
+                            'calendar',
                             size: 12,
                             color: isOverdue ? AppColors.error : AppColors.textHintC(context),
                           ),
@@ -2551,8 +2728,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                             ),
                             child: Center(
                               child: icon['iconData'] != null
-                                  ? Icon(
-                                      icon['iconData'] as IconData,
+                                  ? AppIcon(
+                                      icon['iconData'] as String,
                                       size: 16,
                                       color: icon['iconColor'] as Color,
                                     )
@@ -2655,7 +2832,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                           ),
                         ),
                         SizedBox(width: 8),
-                        Icon(Icons.arrow_forward_rounded, size: 20, color: Colors.white),
+                        AppIcon('arrow-right-1', size: 20, color: Colors.white),
                       ],
                     ),
                   ),
@@ -2688,7 +2865,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.shopping_cart_outlined, size: 20, color: Colors.white),
+                        const AppIcon('shopping-cart', size: 20, color: Colors.white),
                         const SizedBox(width: 8),
                         const Text(
                           'Add to Queue',
@@ -2766,7 +2943,7 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
           'svgPath': svgPath,
           'bgColor': bgColor,
           'iconColor': iconColor,
-          'iconData': groupKey == 'hostel' ? Icons.hotel_outlined : null,
+          'iconData': groupKey == 'hostel' ? 'home-2' : null,
         });
       }
     }
@@ -2787,8 +2964,8 @@ class _PayAllFeesScreenState extends ConsumerState<PayAllFeesScreen> {
                 color: AppColors.gray100,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.check_circle_outline,
+              child: const AppIcon(
+                'tick-circle',
                 size: 48,
                 color: AppColors.success,
               ),

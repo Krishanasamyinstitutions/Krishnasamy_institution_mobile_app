@@ -8,7 +8,9 @@ import '../../../config/routes.dart';
 import '../../../data/models/fee_model.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/fee_provider.dart';
+import '../../providers/student_provider.dart';
 import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../../core/utils/extensions.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
@@ -44,6 +46,12 @@ class FeeDetailsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (context.isDesktop) ...[
+                  _buildDesktopGreetingBanner(context, fee),
+                  const SizedBox(height: 18),
+                  _buildDesktopTitle(context, ref, fee),
+                  const SizedBox(height: 20),
+                ],
                 _buildFeeHeader(context, fee),
                 const SizedBox(height: AppSizes.s4),
                 _buildFeeDetails(context, fee),
@@ -71,6 +79,65 @@ class FeeDetailsScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildDesktopGreetingBanner(BuildContext context, FeeModel fee) {
+    final isPaid = fee.status == FeeStatus.paid;
+    final message = isPaid
+        ? 'This fee is fully paid. View the breakdown below.'
+        : 'Outstanding ${Formatters.currency(fee.balanceAmount)} on this fee.';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(
+      BuildContext context, WidgetRef ref, FeeModel fee) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final firstName =
+        selectedStudent?.name.trim().split(' ').first ?? 'Student';
+    final admissionNo = selectedStudent?.admissionNumber ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$firstName's Fee Details",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDesktopHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -85,7 +152,7 @@ class FeeDetailsScreen extends ConsumerWidget {
                 color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppColors.primary),
+              child: const AppIcon('arrow-left-1', size: 16, color: AppColors.primary),
             ),
           ),
           const SizedBox(width: 16),
@@ -119,7 +186,7 @@ class FeeDetailsScreen extends ConsumerWidget {
               color: _getStatusColor(fee.status).withOpacity(0.1),
               borderRadius: BorderRadius.circular(AppSizes.roundedLg),
             ),
-            child: Icon(
+            child: AppIcon(
               _getStatusIcon(fee.status),
               color: _getStatusColor(fee.status),
               size: 28,
@@ -276,16 +343,16 @@ class FeeDetailsScreen extends ConsumerWidget {
     }
   }
 
-  IconData _getStatusIcon(FeeStatus status) {
+  String _getStatusIcon(FeeStatus status) {
     switch (status) {
       case FeeStatus.paid:
-        return Icons.check_circle_rounded;
+        return 'tick-circle';
       case FeeStatus.pending:
-        return Icons.schedule_rounded;
+        return 'clock';
       case FeeStatus.overdue:
-        return Icons.warning_rounded;
+        return 'warning-2';
       case FeeStatus.partial:
-        return Icons.timelapse_rounded;
+        return 'timer';
     }
   }
 

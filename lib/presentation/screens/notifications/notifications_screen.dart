@@ -11,6 +11,7 @@ import '../../providers/notification_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/fee_provider.dart';
+import '../../widgets/common/app_icon.dart';
 
 class NotificationsScreen extends ConsumerStatefulWidget {
   const NotificationsScreen({super.key});
@@ -20,7 +21,7 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 }
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
-  static const Color _bg = Color(0xFFF2F1EE);
+  static const Color _bg = Color(0xFFF1F5F9);
   static const Color _cardBg = Color(0xFFFFFFFF);
   static const Color _cardBorder = Color(0xFFE8E7E4);
   static const Color _textDark = Color(0xFF1A1A1A);
@@ -87,17 +88,32 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                       .toList();
 
                   if (context.isDesktop) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBg(context),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: AppColors.cardShadow(context),
-                      ),
-                      clipBehavior: Clip.antiAlias,
+                    return SingleChildScrollView(
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(child: _buildDesktopNotificationTable(paged)),
-                          _buildPaginationControls(totalPages),
+                          _buildDesktopGreetingBanner(
+                              context, regularNotifications),
+                          const SizedBox(height: 18),
+                          _buildDesktopTitle(context),
+                          const SizedBox(height: 20),
+                          _buildDesktopStatCards(
+                              context, regularNotifications),
+                          const SizedBox(height: 20),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: AppColors.cardBg(context),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: AppColors.cardShadow(context),
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: Column(
+                              children: [
+                                _buildDesktopNotificationTable(paged),
+                                _buildPaginationControls(totalPages),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     );
@@ -121,66 +137,208 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     );
   }
 
+  Widget _buildDesktopGreetingBanner(
+      BuildContext context, List<NotificationModel> notifications) {
+    final unread = notifications.where((n) => !n.isRead).length;
+    final hasUnread = unread > 0;
+    final message = hasUnread
+        ? "You have $unread unread ${unread == 1 ? 'notification' : 'notifications'}."
+        : "All caught up — no new notifications.";
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(BuildContext context) {
+    final selectedStudent = ref.watch(selectedStudentProvider);
+    final firstName =
+        selectedStudent?.name.trim().split(' ').first ?? 'Student';
+    final admissionNo = selectedStudent?.admissionNumber ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$firstName's Notifications",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopStatCards(
+      BuildContext context, List<NotificationModel> notifications) {
+    final unread = notifications.where((n) => !n.isRead).length;
+    final read = notifications.length - unread;
+    final today = DateTime.now();
+    final todayCount = notifications.where((n) {
+      final d = n.createdAt;
+      return d.year == today.year &&
+          d.month == today.month &&
+          d.day == today.day;
+    }).length;
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Total',
+            value: '${notifications.length}',
+            icon: 'notification',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Unread',
+            value: '$unread',
+            icon: 'message',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Read',
+            value: '$read',
+            icon: 'tick-circle',
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatCardTile(
+            context: context,
+            label: 'Today',
+            value: '$todayCount',
+            icon: 'calendar',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCardTile({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required String icon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: AppColors.cardShadow(context),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: AppIcon(icon, size: 16, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textSecondaryC(context),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimaryC(context),
+              letterSpacing: -0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDesktopNotificationTable(List<NotificationModel> notifications) {
+    const headerStyle = TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: Colors.white,
+      letterSpacing: 0.5,
+    );
     return Column(
       children: [
-        // Header row
+        // Header row — green band with white labels (matches Fee Status)
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          color: AppColors.scaffoldBg(context),
+          color: AppColors.primary,
           child: Row(
-            children: [
-              const SizedBox(width: 60), // icon (48) + gap (12)
-              Expanded(
-                flex: 3,
-                child: Text(
-                  'Title',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondaryC(context),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 4,
-                child: Text(
-                  'Message',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondaryC(context),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              SizedBox(
-                width: 140,
-                child: Text(
-                  'Date',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondaryC(context),
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 36), // unread indicator column
+            children: const [
+              SizedBox(width: 60), // icon (48) + gap (12)
+              Expanded(flex: 3, child: Text('Title', style: headerStyle)),
+              Expanded(flex: 4, child: Text('Message', style: headerStyle)),
+              SizedBox(width: 140, child: Text('Date', style: headerStyle)),
+              SizedBox(width: 36),
             ],
           ),
         ),
         Divider(height: 1, color: AppColors.borderC(context)),
         // Data rows
-        Expanded(
-          child: ListView.separated(
-            padding: EdgeInsets.zero,
-            itemCount: notifications.length,
-            separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.borderC(context)),
-            itemBuilder: (context, index) =>
-                _buildDesktopNotificationRow(notifications[index]),
-          ),
+        ListView.separated(
+          padding: EdgeInsets.zero,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: notifications.length,
+          separatorBuilder: (_, __) =>
+              Divider(height: 1, color: AppColors.borderC(context)),
+          itemBuilder: (context, index) =>
+              _buildDesktopNotificationRow(notifications[index]),
         ),
       ],
     );
@@ -242,24 +400,33 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
             ),
             SizedBox(
               width: 36,
-              child: isUnread
-                  ? Center(
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.4),
-                              blurRadius: 6,
-                            ),
-                          ],
-                        ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (isUnread) ...[
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.4),
+                            blurRadius: 6,
+                          ),
+                        ],
                       ),
-                    )
-                  : null,
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  AppIcon(
+                    'arrow-right-1',
+                    size: 14,
+                    color: AppColors.textHintC(context),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -275,7 +442,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _buildPageButton(
-            icon: Icons.chevron_left,
+            icon: 'arrow-left-1',
             enabled: _currentPage > 0,
             onTap: () => setState(() => _currentPage--),
           ),
@@ -323,7 +490,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           ],
           const SizedBox(width: 8),
           _buildPageButton(
-            icon: Icons.chevron_right,
+            icon: 'arrow-right-1',
             enabled: _currentPage < totalPages - 1,
             onTap: () => setState(() => _currentPage++),
           ),
@@ -333,7 +500,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildPageButton({
-    required IconData icon,
+    required String icon,
     required bool enabled,
     required VoidCallback onTap,
   }) {
@@ -347,10 +514,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           border: Border.all(color: AppColors.borderC(context)),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: enabled ? AppColors.textPrimaryC(context) : AppColors.textHintC(context),
+        child: Center(
+          child: AppIcon(
+            icon,
+            size: 20,
+            color: enabled
+                ? AppColors.textPrimaryC(context)
+                : AppColors.textHintC(context),
+          ),
         ),
       ),
     );
@@ -549,14 +720,16 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.isDesktop ? 0 : 20,
+      ),
       child: Column(
         children: [
           const SizedBox(height: 12),
           if (overdueNotification.isNotEmpty)
             _buildReminderBanner(
               context: context,
-              icon: Icons.warning_rounded,
+              icon: 'warning-2',
               iconBgColor: AppColors.errorLight,
               iconColor: AppColors.error,
               borderColor: AppColors.error.withValues(alpha: 0.3),
@@ -581,7 +754,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
           if (upcomingNotification.isNotEmpty)
             _buildReminderBanner(
               context: context,
-              icon: Icons.schedule_rounded,
+              icon: 'clock',
               iconBgColor: AppColors.warningLight,
               iconColor: AppColors.warningDark,
               borderColor: AppColors.warning.withValues(alpha: 0.3),
@@ -599,7 +772,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   Widget _buildReminderBanner({
     required BuildContext context,
-    required IconData icon,
+    required String icon,
     required Color iconBgColor,
     required Color iconColor,
     required Color borderColor,
@@ -618,7 +791,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         border: Border.all(color: borderColor, width: 1.5),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 42,
@@ -627,12 +800,14 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               color: iconBgColor,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 22, color: iconColor),
+            child: Center(child: AppIcon(icon, size: 22, color: iconColor)),
           ),
           const SizedBox(width: 12),
+          // Full-width message column
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   title,
@@ -652,26 +827,28 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                     height: 1.4,
                   ),
                 ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: onAction,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: iconColor,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      actionLabel,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
               ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Action button pinned to the right side
+          GestureDetector(
+            onTap: onAction,
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: iconColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                actionLabel,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
             ),
           ),
         ],
@@ -786,8 +963,8 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                           color: _textLight,
                         ),
                       ),
-                      const Icon(
-                        Icons.arrow_forward_ios_rounded,
+                      const AppIcon(
+                        'arrow-right-1',
                         size: 14,
                         color: _textLight,
                       ),
@@ -803,40 +980,40 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildNotificationIcon(NotificationType type, bool isUnread) {
-    IconData icon;
+    String icon;
     Color bgColor;
     Color iconColor;
 
     switch (type) {
       case NotificationType.feeReminder:
       case NotificationType.dueDateApproaching:
-        icon = Icons.notifications_active_rounded;
+        icon = 'notification';
         bgColor = AppColors.cardOrange;
         iconColor = AppColors.cardOrangeDark;
         break;
       case NotificationType.paymentSuccess:
-        icon = Icons.check_circle_rounded;
+        icon = 'tick-circle';
         bgColor = AppColors.cardGreen;
         iconColor = AppColors.cardGreenDark;
         break;
       case NotificationType.paymentFailed:
       case NotificationType.alert:
-        icon = Icons.warning_rounded;
+        icon = 'warning-2';
         bgColor = AppColors.cardRose;
         iconColor = AppColors.cardRoseDark;
         break;
       case NotificationType.newFeeAdded:
-        icon = Icons.add_circle_rounded;
+        icon = 'add-circle';
         bgColor = AppColors.cardPurple;
         iconColor = AppColors.cardPurpleDark;
         break;
       case NotificationType.announcement:
-        icon = Icons.campaign_rounded;
+        icon = 'message';
         bgColor = AppColors.cardBlue;
         iconColor = AppColors.cardBlueDark;
         break;
       case NotificationType.general:
-        icon = Icons.info_rounded;
+        icon = 'info-circle';
         bgColor = AppColors.cardCyan;
         iconColor = AppColors.cardCyanDark;
         break;
@@ -849,7 +1026,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         color: bgColor,
         shape: BoxShape.circle,
       ),
-      child: Icon(icon, size: 24, color: iconColor),
+      child: Center(child: AppIcon(icon, size: 24, color: iconColor)),
     );
   }
 
@@ -882,10 +1059,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 color: AppColors.cardPurple,
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.notifications_off_rounded,
-                size: 48,
-                color: AppColors.cardPurpleDark,
+              child: Center(
+                child: AppIcon(
+                  'notification',
+                  size: 48,
+                  color: AppColors.cardPurpleDark,
+                ),
               ),
             ),
             const SizedBox(height: 24),

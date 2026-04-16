@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/auth_desktop_wrapper.dart';
 import '../../widgets/common/screen_illustrations.dart';
 
@@ -222,21 +223,29 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
             ),
-            prefixIcon: Icon(
-              Icons.lock_outline_rounded,
-              size: 22,
-              color: AppColors.textHintC(context),
-            ),
-            suffixIcon: GestureDetector(
-              onTap: () => setState(() => _showPassword = !_showPassword),
-              child: Icon(
-                _showPassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
+            prefixIcon: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: AppIcon(
+                'lock',
                 size: 22,
                 color: AppColors.textHintC(context),
               ),
             ),
+            prefixIconConstraints:
+                const BoxConstraints(minWidth: 50, minHeight: 22),
+            suffixIcon: GestureDetector(
+              onTap: () => setState(() => _showPassword = !_showPassword),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: AppIcon(
+                  _showPassword ? 'eye' : 'eye-slash',
+                  size: 22,
+                  color: AppColors.textHintC(context),
+                ),
+              ),
+            ),
+            suffixIconConstraints:
+                const BoxConstraints(minWidth: 50, minHeight: 22),
           ),
           onChanged: (_) => setState(() {}), // Trigger rebuild for requirements
           validator: (value) {
@@ -311,21 +320,29 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
             ),
-            prefixIcon: Icon(
-              Icons.lock_outline_rounded,
-              size: 22,
-              color: AppColors.textHintC(context),
-            ),
-            suffixIcon: GestureDetector(
-              onTap: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
-              child: Icon(
-                _showConfirmPassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
+            prefixIcon: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: AppIcon(
+                'lock',
                 size: 22,
                 color: AppColors.textHintC(context),
               ),
             ),
+            prefixIconConstraints:
+                const BoxConstraints(minWidth: 50, minHeight: 22),
+            suffixIcon: GestureDetector(
+              onTap: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                child: AppIcon(
+                  _showConfirmPassword ? 'eye' : 'eye-slash',
+                  size: 22,
+                  color: AppColors.textHintC(context),
+                ),
+              ),
+            ),
+            suffixIconConstraints:
+                const BoxConstraints(minWidth: 50, minHeight: 22),
           ),
           validator: (value) {
             if (value == null || value.isEmpty) {
@@ -379,8 +396,9 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
       padding: const EdgeInsets.only(top: 4),
       child: Row(
         children: [
-          Icon(
-            isSatisfied ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
+          AppIcon(
+            'tick-circle',
+            bold: isSatisfied,
             size: 16,
             color: isSatisfied ? AppColors.success : AppColors.cardPurpleDark,
           ),
@@ -436,8 +454,8 @@ class _SetPasswordScreenState extends ConsumerState<SetPasswordScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              const Icon(
-                Icons.arrow_forward_rounded,
+              const AppIcon(
+                'arrow-right-1',
                 size: 22,
                 color: Colors.white,
               ),

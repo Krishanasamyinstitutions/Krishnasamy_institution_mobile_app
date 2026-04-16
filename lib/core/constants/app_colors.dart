@@ -171,7 +171,7 @@ class AppColors {
 
   /// Scaffold / page background
   static Color scaffoldBg(BuildContext context) =>
-      _isDark(context) ? const Color(0xFF121218) : const Color(0xFFF0FBF6);
+      _isDark(context) ? const Color(0xFF121218) : const Color(0xFFF1F5F9);
 
   /// Card / container surface background
   static Color cardBg(BuildContext context) =>
