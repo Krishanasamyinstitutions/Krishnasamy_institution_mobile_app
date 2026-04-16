@@ -8,6 +8,7 @@ import '../../../data/models/payment_model.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../widgets/common/app_button.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/loading_indicator.dart';
 import '../../../core/utils/extensions.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
@@ -29,7 +30,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
         title: const Text('Payment Receipt'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share_rounded),
+            icon: const AppIcon('share'),
             onPressed: () {
               // TODO: Implement share
             },
@@ -53,7 +54,14 @@ class PaymentReceiptScreen extends ConsumerWidget {
           return SingleChildScrollView(
             padding: context.isDesktop ? const EdgeInsets.all(24) : const EdgeInsets.symmetric(horizontal: 16, vertical: AppSizes.s4),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (context.isDesktop) ...[
+                  _buildDesktopGreetingBanner(context),
+                  const SizedBox(height: 18),
+                  _buildDesktopTitle(context, selectedStudent),
+                  const SizedBox(height: 20),
+                ],
                 _buildReceiptCard(context, payment, selectedStudent?.name ?? ''),
                 const SizedBox(height: AppSizes.s4),
                 _buildPaymentDetails(context, payment),
@@ -74,6 +82,61 @@ class PaymentReceiptScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildDesktopGreetingBanner(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: const Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Payment receipt — download or share a copy below.',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopTitle(BuildContext context, dynamic selectedStudent) {
+    final firstName =
+        (selectedStudent?.name as String?)?.trim().split(' ').first ??
+            'Student';
+    final admissionNo =
+        (selectedStudent?.admissionNumber as String?) ?? '—';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$firstName's Payment Receipt",
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimaryC(context),
+            letterSpacing: -0.3,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'ID $admissionNo',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textHintC(context),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDesktopHeader(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -88,7 +151,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
                 color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: AppColors.primary),
+              child: const AppIcon('arrow-left-1', size: 16, color: AppColors.primary),
             ),
           ),
           const SizedBox(width: 16),
@@ -113,7 +176,7 @@ class PaymentReceiptScreen extends ConsumerWidget {
                 color: AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.share_rounded, size: 18, color: AppColors.primary),
+              child: const AppIcon('share', size: 18, color: AppColors.primary),
             ),
           ),
         ],
@@ -138,10 +201,12 @@ class PaymentReceiptScreen extends ConsumerWidget {
               color: _getStatusColor(payment.status).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              _getStatusIcon(payment.status),
-              size: 32,
-              color: _getStatusColor(payment.status),
+            child: Center(
+              child: AppIcon(
+                _getStatusIcon(payment.status),
+                size: 32,
+                color: _getStatusColor(payment.status),
+              ),
             ),
           ),
           const SizedBox(height: AppSizes.s4),
@@ -305,16 +370,16 @@ class PaymentReceiptScreen extends ConsumerWidget {
     }
   }
 
-  IconData _getStatusIcon(PaymentStatus status) {
+  String _getStatusIcon(PaymentStatus status) {
     switch (status) {
       case PaymentStatus.success:
-        return Icons.check_circle_rounded;
+        return 'tick-circle';
       case PaymentStatus.pending:
-        return Icons.schedule_rounded;
+        return 'clock';
       case PaymentStatus.failed:
-        return Icons.cancel_rounded;
+        return 'close-circle';
       case PaymentStatus.refunded:
-        return Icons.replay_rounded;
+        return 'refresh';
     }
   }
 }

@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import 'app_button.dart';
+import 'app_icon.dart';
 
 class AppErrorWidget extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
-  final IconData icon;
+  final String icon;
 
   const AppErrorWidget({
     super.key,
     required this.message,
     this.onRetry,
-    this.icon = Icons.error_outline_rounded,
+    this.icon = 'warning-2',
   });
 
   @override
@@ -30,10 +31,12 @@ class AppErrorWidget extends StatelessWidget {
                 color: AppColors.error.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                icon,
-                size: 40,
-                color: AppColors.error,
+              child: Center(
+                child: AppIcon(
+                  icon,
+                  size: 40,
+                  color: AppColors.error,
+                ),
               ),
             ),
             const SizedBox(height: AppSizes.s4),

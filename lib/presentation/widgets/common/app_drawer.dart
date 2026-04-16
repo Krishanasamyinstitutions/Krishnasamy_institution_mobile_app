@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../data/models/institution_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/student_provider.dart';
+import 'app_icon.dart';
 
 /// App Drawer widget that slides in from the left
 /// Contains school info, user profile, menu items, and logout button
@@ -49,7 +50,7 @@ class AppDrawer extends ConsumerWidget {
                     // Menu Items
                     _buildMenuItem(
                       context: context,
-                      icon: Icons.key,
+                      icon: 'lock',
                       label: 'Change Password',
                       onTap: () {
                         Navigator.pop(context);
@@ -59,7 +60,7 @@ class AppDrawer extends ConsumerWidget {
                     const SizedBox(height: 16),
                     _buildMenuItem(
                       context: context,
-                      icon: Icons.help_outline,
+                      icon: '24-support',
                       label: 'Help & Support',
                       onTap: () {
                         Navigator.pop(context);
@@ -69,7 +70,7 @@ class AppDrawer extends ConsumerWidget {
                     const SizedBox(height: 16),
                     _buildMenuItem(
                       context: context,
-                      icon: Icons.settings,
+                      icon: 'setting-2',
                       label: 'Setting',
                       onTap: () {
                         Navigator.pop(context);
@@ -173,8 +174,8 @@ class AppDrawer extends ConsumerWidget {
               ],
             ),
             child: const Center(
-              child: Icon(
-                Icons.close,
+              child: AppIcon(
+                'close-circle',
                 size: 24,
                 color: AppColors.textPrimary,
               ),
@@ -257,7 +258,7 @@ class AppDrawer extends ConsumerWidget {
 
   Widget _buildMenuItem({
     required BuildContext context,
-    required IconData icon,
+    required String icon,
     required String label,
     required VoidCallback onTap,
   }) {
@@ -271,7 +272,7 @@ class AppDrawer extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            Icon(
+            AppIcon(
               icon,
               size: 24,
               color: AppColors.textSecondary,
@@ -334,8 +335,8 @@ class AppDrawer extends ConsumerWidget {
               ),
             ),
             SizedBox(width: 8),
-            Icon(
-              Icons.logout,
+            AppIcon(
+              'logout',
               size: 24,
               color: Color(0xFFDC2626),
             ),

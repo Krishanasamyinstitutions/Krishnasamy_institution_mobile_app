@@ -14,35 +14,35 @@ class FeeGroupUtils {
 
     if (lower.contains('school') || lower.contains('tuition')) {
       return {
-        'icon': Icons.school_rounded,
+        'icon': 'book',
         'color': const Color(0xFF0D9B5C),
         'iconBgColor': const Color(0xFFDCFCE7),
         'badgeColor': AppColors.success,
       };
     } else if (lower.contains('van') || lower.contains('bus') || lower.contains('transport')) {
       return {
-        'icon': Icons.directions_bus_rounded,
+        'icon': 'bus',
         'color': const Color(0xFFF59E0B),
         'iconBgColor': const Color(0xFFFEF3C7),
         'badgeColor': const Color(0xFFF59E0B),
       };
     } else if (lower.contains('hostel')) {
       return {
-        'icon': Icons.hotel_rounded,
+        'icon': 'home-2',
         'color': const Color(0xFF3B82F6),
         'iconBgColor': const Color(0xFFDBEAFE),
         'badgeColor': const Color(0xFF3B82F6),
       };
     } else if (lower.contains('exam') || lower.contains('test')) {
       return {
-        'icon': Icons.assignment_rounded,
+        'icon': 'task-square',
         'color': const Color(0xFFEF4444),
         'iconBgColor': const Color(0xFFFEE2E2),
         'badgeColor': const Color(0xFFEF4444),
       };
     } else {
       return {
-        'icon': Icons.receipt_rounded,
+        'icon': 'receipt',
         'color': AppColors.cardPurpleDark,
         'iconBgColor': const Color(0xFFF3E8FF),
         'badgeColor': AppColors.cardPurpleDark,

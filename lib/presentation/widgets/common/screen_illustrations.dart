@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
+import 'app_icon.dart';
 
 /// Animated Flutter widget-based illustrations for screens.
 /// Replaces GIF/PNG assets that fail to load on Flutter web.
@@ -35,7 +36,7 @@ class ScreenIllustrations {
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Container(width: size * 0.20, height: size * 0.20,
                     decoration: const BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [AppColors.primary, AppColors.primary600])),
-                    child: Icon(Icons.person_rounded, size: size * 0.12, color: Colors.white)),
+                    child: AppIcon('profile-circle', size: size * 0.12, color: Colors.white)),
                   SizedBox(height: size * 0.04),
                   Container(width: size * 0.32, height: size * 0.03, decoration: BoxDecoration(color: AppColors.gray200, borderRadius: BorderRadius.circular(size * 0.01))),
                   SizedBox(height: size * 0.025),
@@ -47,9 +48,9 @@ class ScreenIllustrations {
               Positioned(left: size * 0.06, top: size * 0.12, child: _FloatOffset(animation: anim, dy: 4.0, phase: 0.3, child: Container(
                 width: size * 0.14, height: size * 0.14,
                 decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2))]),
-                child: Icon(Icons.vpn_key_rounded, size: size * 0.07, color: AppColors.primary),
+                child: AppIcon('key', size: size * 0.07, color: AppColors.primary),
               ))),
-              Positioned(right: size * 0.08, bottom: size * 0.10, child: _PulseBadge(animation: anim, size: size * 0.22, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: Icons.login_rounded, iconSize: size * 0.11)),
+              Positioned(right: size * 0.08, bottom: size * 0.10, child: _PulseBadge(animation: anim, size: size * 0.22, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: 'login', iconSize: size * 0.11)),
             ],
           );
         }
@@ -73,7 +74,7 @@ class ScreenIllustrations {
                 boxShadow: [BoxShadow(color: blue.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(-2, 6))],
               ),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.vpn_key_rounded, size: size * 0.08, color: Colors.white),
+                AppIcon('key', size: size * 0.08, color: Colors.white),
                 SizedBox(height: size * 0.006),
                 Container(width: size * 0.12, height: size * 0.006, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
               ]),
@@ -85,11 +86,11 @@ class ScreenIllustrations {
               child: Column(children: [
                 // Green header
                 Container(height: size * 0.05, decoration: const BoxDecoration(gradient: LinearGradient(colors: [AppColors.primary, AppColors.primary600])),
-                  child: Center(child: Icon(Icons.person_rounded, size: size * 0.025, color: Colors.white))),
+                  child: Center(child: AppIcon('profile-circle', size: size * 0.025, color: Colors.white))),
                 SizedBox(height: size * 0.02),
                 // Avatar
                 Container(width: size * 0.06, height: size * 0.06, decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primary600])),
-                  child: Icon(Icons.person_rounded, size: size * 0.035, color: Colors.white)),
+                  child: AppIcon('profile-circle', size: size * 0.035, color: Colors.white)),
                 SizedBox(height: size * 0.015),
                 // Username field
                 Container(margin: EdgeInsets.symmetric(horizontal: size * 0.06), height: size * 0.024, decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(size * 0.006))),
@@ -105,16 +106,16 @@ class ScreenIllustrations {
 
             // Lock badge top-left
             Positioned(left: size * 0.04, top: size * 0.06, child: _FloatOffset(animation: anim, dy: 3.5, phase: 0.5, child: _PulseBadge(
-              animation: anim, size: size * 0.12, colors: const [blue, Color(0xFF2563EB)], icon: Icons.lock_rounded, iconSize: size * 0.06, borderColor: Colors.white,
+              animation: anim, size: size * 0.12, colors: const [blue, Color(0xFF2563EB)], icon: 'lock', iconSize: size * 0.06, borderColor: Colors.white,
             ))),
 
             // Login badge bottom-right
             Positioned(right: size * 0.04, bottom: size * 0.10, child: _PulseBadge(
-              animation: anim, size: size * 0.11, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: Icons.login_rounded, iconSize: size * 0.055, borderColor: Colors.white,
+              animation: anim, size: size * 0.11, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: 'login', iconSize: size * 0.055, borderColor: Colors.white,
             )),
 
             // Sparkle
-            Positioned(right: size * 0.18, top: size * 0.04, child: _FloatOffset(animation: anim, dy: 2.0, phase: 0.8, child: Icon(Icons.auto_awesome, size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
+            Positioned(right: size * 0.18, top: size * 0.04, child: _FloatOffset(animation: anim, dy: 2.0, phase: 0.8, child: AppIcon('star', size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
           ],
         );
       },
@@ -136,7 +137,7 @@ class ScreenIllustrations {
                 width: size * 0.52, height: size * 0.62,
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(size * 0.07), boxShadow: [BoxShadow(color: const Color(0xFF10B981).withValues(alpha: 0.14), blurRadius: 18, offset: const Offset(0, 6))]),
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Container(width: size * 0.20, height: size * 0.20, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF10B981).withValues(alpha: 0.12)), child: Icon(Icons.person_add_rounded, size: size * 0.12, color: const Color(0xFF059669))),
+                  Container(width: size * 0.20, height: size * 0.20, decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF10B981).withValues(alpha: 0.12)), child: AppIcon('user-add', size: size * 0.12, color: const Color(0xFF059669))),
                   SizedBox(height: size * 0.035),
                   for (int i = 0; i < 3; i++) ...[
                     Container(width: i < 2 ? size * 0.32 : size * 0.26, height: size * 0.028, decoration: BoxDecoration(color: AppColors.gray200, borderRadius: BorderRadius.circular(size * 0.01))),
@@ -149,9 +150,9 @@ class ScreenIllustrations {
               Positioned(right: size * 0.06, top: size * 0.12, child: _FloatOffset(animation: anim, dy: 3.5, phase: 0.5, child: Container(
                 width: size * 0.14, height: size * 0.14,
                 decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2))]),
-                child: Icon(Icons.shield_rounded, size: size * 0.07, color: const Color(0xFF10B981)),
+                child: AppIcon('shield', size: size * 0.07, color: const Color(0xFF10B981)),
               ))),
-              Positioned(right: size * 0.10, bottom: size * 0.10, child: _PulseBadge(animation: anim, size: size * 0.22, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: Icons.add_rounded, iconSize: size * 0.13)),
+              Positioned(right: size * 0.10, bottom: size * 0.10, child: _PulseBadge(animation: anim, size: size * 0.22, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: 'add', iconSize: size * 0.13)),
             ],
           );
         }
@@ -176,9 +177,9 @@ class ScreenIllustrations {
                 boxShadow: [BoxShadow(color: const Color(0xFF10B981).withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(2, 6))],
               ),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.shield_rounded, size: size * 0.08, color: Colors.white),
+                AppIcon('shield', size: size * 0.08, color: Colors.white),
                 SizedBox(height: size * 0.006),
-                Icon(Icons.check_rounded, size: size * 0.04, color: Colors.white.withValues(alpha: 0.7)),
+                AppIcon('tick-circle', size: size * 0.04, color: Colors.white.withValues(alpha: 0.7)),
               ]),
             ))),
 
@@ -187,7 +188,7 @@ class ScreenIllustrations {
               color: const Color(0xFFF8FAFC),
               child: Column(children: [
                 Container(height: size * 0.05, decoration: const BoxDecoration(gradient: LinearGradient(colors: [teal, deepTeal])),
-                  child: Center(child: Icon(Icons.person_add_rounded, size: size * 0.025, color: Colors.white))),
+                  child: Center(child: AppIcon('user-add', size: size * 0.025, color: Colors.white))),
                 SizedBox(height: size * 0.015),
                 for (int i = 0; i < 3; i++) ...[
                   Container(margin: EdgeInsets.symmetric(horizontal: size * 0.06), height: size * 0.022, decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(size * 0.006))),
@@ -201,16 +202,16 @@ class ScreenIllustrations {
 
             // Person-add badge top-left
             Positioned(left: size * 0.04, top: size * 0.06, child: _FloatOffset(animation: anim, dy: 3.5, phase: 0.5, child: _PulseBadge(
-              animation: anim, size: size * 0.12, colors: const [teal, deepTeal], icon: Icons.person_add_rounded, iconSize: size * 0.06, borderColor: Colors.white,
+              animation: anim, size: size * 0.12, colors: const [teal, deepTeal], icon: 'user-add', iconSize: size * 0.06, borderColor: Colors.white,
             ))),
 
             // Check badge bottom-right
             Positioned(right: size * 0.04, bottom: size * 0.10, child: _PulseBadge(
-              animation: anim, size: size * 0.11, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: Icons.check_rounded, iconSize: size * 0.055, borderColor: Colors.white,
+              animation: anim, size: size * 0.11, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: 'tick-circle', iconSize: size * 0.055, borderColor: Colors.white,
             )),
 
             // Sparkle
-            Positioned(left: size * 0.18, bottom: size * 0.06, child: _FloatOffset(animation: anim, dy: 1.5, phase: 0.1, child: Icon(Icons.auto_awesome, size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
+            Positioned(left: size * 0.18, bottom: size * 0.06, child: _FloatOffset(animation: anim, dy: 1.5, phase: 0.1, child: AppIcon('star', size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
           ],
         );
       },
@@ -232,7 +233,7 @@ class ScreenIllustrations {
                 width: size * 0.38, height: size * 0.62,
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(size * 0.055), boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.14), blurRadius: 18, offset: const Offset(0, 6))]),
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.sms_rounded, size: size * 0.08, color: AppColors.primary.withValues(alpha: 0.4)),
+                  AppIcon('sms', size: size * 0.08, color: AppColors.primary.withValues(alpha: 0.4)),
                   SizedBox(height: size * 0.03),
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(4, (i) => Container(
                     margin: EdgeInsets.symmetric(horizontal: size * 0.008), width: size * 0.055, height: size * 0.065,
@@ -246,9 +247,9 @@ class ScreenIllustrations {
               Positioned(left: size * 0.06, top: size * 0.14, child: _FloatOffset(animation: anim, dy: 4.0, phase: 0.4, child: Container(
                 width: size * 0.15, height: size * 0.15,
                 decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2))]),
-                child: Icon(Icons.mark_email_read_rounded, size: size * 0.075, color: AppColors.primary),
+                child: AppIcon('sms-tracking', size: size * 0.075, color: AppColors.primary),
               ))),
-              Positioned(right: size * 0.08, bottom: size * 0.10, child: _PulseBadge(animation: anim, size: size * 0.24, colors: const [AppColors.primary, AppColors.primary600], icon: Icons.verified_user_rounded, iconSize: size * 0.12)),
+              Positioned(right: size * 0.08, bottom: size * 0.10, child: _PulseBadge(animation: anim, size: size * 0.24, colors: const [AppColors.primary, AppColors.primary600], icon: 'verify', iconSize: size * 0.12)),
             ],
           );
         }
@@ -273,7 +274,7 @@ class ScreenIllustrations {
                 boxShadow: [BoxShadow(color: indigo.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(-2, 6))],
               ),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.mark_email_read_rounded, size: size * 0.08, color: Colors.white),
+                AppIcon('sms-tracking', size: size * 0.08, color: Colors.white),
                 SizedBox(height: size * 0.006),
                 Container(width: size * 0.12, height: size * 0.006, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
               ]),
@@ -284,11 +285,11 @@ class ScreenIllustrations {
               color: const Color(0xFFF8FAFC),
               child: Column(children: [
                 Container(height: size * 0.05, decoration: const BoxDecoration(gradient: LinearGradient(colors: [indigo, deepIndigo])),
-                  child: Center(child: Icon(Icons.sms_rounded, size: size * 0.025, color: Colors.white))),
+                  child: Center(child: AppIcon('sms', size: size * 0.025, color: Colors.white))),
                 SizedBox(height: size * 0.02),
                 // Lock circle
                 Container(width: size * 0.05, height: size * 0.05, decoration: BoxDecoration(shape: BoxShape.circle, color: indigo.withValues(alpha: 0.10)),
-                  child: Icon(Icons.lock_rounded, size: size * 0.025, color: indigo)),
+                  child: AppIcon('lock', size: size * 0.025, color: indigo)),
                 SizedBox(height: size * 0.015),
                 // 4 OTP code boxes
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(4, (i) => Container(
@@ -309,16 +310,16 @@ class ScreenIllustrations {
 
             // Verified badge top-left
             Positioned(left: size * 0.04, top: size * 0.06, child: _FloatOffset(animation: anim, dy: 3.5, phase: 0.5, child: _PulseBadge(
-              animation: anim, size: size * 0.12, colors: const [indigo, deepIndigo], icon: Icons.verified_user_rounded, iconSize: size * 0.06, borderColor: Colors.white,
+              animation: anim, size: size * 0.12, colors: const [indigo, deepIndigo], icon: 'verify', iconSize: size * 0.06, borderColor: Colors.white,
             ))),
 
             // Shield badge bottom-right
             Positioned(right: size * 0.04, bottom: size * 0.10, child: _PulseBadge(
-              animation: anim, size: size * 0.11, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: Icons.shield_rounded, iconSize: size * 0.055, borderColor: Colors.white,
+              animation: anim, size: size * 0.11, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: 'shield', iconSize: size * 0.055, borderColor: Colors.white,
             )),
 
             // Sparkle
-            Positioned(right: size * 0.18, top: size * 0.04, child: _FloatOffset(animation: anim, dy: 2.0, phase: 0.8, child: Icon(Icons.auto_awesome, size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
+            Positioned(right: size * 0.18, top: size * 0.04, child: _FloatOffset(animation: anim, dy: 2.0, phase: 0.8, child: AppIcon('star', size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
           ],
         );
       },
@@ -341,13 +342,13 @@ class ScreenIllustrations {
                 width: size * 0.42, height: size * 0.36, margin: EdgeInsets.only(top: size * 0.10),
                 decoration: BoxDecoration(gradient: const LinearGradient(colors: [AppColors.primary, AppColors.primary600]), borderRadius: BorderRadius.circular(size * 0.06), boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.28), blurRadius: 16, offset: const Offset(0, 5))]),
                 child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.lock_rounded, size: size * 0.16, color: Colors.white),
+                  AppIcon('lock', size: size * 0.16, color: Colors.white),
                   SizedBox(height: size * 0.02),
                   Container(width: size * 0.04, height: size * 0.06, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(size * 0.02))),
                 ]),
               )),
-              Positioned(right: size * 0.06, bottom: size * 0.08, child: _PulseBadge(animation: anim, size: size * 0.22, colors: const [Color(0xFFF59E0B), Color(0xFFD97706)], icon: Icons.vpn_key_rounded, iconSize: size * 0.11)),
-              Positioned(right: size * 0.10, top: size * 0.06, child: _FloatOffset(animation: anim, dy: 3.0, phase: 0.6, child: Icon(Icons.star_rounded, size: size * 0.08, color: const Color(0xFFF59E0B).withValues(alpha: 0.5)))),
+              Positioned(right: size * 0.06, bottom: size * 0.08, child: _PulseBadge(animation: anim, size: size * 0.22, colors: const [Color(0xFFF59E0B), Color(0xFFD97706)], icon: 'key', iconSize: size * 0.11)),
+              Positioned(right: size * 0.10, top: size * 0.06, child: _FloatOffset(animation: anim, dy: 3.0, phase: 0.6, child: AppIcon('star', size: size * 0.08, color: const Color(0xFFF59E0B).withValues(alpha: 0.5)))),
             ],
           );
         }
@@ -372,7 +373,7 @@ class ScreenIllustrations {
                 boxShadow: [BoxShadow(color: amber.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(2, 6))],
               ),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.vpn_key_rounded, size: size * 0.08, color: Colors.white),
+                AppIcon('key', size: size * 0.08, color: Colors.white),
                 SizedBox(height: size * 0.006),
                 Container(width: size * 0.12, height: size * 0.006, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
               ]),
@@ -383,9 +384,9 @@ class ScreenIllustrations {
               color: const Color(0xFFF8FAFC),
               child: Column(children: [
                 Container(height: size * 0.05, decoration: const BoxDecoration(gradient: LinearGradient(colors: [AppColors.primary, AppColors.primary600])),
-                  child: Center(child: Icon(Icons.lock_rounded, size: size * 0.025, color: Colors.white))),
+                  child: Center(child: AppIcon('lock', size: size * 0.025, color: Colors.white))),
                 SizedBox(height: size * 0.015),
-                Icon(Icons.lock_rounded, size: size * 0.04, color: AppColors.primary),
+                AppIcon('lock', size: size * 0.04, color: AppColors.primary),
                 SizedBox(height: size * 0.012),
                 // Password field
                 Container(margin: EdgeInsets.symmetric(horizontal: size * 0.06), height: size * 0.024, decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(size * 0.006))),
@@ -409,16 +410,16 @@ class ScreenIllustrations {
 
             // Shield badge top-left
             Positioned(left: size * 0.04, top: size * 0.06, child: _FloatOffset(animation: anim, dy: 3.5, phase: 0.5, child: _PulseBadge(
-              animation: anim, size: size * 0.12, colors: const [AppColors.primary, AppColors.primary600], icon: Icons.shield_rounded, iconSize: size * 0.06, borderColor: Colors.white,
+              animation: anim, size: size * 0.12, colors: const [AppColors.primary, AppColors.primary600], icon: 'shield', iconSize: size * 0.06, borderColor: Colors.white,
             ))),
 
             // Star badge bottom-right
             Positioned(right: size * 0.04, bottom: size * 0.10, child: _PulseBadge(
-              animation: anim, size: size * 0.11, colors: const [amber, deepAmber], icon: Icons.star_rounded, iconSize: size * 0.055, borderColor: Colors.white,
+              animation: anim, size: size * 0.11, colors: const [amber, deepAmber], icon: 'star', iconSize: size * 0.055, borderColor: Colors.white,
             )),
 
             // Sparkle
-            Positioned(left: size * 0.18, bottom: size * 0.06, child: _FloatOffset(animation: anim, dy: 1.5, phase: 0.1, child: Icon(Icons.auto_awesome, size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
+            Positioned(left: size * 0.18, bottom: size * 0.06, child: _FloatOffset(animation: anim, dy: 1.5, phase: 0.1, child: AppIcon('star', size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
           ],
         );
       },
@@ -439,14 +440,14 @@ class ScreenIllustrations {
               _FloatOffset(animation: anim, dy: 3.0, child: Container(
                 width: size * 0.48, height: size * 0.48,
                 decoration: BoxDecoration(shape: BoxShape.circle, gradient: const LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFD97706)]), boxShadow: [BoxShadow(color: const Color(0xFFF59E0B).withValues(alpha: 0.28), blurRadius: 20, offset: const Offset(0, 8))]),
-                child: Icon(Icons.help_outline_rounded, size: size * 0.26, color: Colors.white),
+                child: AppIcon('message-question', size: size * 0.26, color: Colors.white),
               )),
               Positioned(left: size * 0.08, top: size * 0.14, child: _FloatOffset(animation: anim, dy: 3.5, phase: 0.3, child: Container(
                 width: size * 0.14, height: size * 0.14,
                 decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 8, offset: const Offset(0, 2))]),
-                child: Icon(Icons.lock_open_rounded, size: size * 0.07, color: const Color(0xFFF59E0B)),
+                child: AppIcon('unlock', size: size * 0.07, color: const Color(0xFFF59E0B)),
               ))),
-              Positioned(right: size * 0.06, bottom: size * 0.10, child: _SpinBadge(animation: anim, size: size * 0.24, colors: const [AppColors.primary, AppColors.primary600], icon: Icons.refresh_rounded, iconSize: size * 0.12)),
+              Positioned(right: size * 0.06, bottom: size * 0.10, child: _SpinBadge(animation: anim, size: size * 0.24, colors: const [AppColors.primary, AppColors.primary600], icon: 'refresh', iconSize: size * 0.12)),
             ],
           );
         }
@@ -471,7 +472,7 @@ class ScreenIllustrations {
                 boxShadow: [BoxShadow(color: orange.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(-2, 6))],
               ),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.lock_open_rounded, size: size * 0.08, color: Colors.white),
+                AppIcon('unlock', size: size * 0.08, color: Colors.white),
                 SizedBox(height: size * 0.006),
                 Container(width: size * 0.12, height: size * 0.006, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
               ]),
@@ -482,11 +483,11 @@ class ScreenIllustrations {
               color: const Color(0xFFF8FAFC),
               child: Column(children: [
                 Container(height: size * 0.05, decoration: const BoxDecoration(gradient: LinearGradient(colors: [orange, deepOrange])),
-                  child: Center(child: Icon(Icons.help_outline_rounded, size: size * 0.025, color: Colors.white))),
+                  child: Center(child: AppIcon('message-question', size: size * 0.025, color: Colors.white))),
                 SizedBox(height: size * 0.02),
                 // Question mark icon
                 Container(width: size * 0.06, height: size * 0.06, decoration: BoxDecoration(shape: BoxShape.circle, color: orange.withValues(alpha: 0.10)),
-                  child: Icon(Icons.help_outline_rounded, size: size * 0.035, color: orange)),
+                  child: AppIcon('message-question', size: size * 0.035, color: orange)),
                 SizedBox(height: size * 0.015),
                 // Email field
                 Container(margin: EdgeInsets.symmetric(horizontal: size * 0.06), height: size * 0.024, decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(size * 0.006))),
@@ -498,16 +499,16 @@ class ScreenIllustrations {
 
             // Email badge top-left
             Positioned(left: size * 0.04, top: size * 0.06, child: _FloatOffset(animation: anim, dy: 3.5, phase: 0.5, child: _PulseBadge(
-              animation: anim, size: size * 0.12, colors: const [orange, deepOrange], icon: Icons.email_rounded, iconSize: size * 0.06, borderColor: Colors.white,
+              animation: anim, size: size * 0.12, colors: const [orange, deepOrange], icon: 'sms', iconSize: size * 0.06, borderColor: Colors.white,
             ))),
 
             // Refresh spin badge bottom-right
             Positioned(right: size * 0.04, bottom: size * 0.10, child: _SpinBadge(
-              animation: anim, size: size * 0.11, colors: const [AppColors.primary, AppColors.primary600], icon: Icons.refresh_rounded, iconSize: size * 0.055,
+              animation: anim, size: size * 0.11, colors: const [AppColors.primary, AppColors.primary600], icon: 'refresh', iconSize: size * 0.055,
             )),
 
             // Sparkle
-            Positioned(right: size * 0.18, top: size * 0.04, child: _FloatOffset(animation: anim, dy: 2.0, phase: 0.8, child: Icon(Icons.auto_awesome, size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
+            Positioned(right: size * 0.18, top: size * 0.04, child: _FloatOffset(animation: anim, dy: 2.0, phase: 0.8, child: AppIcon('star', size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
           ],
         );
       },
@@ -532,7 +533,7 @@ class ScreenIllustrations {
                 SizedBox(width: size * 0.02),
                 _FloatOffset(animation: anim, dy: 3.0, phase: 0.66, child: _avatar(size * 0.26, const Color(0xFF10B981))),
               ]),
-              Positioned(right: size * 0.06, bottom: size * 0.04, child: _PulseBadge(animation: anim, size: size * 0.19, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: Icons.check_rounded, iconSize: size * 0.10)),
+              Positioned(right: size * 0.06, bottom: size * 0.04, child: _PulseBadge(animation: anim, size: size * 0.19, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: 'tick-circle', iconSize: size * 0.10)),
             ],
           );
         }
@@ -557,7 +558,7 @@ class ScreenIllustrations {
                 boxShadow: [BoxShadow(color: purple.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(2, 6))],
               ),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.school_rounded, size: size * 0.08, color: Colors.white),
+                AppIcon('book', size: size * 0.08, color: Colors.white),
                 SizedBox(height: size * 0.006),
                 Container(width: size * 0.12, height: size * 0.006, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
               ]),
@@ -568,7 +569,7 @@ class ScreenIllustrations {
               color: const Color(0xFFF8FAFC),
               child: Column(children: [
                 Container(height: size * 0.05, decoration: const BoxDecoration(gradient: LinearGradient(colors: [purple, deepPurple])),
-                  child: Center(child: Icon(Icons.people_rounded, size: size * 0.025, color: Colors.white))),
+                  child: Center(child: AppIcon('people', size: size * 0.025, color: Colors.white))),
                 SizedBox(height: size * 0.01),
                 // 3 student rows
                 for (int i = 0; i < 3; i++) ...[
@@ -586,14 +587,14 @@ class ScreenIllustrations {
                           [purple, const Color(0xFF10B981), const Color(0xFF3B82F6)][i],
                           [deepPurple, const Color(0xFF059669), const Color(0xFF2563EB)][i],
                         ]),
-                      ), child: Icon(Icons.person_rounded, size: size * 0.015, color: Colors.white)),
+                      ), child: AppIcon('profile-circle', size: size * 0.015, color: Colors.white)),
                       SizedBox(width: size * 0.008),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Container(width: size * 0.10 - (i * size * 0.01), height: size * 0.005, decoration: BoxDecoration(color: const Color(0xFF94A3B8), borderRadius: BorderRadius.circular(1))),
                         SizedBox(height: size * 0.003),
                         Container(width: size * 0.07, height: size * 0.004, decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(1))),
                       ])),
-                      if (i == 0) Icon(Icons.check_circle_rounded, size: size * 0.018, color: purple),
+                      if (i == 0) AppIcon('tick-circle', size: size * 0.018, color: purple),
                     ]),
                   )),
                   SizedBox(height: size * 0.006),
@@ -606,16 +607,16 @@ class ScreenIllustrations {
 
             // People badge top-left
             Positioned(left: size * 0.04, top: size * 0.06, child: _FloatOffset(animation: anim, dy: 3.5, phase: 0.5, child: _PulseBadge(
-              animation: anim, size: size * 0.12, colors: const [purple, deepPurple], icon: Icons.people_rounded, iconSize: size * 0.06, borderColor: Colors.white,
+              animation: anim, size: size * 0.12, colors: const [purple, deepPurple], icon: 'people', iconSize: size * 0.06, borderColor: Colors.white,
             ))),
 
             // Check badge bottom-right
             Positioned(right: size * 0.04, bottom: size * 0.10, child: _PulseBadge(
-              animation: anim, size: size * 0.11, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: Icons.check_rounded, iconSize: size * 0.055, borderColor: Colors.white,
+              animation: anim, size: size * 0.11, colors: const [Color(0xFF10B981), Color(0xFF059669)], icon: 'tick-circle', iconSize: size * 0.055, borderColor: Colors.white,
             )),
 
             // Sparkle
-            Positioned(left: size * 0.18, bottom: size * 0.06, child: _FloatOffset(animation: anim, dy: 1.5, phase: 0.1, child: Icon(Icons.auto_awesome, size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
+            Positioned(left: size * 0.18, bottom: size * 0.06, child: _FloatOffset(animation: anim, dy: 1.5, phase: 0.1, child: AppIcon('star', size: size * 0.03, color: Colors.white.withValues(alpha: 0.3)))),
           ],
         );
       },
@@ -661,7 +662,7 @@ class ScreenIllustrations {
                   BoxShadow(color: AppColors.primary.withValues(alpha: 0.32), blurRadius: 24, offset: const Offset(0, 10)),
                 ],
               ),
-              child: Icon(Icons.school_rounded, size: size * 0.22, color: Colors.white),
+              child: AppIcon('book', size: size * 0.22, color: Colors.white),
             ),
           ),
           // Rupee badge bottom-right
@@ -672,7 +673,7 @@ class ScreenIllustrations {
               animation: anim,
               size: size * 0.20,
               colors: const [Color(0xFF10B981), Color(0xFF059669)],
-              icon: Icons.currency_rupee_rounded,
+              icon: 'empty-wallet',
               iconSize: size * 0.10,
             ),
           ),
@@ -694,7 +695,7 @@ class ScreenIllustrations {
                     BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 8, offset: const Offset(0, 2)),
                   ],
                 ),
-                child: Icon(Icons.verified_rounded, size: size * 0.09, color: AppColors.primary),
+                child: AppIcon('verify', size: size * 0.09, color: AppColors.primary),
               ),
             ),
           ),
@@ -716,7 +717,7 @@ class ScreenIllustrations {
                     BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 6, offset: const Offset(0, 2)),
                   ],
                 ),
-                child: Icon(Icons.receipt_long_rounded, size: size * 0.06, color: AppColors.primary),
+                child: AppIcon('receipt-text', size: size * 0.06, color: AppColors.primary),
               ),
             ),
           ),
@@ -756,7 +757,7 @@ class ScreenIllustrations {
                 boxShadow: [BoxShadow(color: blue.withValues(alpha: 0.30), blurRadius: 16, offset: const Offset(-2, 6))],
               ),
               child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Icon(Icons.school_rounded, size: size * 0.08, color: Colors.white),
+                AppIcon('book', size: size * 0.08, color: Colors.white),
                 SizedBox(height: size * 0.006),
                 Container(width: size * 0.12, height: size * 0.006, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2))),
               ]),
@@ -767,7 +768,7 @@ class ScreenIllustrations {
               color: const Color(0xFFF8FAFC),
               child: Column(children: [
                 Container(height: size * 0.05, decoration: const BoxDecoration(gradient: LinearGradient(colors: [AppColors.primary, AppColors.primary600])),
-                  child: Center(child: Icon(Icons.school_rounded, size: size * 0.025, color: Colors.white))),
+                  child: Center(child: AppIcon('book', size: size * 0.025, color: Colors.white))),
                 SizedBox(height: size * 0.015),
                 // Welcome text
                 Container(width: size * 0.16, height: size * 0.008, decoration: BoxDecoration(color: const Color(0xFF1F2937), borderRadius: BorderRadius.circular(2))),
@@ -778,7 +779,7 @@ class ScreenIllustrations {
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   for (final color in [AppColors.primary, blue, goldAccent]) ...[
                     Container(width: size * 0.04, height: size * 0.04, decoration: BoxDecoration(shape: BoxShape.circle, color: color.withValues(alpha: 0.12)),
-                      child: Icon(color == AppColors.primary ? Icons.payments_rounded : color == blue ? Icons.receipt_long_rounded : Icons.notifications_rounded, size: size * 0.018, color: color)),
+                      child: AppIcon(color == AppColors.primary ? 'wallet-3' : color == blue ? 'receipt-text' : 'notification', size: size * 0.018, color: color)),
                     SizedBox(width: size * 0.008),
                   ],
                 ]),
@@ -802,7 +803,7 @@ class ScreenIllustrations {
                   animation: anim,
                   size: size * 0.12,
                   colors: const [goldAccent, Color(0xFFF59E0B)],
-                  icon: Icons.currency_rupee_rounded,
+                  icon: 'empty-wallet',
                   iconSize: size * 0.06,
                   borderColor: Colors.white,
                 ),
@@ -827,7 +828,7 @@ class ScreenIllustrations {
                       BoxShadow(color: purple.withValues(alpha: 0.30), blurRadius: 6, offset: const Offset(0, 2)),
                     ],
                   ),
-                  child: Icon(Icons.receipt_long_rounded, size: size * 0.045, color: Colors.white),
+                  child: AppIcon('receipt-text', size: size * 0.045, color: Colors.white),
                 ),
               ),
             ),
@@ -840,7 +841,7 @@ class ScreenIllustrations {
                 animation: anim,
                 size: size * 0.11,
                 colors: const [Color(0xFF10B981), Color(0xFF059669)],
-                icon: Icons.verified_rounded,
+                icon: 'verify',
                 iconSize: size * 0.055,
                 borderColor: Colors.white,
               ),
@@ -854,7 +855,7 @@ class ScreenIllustrations {
                 animation: anim,
                 dy: 1.5,
                 phase: 0.1,
-                child: Icon(Icons.auto_awesome, size: size * 0.03,
+                child: AppIcon('star', size: size * 0.03,
                     color: Colors.white.withValues(alpha: 0.3)),
               ),
             ),
@@ -916,7 +917,7 @@ class ScreenIllustrations {
                       Row(children: [
                         Container(width: size * 0.03, height: size * 0.022, decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xFFE5C07B), Color(0xFFD4A259)]), borderRadius: BorderRadius.circular(2))),
                         const Spacer(),
-                        Icon(Icons.wifi_rounded, size: size * 0.025, color: Colors.white.withValues(alpha: 0.5)),
+                        AppIcon('wifi', size: size * 0.025, color: Colors.white.withValues(alpha: 0.5)),
                       ]),
                       const Spacer(),
                       Row(children: List.generate(4, (g) => Padding(
@@ -947,7 +948,7 @@ class ScreenIllustrations {
                 SizedBox(height: size * 0.018),
                 // Amount
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(Icons.currency_rupee_rounded, size: size * 0.03, color: const Color(0xFF1F2937)),
+                  AppIcon('empty-wallet', size: size * 0.03, color: const Color(0xFF1F2937)),
                   Container(width: size * 0.06, height: size * 0.012, decoration: BoxDecoration(color: const Color(0xFF1F2937), borderRadius: BorderRadius.circular(2))),
                 ]),
                 SizedBox(height: size * 0.012),
@@ -993,7 +994,7 @@ class ScreenIllustrations {
                       BoxShadow(color: goldAccent.withValues(alpha: 0.35), blurRadius: 8, offset: const Offset(0, 3)),
                     ],
                   ),
-                  child: Icon(Icons.currency_rupee_rounded, size: size * 0.055, color: Colors.white),
+                  child: AppIcon('empty-wallet', size: size * 0.055, color: Colors.white),
                 ),
               ),
             ),
@@ -1019,7 +1020,7 @@ class ScreenIllustrations {
                       BoxShadow(color: goldAccent.withValues(alpha: 0.25), blurRadius: 4, offset: const Offset(0, 2)),
                     ],
                   ),
-                  child: Icon(Icons.currency_rupee_rounded, size: size * 0.032, color: Colors.white),
+                  child: AppIcon('empty-wallet', size: size * 0.032, color: Colors.white),
                 ),
               ),
             ),
@@ -1032,7 +1033,7 @@ class ScreenIllustrations {
                 animation: anim,
                 size: size * 0.14,
                 colors: [successGreen, const Color(0xFF059669)],
-                icon: Icons.check_circle_rounded,
+                icon: 'tick-circle',
                 iconSize: size * 0.07,
                 borderColor: Colors.white,
               ),
@@ -1077,7 +1078,7 @@ class ScreenIllustrations {
                         ),
                       ),
                       SizedBox(height: size * 0.006),
-                      Icon(Icons.check_rounded, size: size * 0.03, color: successGreen),
+                      AppIcon('tick-circle', size: size * 0.03, color: successGreen),
                     ],
                   ),
                 ),
@@ -1092,7 +1093,7 @@ class ScreenIllustrations {
                 animation: anim,
                 dy: 2.0,
                 phase: 0.8,
-                child: Icon(Icons.auto_awesome, size: size * 0.04,
+                child: AppIcon('star', size: size * 0.04,
                     color: isDark ? goldAccent.withValues(alpha: 0.6) : AppColors.primary.withValues(alpha: 0.3)),
               ),
             ),
@@ -1103,7 +1104,7 @@ class ScreenIllustrations {
                 animation: anim,
                 dy: 1.5,
                 phase: 0.1,
-                child: Icon(Icons.auto_awesome, size: size * 0.03,
+                child: AppIcon('star', size: size * 0.03,
                     color: isDark ? Colors.white.withValues(alpha: 0.3) : AppColors.primary.withValues(alpha: 0.2)),
               ),
             ),
@@ -1169,9 +1170,9 @@ class ScreenIllustrations {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.shield_rounded, size: size * 0.12, color: Colors.white),
+                      AppIcon('shield', size: size * 0.12, color: Colors.white),
                       SizedBox(height: size * 0.012),
-                      Icon(Icons.check_rounded, size: size * 0.06, color: Colors.white.withValues(alpha: 0.7)),
+                      AppIcon('tick-circle', size: size * 0.06, color: Colors.white.withValues(alpha: 0.7)),
                     ],
                   ),
                 ),
@@ -1184,13 +1185,13 @@ class ScreenIllustrations {
               child: Column(children: [
                 Container(height: size * 0.05, decoration: const BoxDecoration(gradient: LinearGradient(colors: [purple, deepPurple])),
                   child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.security_rounded, size: size * 0.022, color: Colors.white.withValues(alpha: 0.8)),
+                    AppIcon('shield-tick', size: size * 0.022, color: Colors.white.withValues(alpha: 0.8)),
                     SizedBox(width: size * 0.008),
                     Container(width: size * 0.07, height: size * 0.006, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2))),
                   ])),
                 SizedBox(height: size * 0.018),
                 Container(width: size * 0.07, height: size * 0.07, decoration: BoxDecoration(shape: BoxShape.circle, color: purple.withValues(alpha: 0.10)),
-                  child: Icon(Icons.lock_rounded, size: size * 0.035, color: purple)),
+                  child: AppIcon('lock', size: size * 0.035, color: purple)),
                 SizedBox(height: size * 0.012),
                 Row(mainAxisAlignment: MainAxisAlignment.center, children: List.generate(4, (i) => Container(
                   margin: EdgeInsets.symmetric(horizontal: size * 0.006),
@@ -1220,7 +1221,7 @@ class ScreenIllustrations {
                   animation: anim,
                   size: size * 0.12,
                   colors: const [purple, deepPurple],
-                  icon: Icons.lock_rounded,
+                  icon: 'lock',
                   iconSize: size * 0.06,
                   borderColor: Colors.white,
                 ),
@@ -1246,7 +1247,7 @@ class ScreenIllustrations {
                       BoxShadow(color: teal.withValues(alpha: 0.30), blurRadius: 8, offset: const Offset(0, 3)),
                     ],
                   ),
-                  child: Icon(Icons.fingerprint_rounded, size: size * 0.055, color: Colors.white),
+                  child: AppIcon('finger-scan', size: size * 0.055, color: Colors.white),
                 ),
               ),
             ),
@@ -1269,7 +1270,7 @@ class ScreenIllustrations {
                       BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 6, offset: const Offset(0, 2)),
                     ],
                   ),
-                  child: Icon(Icons.vpn_key_rounded, size: size * 0.04, color: purple),
+                  child: AppIcon('key', size: size * 0.04, color: purple),
                 ),
               ),
             ),
@@ -1282,7 +1283,7 @@ class ScreenIllustrations {
                 animation: anim,
                 dy: 2.0,
                 phase: 0.8,
-                child: Icon(Icons.auto_awesome, size: size * 0.035,
+                child: AppIcon('star', size: size * 0.035,
                     color: isDark ? purple.withValues(alpha: 0.5) : teal.withValues(alpha: 0.3)),
               ),
             ),
@@ -1372,7 +1373,7 @@ class ScreenIllustrations {
               child: Column(children: [
                 Container(height: size * 0.05, decoration: const BoxDecoration(gradient: LinearGradient(colors: [amber, deepAmber])),
                   child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.notifications_rounded, size: size * 0.022, color: Colors.white.withValues(alpha: 0.8)),
+                    AppIcon('notification', size: size * 0.022, color: Colors.white.withValues(alpha: 0.8)),
                     SizedBox(width: size * 0.008),
                     Container(width: size * 0.07, height: size * 0.006, decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(2))),
                   ])),
@@ -1388,7 +1389,7 @@ class ScreenIllustrations {
                     ),
                     child: Row(children: [
                       Container(width: size * 0.025, height: size * 0.025, decoration: BoxDecoration(shape: BoxShape.circle, color: [amber, red, const Color(0xFF3B82F6)][i].withValues(alpha: 0.15)),
-                        child: Icon([Icons.payment_rounded, Icons.warning_rounded, Icons.info_rounded][i], size: size * 0.013, color: [amber, red, const Color(0xFF3B82F6)][i])),
+                        child: AppIcon(['wallet-3', 'warning-2', 'info-circle'][i], size: size * 0.013, color: [amber, red, const Color(0xFF3B82F6)][i])),
                       SizedBox(width: size * 0.008),
                       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Container(width: size * 0.12 - (i * size * 0.01), height: size * 0.004, decoration: BoxDecoration(color: const Color(0xFF94A3B8), borderRadius: BorderRadius.circular(1))),
@@ -1407,7 +1408,7 @@ class ScreenIllustrations {
                   padding: EdgeInsets.symmetric(vertical: size * 0.006, horizontal: size * 0.01),
                   decoration: BoxDecoration(color: red.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(size * 0.008), border: Border.all(color: red.withValues(alpha: 0.2), width: 1)),
                   child: Row(children: [
-                    Icon(Icons.access_time_rounded, size: size * 0.016, color: red),
+                    AppIcon('clock', size: size * 0.016, color: red),
                     SizedBox(width: size * 0.005),
                     Container(width: size * 0.07, height: size * 0.004, decoration: BoxDecoration(color: red.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(1))),
                   ]),
@@ -1428,7 +1429,7 @@ class ScreenIllustrations {
                   animation: anim,
                   size: size * 0.12,
                   colors: const [amber, deepAmber],
-                  icon: Icons.calendar_today_rounded,
+                  icon: 'calendar',
                   iconSize: size * 0.055,
                   borderColor: Colors.white,
                 ),
@@ -1473,7 +1474,7 @@ class ScreenIllustrations {
                       BoxShadow(color: Colors.black.withValues(alpha: 0.10), blurRadius: 6, offset: const Offset(0, 2)),
                     ],
                   ),
-                  child: Icon(Icons.access_time_rounded, size: size * 0.045, color: amber),
+                  child: AppIcon('clock', size: size * 0.045, color: amber),
                 ),
               ),
             ),
@@ -1486,7 +1487,7 @@ class ScreenIllustrations {
                 animation: anim,
                 size: size * 0.11,
                 colors: const [Color(0xFF10B981), Color(0xFF059669)],
-                icon: Icons.check_rounded,
+                icon: 'tick-circle',
                 iconSize: size * 0.055,
                 borderColor: Colors.white,
               ),
@@ -1500,7 +1501,7 @@ class ScreenIllustrations {
                 animation: anim,
                 dy: 2.0,
                 phase: 0.8,
-                child: Icon(Icons.auto_awesome, size: size * 0.035,
+                child: AppIcon('star', size: size * 0.035,
                     color: isDark ? amber.withValues(alpha: 0.5) : amber.withValues(alpha: 0.3)),
               ),
             ),
@@ -1579,7 +1580,7 @@ class ScreenIllustrations {
             gradient: LinearGradient(colors: [color, color.withValues(alpha: 0.8)]),
             boxShadow: [BoxShadow(color: color.withValues(alpha: 0.22), blurRadius: 8, offset: const Offset(0, 3))],
           ),
-          child: Icon(Icons.person_rounded, size: size * 0.50, color: Colors.white),
+          child: AppIcon('profile-circle', size: size * 0.50, color: Colors.white),
         ),
         SizedBox(height: size * 0.10),
         Container(
@@ -1706,7 +1707,7 @@ class _PulseBadge extends StatelessWidget {
   final Animation<double> animation;
   final double size;
   final List<Color> colors;
-  final IconData icon;
+  final String icon;
   final double iconSize;
   final Color borderColor;
 
@@ -1735,7 +1736,7 @@ class _PulseBadge extends StatelessWidget {
             BoxShadow(color: colors[0].withValues(alpha: 0.25), blurRadius: 8, offset: const Offset(0, 2)),
           ],
         ),
-        child: Icon(icon, size: iconSize, color: Colors.white),
+        child: AppIcon(icon, size: iconSize, color: Colors.white),
       ),
     );
   }
@@ -1746,7 +1747,7 @@ class _SpinBadge extends StatelessWidget {
   final Animation<double> animation;
   final double size;
   final List<Color> colors;
-  final IconData icon;
+  final String icon;
   final double iconSize;
 
   const _SpinBadge({
@@ -1772,7 +1773,7 @@ class _SpinBadge extends StatelessWidget {
       ),
       child: Transform.rotate(
         angle: animation.value * 2 * math.pi,
-        child: Icon(icon, size: iconSize, color: Colors.white),
+        child: AppIcon(icon, size: iconSize, color: Colors.white),
       ),
     );
   }
@@ -1795,7 +1796,7 @@ class _WobbleBell extends StatelessWidget {
     final angle = math.sin(animation.value * 2 * math.pi) * 0.15;
     return Transform.rotate(
       angle: angle,
-      child: Icon(Icons.notifications_rounded, size: size, color: color),
+      child: AppIcon('notification', size: size, color: color),
     );
   }
 }

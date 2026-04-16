@@ -4,6 +4,7 @@ import '../../../core/constants/app_sizes.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../data/models/fee_model.dart';
 import '../common/app_card.dart';
+import '../common/app_icon.dart';
 
 class FeeSummaryCard extends StatelessWidget {
   final FeeSummary summary;
@@ -194,8 +195,8 @@ class FeeSummaryCard extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          Icons.schedule_rounded,
+        AppIcon(
+          'clock',
           size: 14,
           color: AppColors.textTertiary,
         ),

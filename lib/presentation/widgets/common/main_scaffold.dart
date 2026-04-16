@@ -12,6 +12,7 @@ import '../../providers/notification_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/institution_provider.dart';
+import 'app_icon.dart';
 
 class MainScaffold extends ConsumerWidget {
   final Widget child;
@@ -44,26 +45,6 @@ class MainScaffold extends ConsumerWidget {
             location != '/notifications');
   }
 
-  String _getPageTitle(String location) {
-    if (location.startsWith('/support')) return 'Support';
-    if (location.startsWith('/switch-student')) return 'Switch Student';
-    if (location.startsWith('/cart')) return 'Payment Queue';
-    if (location.startsWith('/all-pending-fees')) return 'All Pending Fees';
-    if (location.startsWith('/pay-all-fees')) return 'Pay All Fees';
-    if (location.startsWith('/paid-fees')) return 'Paid Fees';
-    if (location.startsWith('/transaction')) return 'Transaction Details';
-    if (location.startsWith('/fees/')) return 'Fee Details';
-    if (location.startsWith('/payment-history/') &&
-        location != '/payment-history') return 'Transaction Details';
-    if (location.startsWith('/notifications/') &&
-        location != '/notifications') return 'Notification';
-    if (location.startsWith('/home')) return 'Dashboard';
-    if (location.startsWith('/payment-history')) return 'Payment History';
-    if (location.startsWith('/notifications')) return 'Notifications';
-    if (location.startsWith('/profile')) return 'Profile';
-    return 'Dashboard';
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedIndex = _calculateSelectedIndex(context);
@@ -79,40 +60,43 @@ class MainScaffold extends ConsumerWidget {
   }
 
   // ────────────────────────────────────────────────────────────────
-  // Desktop: full-height sidebar + (top bar + content)
+  // Desktop: ONE unified rounded container wrapping sidebar | header+content
   // ────────────────────────────────────────────────────────────────
   Widget _buildDesktopLayout(
       BuildContext context, WidgetRef ref, int selectedIndex, bool isDark) {
+    const double sidebarWidth = 260;
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBg(context),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Full-height sidebar (floating card)
-            _buildDesktopSidebar(context, ref, selectedIndex, isDark),
-            const SizedBox(width: 16),
-            // Top bar + content (floating card)
-            Expanded(
-              child: Column(
-                children: [
-                  // Top bar as rounded card
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.cardBg(context),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: AppColors.cardShadow(context),
-                    ),
-                    child: _buildDesktopTopBar(context, ref, isDark, selectedIndex),
+      backgroundColor: AppColors.cardBg(context),
+      body: Column(
+        children: [
+          // Full-width header spanning the entire top
+          _buildDesktopTopBar(context, ref, isDark, selectedIndex),
+          Divider(
+              height: 1, thickness: 1, color: AppColors.borderC(context)),
+          // Below header: sidebar on the left, content on the right
+          Expanded(
+            child: Row(
+              children: [
+                SizedBox(
+                  width: sidebarWidth,
+                  child: _buildDesktopSidebar(
+                      context, ref, selectedIndex, isDark),
+                ),
+                VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: AppColors.borderC(context)),
+                Expanded(
+                  child: Container(
+                    color: AppColors.scaffoldBg(context),
+                    padding: const EdgeInsets.all(16),
+                    child: child,
                   ),
-                  const SizedBox(height: 16),
-                  // Content area
-                  Expanded(child: child),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -125,110 +109,81 @@ class MainScaffold extends ConsumerWidget {
     final selectedStudent = ref.watch(selectedStudentProvider);
     final unreadCount = ref.watch(notificationCountProvider);
     final cartCount = ref.watch(cartItemCountProvider);
-    final location = GoRouterState.of(context).matchedLocation;
-    final pageTitle = _getPageTitle(location);
+    final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
+    final institution = institutionAsync.valueOrNull;
+    final schoolName = institution?.name ?? 'School Fees';
+    final logoUrl = institution?.logoUrl;
+    final hasLogo = logoUrl != null && logoUrl.isNotEmpty;
 
     return Container(
       height: 64,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
-          // Page title
-          Text(
-            pageTitle,
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimaryC(context),
+          // Brand: school logo + institution name (moved to the left)
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: AppColors.borderC(context).withValues(alpha: 0.3)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: hasLogo
+                ? CachedNetworkImage(
+                    imageUrl: logoUrl,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.contain,
+                    errorWidget: (context, url, error) => Container(
+                        color: AppColors.primary,
+                        child: const Center(child: AppIcon('book',
+                            color: Colors.white, size: 26))),
+                  )
+                : Container(
+                    color: AppColors.primary,
+                    child: const Center(child: AppIcon('book',
+                        color: Colors.white, size: 26))),
+          ),
+          const SizedBox(width: 12),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 260),
+            child: Text(
+              schoolName,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimaryC(context),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 32),
-          // Search bar
-          Expanded(
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 480),
-                child: _TopBarSearchField(),
-              ),
-            ),
+          const Spacer(),
+          // Compact search bar positioned next to the cart icon
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 320),
+            child: _TopBarSearchField(),
           ),
-          const SizedBox(width: 24),
-          // Cart icon with badge
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                onPressed: () => context.push(Routes.cart),
-                icon: Icon(
-                  Icons.shopping_cart_outlined,
-                  color: AppColors.textSecondaryC(context),
-                  size: 24,
-                ),
-              ),
-              if (cartCount > 0)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        cartCount > 9 ? '9+' : '$cartCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+          const SizedBox(width: 12),
+          // Cart icon with badge — outlined circle per reference
+          _buildTopBarIconButton(
+            context: context,
+            svgPath: 'assets/icons/Cart.svg',
+            badge: cartCount,
+            onTap: () => context.push(Routes.cart),
           ),
-          const SizedBox(width: 4),
-          // Notification bell with unread badge
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                onPressed: () => context.go(Routes.notifications),
-                icon: Icon(
-                  Icons.notifications_outlined,
-                  color: AppColors.textSecondaryC(context),
-                  size: 24,
-                ),
-              ),
-              if (unreadCount > 0)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        unreadCount > 9 ? '9+' : '$unreadCount',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+          const SizedBox(width: 10),
+          // Notification bell with unread badge — outlined circle per reference
+          _buildTopBarIconButton(
+            context: context,
+            svgPath: 'assets/main icons/line icons/notification.svg',
+            badge: unreadCount,
+            onTap: () => context.go(Routes.notifications),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 14),
           // User avatar + student name + dropdown menu
           PopupMenuButton<String>(
             offset: const Offset(0, 50),
@@ -246,7 +201,7 @@ class MainScaffold extends ConsumerWidget {
                 value: 'switch',
                 child: Row(
                   children: [
-                    Icon(Icons.swap_horiz_rounded, size: 20, color: AppColors.textSecondaryC(context)),
+                    AppIcon('arrow-swap-horizontal', size: 20, color: AppColors.textSecondaryC(context)),
                     const SizedBox(width: 10),
                     Text(
                       'Switch Account',
@@ -263,7 +218,7 @@ class MainScaffold extends ConsumerWidget {
                 value: 'logout',
                 child: Row(
                   children: [
-                    const Icon(Icons.logout_rounded, size: 20, color: AppColors.error),
+                    const AppIcon('logout', size: 20, color: AppColors.error),
                     const SizedBox(width: 10),
                     Text(
                       'Logout',
@@ -343,8 +298,8 @@ class MainScaffold extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                Icon(
-                  Icons.keyboard_arrow_down_rounded,
+                AppIcon(
+                  'arrow-down',
                   size: 20,
                   color: AppColors.textHintC(context),
                 ),
@@ -352,6 +307,69 @@ class MainScaffold extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTopBarIconButton({
+    required BuildContext context,
+    required String svgPath,
+    required int badge,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: const BoxDecoration(
+          color: Color(0xFF121212),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x26000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
+          children: [
+            SvgPicture.asset(
+              svgPath,
+              width: 20,
+              height: 20,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            ),
+            if (badge > 0)
+              Positioned(
+                top: -3,
+                right: -3,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  constraints:
+                      const BoxConstraints(minWidth: 16, minHeight: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: Text(
+                    badge > 9 ? '9+' : '$badge',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -364,100 +382,25 @@ class MainScaffold extends ConsumerWidget {
   }
 
   // ────────────────────────────────────────────────────────────────
-  // Desktop sidebar — full-height with logo, nav, settings & logout
+  // Desktop sidebar — brand + search + grouped nav + logout
+  // Rendered inside the unified outer container, so it has no own card styling.
   // ────────────────────────────────────────────────────────────────
   Widget _buildDesktopSidebar(
       BuildContext context, WidgetRef ref, int selectedIndex, bool isDark) {
-    final institutionAsync = ref.watch(selectedStudentInstitutionProvider);
-    final institution = institutionAsync.valueOrNull;
-    final schoolName = institution?.name ?? 'School Fees';
-    final logoUrl = institution?.logoUrl;
-    final hasLogo = logoUrl != null && logoUrl.isNotEmpty;
-
-    return Container(
-      width: 260,
-      decoration: BoxDecoration(
-        color: AppColors.cardBg(context),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: AppColors.cardShadow(context),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // School Logo + Name (64px to align with top bar)
-          Container(
-            height: 64,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.borderC(context).withValues(alpha: 0.3)),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: hasLogo
-                      ? CachedNetworkImage(
-                          imageUrl: logoUrl,
-                          width: 36,
-                          height: 36,
-                          fit: BoxFit.contain,
-                          errorWidget: (context, url, error) => Container(
-                              color: AppColors.primary,
-                              child: const Icon(
-                                  Icons.school_rounded,
-                                  color: Colors.white,
-                                  size: 20)),
-                        )
-                      : Container(
-                          color: AppColors.primary,
-                          child: const Icon(Icons.school_rounded,
-                              color: Colors.white, size: 20)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    schoolName,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimaryC(context),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Divider(height: 1, color: AppColors.borderC(context)),
-          const SizedBox(height: 20),
-          // Menu label
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              'MENU',
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textHintC(context),
-                letterSpacing: 1.2,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Nav items
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 20),
+        // MAIN MENU group
+          _buildSidebarSectionLabel(context, 'MAIN MENU'),
+          const SizedBox(height: 8),
           _buildSidebarItem(
             context: context,
             index: 0,
             selectedIndex: selectedIndex,
             label: 'Dashboard',
-            outlinedIcon: Icons.dashboard_outlined,
-            filledIcon: Icons.dashboard_rounded,
+            lineSvg: 'assets/main icons/line icons/home.svg',
+            fillSvg: 'assets/main icons/fill icons/home.svg',
             onTap: () => context.go(Routes.home),
           ),
           _buildSidebarItem(
@@ -465,8 +408,8 @@ class MainScaffold extends ConsumerWidget {
             index: 1,
             selectedIndex: selectedIndex,
             label: 'History',
-            outlinedIcon: Icons.receipt_long_outlined,
-            filledIcon: Icons.receipt_long_rounded,
+            lineSvg: 'assets/main icons/line icons/receipt-item.svg',
+            fillSvg: 'assets/main icons/fill icons/receipt-item.svg',
             onTap: () => context.go(Routes.paymentHistory),
           ),
           _buildSidebarItem(
@@ -474,55 +417,49 @@ class MainScaffold extends ConsumerWidget {
             index: 2,
             selectedIndex: selectedIndex,
             label: 'Alerts',
-            outlinedIcon: Icons.notifications_outlined,
-            filledIcon: Icons.notifications_rounded,
+            lineSvg: 'assets/main icons/line icons/notification.svg',
+            fillSvg: 'assets/main icons/fill icons/notification.svg',
             onTap: () => context.go(Routes.notifications),
             badge: ref.watch(notificationCountProvider),
           ),
+          const SizedBox(height: 20),
+          // GENERAL group
+          _buildSidebarSectionLabel(context, 'GENERAL'),
+          const SizedBox(height: 8),
           _buildSidebarItem(
             context: context,
             index: 3,
             selectedIndex: selectedIndex,
             label: 'Profile',
-            outlinedIcon: Icons.person_outline_rounded,
-            filledIcon: Icons.person_rounded,
+            lineSvg: 'assets/main icons/line icons/profile-circle.svg',
+            fillSvg: 'assets/main icons/fill icons/profile-circle.svg',
             onTap: () => context.go(Routes.profile),
           ),
-          // School logo watermark in center
-          Expanded(
-            child: Center(
-              child: hasLogo
-                  ? Opacity(
-                      opacity: isDark ? 0.06 : 0.05,
-                      child: CachedNetworkImage(
-                        imageUrl: logoUrl,
-                        width: 120,
-                        height: 120,
-                        fit: BoxFit.contain,
-                        errorWidget: (context, url, error) =>
-                            const SizedBox.shrink(),
-                      ),
-                    )
-                  : Opacity(
-                      opacity: isDark ? 0.06 : 0.05,
-                      child: Icon(
-                        Icons.school_rounded,
-                        size: 120,
-                        color: AppColors.textPrimaryC(context),
-                      ),
-                    ),
-            ),
+          _buildSidebarItem(
+            context: context,
+            index: -1,
+            selectedIndex: selectedIndex,
+            label: 'Logout',
+            fallbackIcon: 'logout',
+            onTap: () => _showLogoutDialog(context, ref),
           ),
-          Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.borderC(context)),
-          const SizedBox(height: 8),
-          _buildSidebarBottomItem(
-            context,
-            Icons.logout_rounded,
-            'Logout',
-            () => _showLogoutDialog(context, ref),
-          ),
-          const SizedBox(height: 16),
+          // Fill remaining space — no watermark, cleaner per reference
+          const Expanded(child: SizedBox.shrink()),
         ],
+      );
+  }
+
+  Widget _buildSidebarSectionLabel(BuildContext context, String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 4, 20, 0),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF121212),
+          letterSpacing: 1.2,
+        ),
       ),
     );
   }
@@ -532,12 +469,27 @@ class MainScaffold extends ConsumerWidget {
     required int index,
     required int selectedIndex,
     required String label,
-    required IconData outlinedIcon,
-    required IconData filledIcon,
     required VoidCallback onTap,
+    String? lineSvg,
+    String? fillSvg,
+    String? fallbackIcon,
     int badge = 0,
   }) {
+    assert(
+      (lineSvg != null && fillSvg != null) || fallbackIcon != null,
+      'Provide either lineSvg + fillSvg or a fallbackIcon (AppIcon name).',
+    );
     final isSelected = index == selectedIndex;
+    final Color fg =
+        isSelected ? Colors.white : AppColors.textSecondaryC(context);
+    final Widget iconWidget = (lineSvg != null && fillSvg != null)
+        ? SvgPicture.asset(
+            isSelected ? fillSvg : lineSvg,
+            width: 20,
+            height: 20,
+            colorFilter: ColorFilter.mode(fg, BlendMode.srcIn),
+          )
+        : AppIcon(fallbackIcon!, size: 20, color: fg);
 
     return GestureDetector(
       onTap: onTap,
@@ -547,37 +499,32 @@ class MainScaffold extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
           children: [
-            Icon(
-              isSelected ? filledIcon : outlinedIcon,
-              size: 20,
-              color: isSelected ? AppColors.primary : AppColors.textHintC(context),
-            ),
+            iconWidget,
             const SizedBox(width: 12),
             Text(
               label,
               style: TextStyle(
                 fontSize: 14,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                color:
-                    isSelected ? AppColors.primary : AppColors.textHintC(context),
+                fontWeight: FontWeight.w600,
+                color: fg,
               ),
             ),
             if (badge > 0) ...[
               const Spacer(),
               Container(
-                constraints: const BoxConstraints(minWidth: 20, maxWidth: 28),
+                constraints: const BoxConstraints(minWidth: 22, maxWidth: 32),
                 height: 20,
-                padding: const EdgeInsets.symmetric(horizontal: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.error,
-                  borderRadius: BorderRadius.circular(10),
+                  color: isSelected
+                      ? Colors.white.withValues(alpha: 0.25)
+                      : AppColors.error,
+                  borderRadius: BorderRadius.circular(999),
                 ),
                 child: Center(
                   child: Text(
@@ -592,36 +539,6 @@ class MainScaffold extends ConsumerWidget {
                 ),
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSidebarBottomItem(
-      BuildContext context, IconData icon, String label, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.error.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: AppColors.error),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppColors.error,
-              ),
-            ),
           ],
         ),
       ),
@@ -814,6 +731,52 @@ class _TopBarSearchFieldState extends State<_TopBarSearchField> {
     super.dispose();
   }
 
+  void _onFilterSelected(String value) {
+    final String? query = _controller.text.trim().isEmpty
+        ? null
+        : Uri.encodeComponent(_controller.text.trim());
+    switch (value) {
+      case 'all':
+        context.go(Routes.fees);
+        break;
+      case 'pending':
+        context.go(query != null
+            ? '${Routes.allPendingFees}?group=$query'
+            : Routes.allPendingFees);
+        break;
+      case 'paid':
+        context.go(Routes.paidFees);
+        break;
+      case 'pay_all':
+        context.go(Routes.payAllFees);
+        break;
+    }
+    _controller.clear();
+    _focusNode.unfocus();
+  }
+
+  PopupMenuItem<String> _filterMenuItem(
+      BuildContext context, String value, String label, String icon) {
+    return PopupMenuItem<String>(
+      value: value,
+      height: 40,
+      child: Row(
+        children: [
+          AppIcon(icon, size: 18, color: AppColors.textSecondaryC(context)),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimaryC(context),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _onSearch(String query) {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return;
@@ -846,36 +809,38 @@ class _TopBarSearchFieldState extends State<_TopBarSearchField> {
 
   @override
   Widget build(BuildContext context) {
+    final bool hasText = _controller.text.isNotEmpty;
+
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      height: 42,
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      height: 48,
       decoration: BoxDecoration(
-        color: _hasFocus
-            ? AppColors.cardBg(context)
-            : AppColors.scaffoldBg(context),
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.cardBg(context),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color: _hasFocus
               ? AppColors.primary.withValues(alpha: 0.5)
               : AppColors.borderC(context).withValues(alpha: 0.5),
-          width: _hasFocus ? 1.5 : 1,
+          width: _hasFocus ? 1.4 : 1,
         ),
         boxShadow: _hasFocus
             ? [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.08),
-                  blurRadius: 8,
+                  color: AppColors.primary.withValues(alpha: 0.12),
+                  blurRadius: 10,
+                  spreadRadius: 0.5,
                   offset: const Offset(0, 2),
                 ),
               ]
-            : [],
+            : const [],
       ),
       child: Row(
         children: [
           const SizedBox(width: 14),
-          Icon(
-            Icons.search_rounded,
-            size: 18,
+          AppIcon(
+            'search-normal-1',
+            size: 20,
             color: _hasFocus
                 ? AppColors.primary
                 : AppColors.textHintC(context),
@@ -886,19 +851,27 @@ class _TopBarSearchFieldState extends State<_TopBarSearchField> {
               controller: _controller,
               focusNode: _focusNode,
               textAlignVertical: TextAlignVertical.center,
+              cursorColor: AppColors.primary,
+              cursorHeight: 16,
               decoration: InputDecoration(
-                hintText: 'Search fees, payments, pages...',
+                hintText: 'Search anything...',
                 hintStyle: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
                   color: AppColors.textHintC(context),
                 ),
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                filled: false,
                 isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 13.5,
                 fontWeight: FontWeight.w500,
                 color: AppColors.textPrimaryC(context),
               ),
@@ -906,50 +879,82 @@ class _TopBarSearchFieldState extends State<_TopBarSearchField> {
               onSubmitted: _onSearch,
             ),
           ),
-          if (_controller.text.isNotEmpty)
-            GestureDetector(
+          // Trailing: clear button when typing
+          if (hasText) ...[
+            _ClearButton(
               onTap: () {
                 _controller.clear();
                 setState(() {});
               },
+            ),
+            const SizedBox(width: 6),
+          ],
+          // Solid primary action button — opens quick-filter menu
+          Padding(
+            padding: const EdgeInsets.all(4),
+            child: PopupMenuButton<String>(
+              tooltip: 'Filter',
+              offset: const Offset(0, 48),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              color: AppColors.cardBg(context),
+              elevation: 8,
+              onSelected: _onFilterSelected,
+              itemBuilder: (context) => [
+                _filterMenuItem(context, 'all', 'All Fees', 'receipt-text'),
+                _filterMenuItem(context, 'pending', 'Pending Fees', 'clock'),
+                _filterMenuItem(context, 'paid', 'Paid Fees', 'tick-circle'),
+                _filterMenuItem(context, 'pay_all', 'Pay All Fees', 'wallet-3'),
+              ],
               child: Container(
-                width: 28,
-                height: 28,
-                margin: const EdgeInsets.only(right: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.scaffoldBg(context),
-                  borderRadius: BorderRadius.circular(8),
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  Icons.close_rounded,
-                  size: 14,
-                  color: AppColors.textSecondaryC(context),
-                ),
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.scaffoldBg(context),
-                  borderRadius: BorderRadius.circular(5),
-                  border: Border.all(
-                    color: AppColors.borderC(context).withValues(alpha: 0.6),
-                  ),
-                ),
-                child: Text(
-                  '⏎',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: AppColors.textHintC(context),
-                  ),
+                child: const AppIcon(
+                  'setting-4',
+                  size: 18,
+                  color: Colors.white,
                 ),
               ),
             ),
+          ),
         ],
       ),
     );
   }
 }
+
+class _ClearButton extends StatelessWidget {
+  const _ClearButton({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: AppColors.borderC(context).withValues(alpha: 0.35),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          alignment: Alignment.center,
+          child: AppIcon(
+            'close-circle',
+            size: 14,
+            color: AppColors.textSecondaryC(context),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

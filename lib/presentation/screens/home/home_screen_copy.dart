@@ -12,6 +12,7 @@ import '../../../data/models/fee_model.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
+import '../../widgets/common/app_icon.dart';
 
 class HomeScreenCopy extends ConsumerWidget {
   const HomeScreenCopy({super.key});
@@ -131,10 +132,12 @@ class HomeScreenCopy extends ConsumerWidget {
             color: const Color(0xFFE5E7EB),
             borderRadius: BorderRadius.circular(25),
           ),
-          child: const Icon(
-            Icons.person,
-            size: 28,
-            color: Color(0xFF6B7280),
+          child: const Center(
+            child: AppIcon(
+              'profile-circle',
+              size: 28,
+              color: Color(0xFF6B7280),
+            ),
           ),
         ),
         const SizedBox(width: 12),
@@ -342,8 +345,8 @@ class HomeScreenCopy extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              const Icon(
-                Icons.keyboard_arrow_down,
+              const AppIcon(
+                'arrow-down',
                 size: 18,
                 color: Color(0xFF6B7280),
               ),
@@ -362,7 +365,7 @@ class HomeScreenCopy extends ConsumerWidget {
           children: [
             Expanded(
               child: _buildFeeCard(
-                icon: Icons.school_outlined,
+                icon: 'book',
                 title: 'Term Fees',
                 amount: feesByCategory['termFees'] ?? 0,
                 backgroundColor: const Color(0xFFE8E4F3),
@@ -374,7 +377,7 @@ class HomeScreenCopy extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildFeeCard(
-                icon: Icons.directions_bus_outlined,
+                icon: 'bus',
                 title: 'Bus Fees',
                 amount: feesByCategory['bus'] ?? 0,
                 backgroundColor: const Color(0xFFD4EDDA),
@@ -391,7 +394,7 @@ class HomeScreenCopy extends ConsumerWidget {
           children: [
             Expanded(
               child: _buildFeeCard(
-                icon: Icons.history_outlined,
+                icon: 'clock',
                 title: 'History',
                 amount: 0,
                 backgroundColor: const Color(0xFFFFF3CD),
@@ -403,7 +406,7 @@ class HomeScreenCopy extends ConsumerWidget {
             const SizedBox(width: 12),
             Expanded(
               child: _buildFeeCard(
-                icon: Icons.support_agent_outlined,
+                icon: '24-support',
                 title: 'Support',
                 amount: 0,
                 backgroundColor: const Color(0xFFE2E8F0),
@@ -419,7 +422,7 @@ class HomeScreenCopy extends ConsumerWidget {
   }
 
   Widget _buildFeeCard({
-    required IconData icon,
+    required String icon,
     required String title,
     required double amount,
     required Color backgroundColor,
@@ -459,10 +462,12 @@ class HomeScreenCopy extends ConsumerWidget {
                     color: backgroundColor,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 24,
-                    color: iconColor,
+                  child: Center(
+                    child: AppIcon(
+                      icon,
+                      size: 24,
+                      color: iconColor,
+                    ),
                   ),
                 ),
                 // Status Tag (top right)
@@ -631,8 +636,9 @@ class HomeScreenCopy extends ConsumerWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(
-                  isSelected ? Icons.shopping_cart : Icons.shopping_cart_outlined,
+                AppIcon(
+                  'shopping-cart',
+                  bold: isSelected,
                   size: 24,
                   color: color,
                 ),

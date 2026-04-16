@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/auth_desktop_wrapper.dart';
 import '../../widgets/common/screen_illustrations.dart';
 
@@ -395,8 +396,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       style: const TextStyle(fontSize: 20),
                     ),
                     const SizedBox(width: 4),
-                    Icon(
-                      Icons.keyboard_arrow_down_rounded,
+                    AppIcon(
+                      'arrow-down',
                       size: 18,
                       color: AppColors.textSecondaryC(context),
                     ),
@@ -485,7 +486,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              const Icon(Icons.send_rounded, size: 22, color: Colors.white),
+              const AppIcon('send', size: 22, color: Colors.white),
             ],
           ],
         ),
