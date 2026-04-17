@@ -1020,13 +1020,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
 
     return Container(
-      width: 48,
-      height: 48,
+      width: 36,
+      height: 36,
       decoration: BoxDecoration(
         color: bgColor,
         shape: BoxShape.circle,
       ),
-      child: Center(child: AppIcon(icon, size: 24, color: iconColor)),
+      child: Center(child: AppIcon(icon, size: 16, color: iconColor)),
     );
   }
 
