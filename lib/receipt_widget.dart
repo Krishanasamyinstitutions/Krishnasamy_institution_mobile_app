@@ -10,6 +10,7 @@ class ReceiptData {
   final String address;
   final String admissionNo;
   final String className;
+  final String courseName;
   final String schoolName;
   final String schoolAddress;
   final String? schoolLogoUrl;
@@ -29,6 +30,7 @@ class ReceiptData {
     required this.address,
     required this.admissionNo,
     required this.className,
+    this.courseName = '-',
     required this.schoolName,
     required this.schoolAddress,
     this.schoolLogoUrl,
@@ -178,16 +180,6 @@ class ReceiptWidget extends StatelessWidget {
                 _buildFeeTable(chunk),
                 if (chunk.isLast) ...[
                   const Spacer(),
-                  // Payment info
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _labelValue('Receipt Method:', data.paymentMethod.toLowerCase() == 'razorpay' ? 'Online' : data.paymentMethod),
-                      const SizedBox(height: 6),
-                      _labelValue('Status:', data.status == 'paid' ? 'Paid' : data.status == 'failed' ? 'Failed' : data.status),
-                    ],
-                  ),
-                  const Spacer(),
                   // Footer
                   Center(
                     child: Text(
@@ -299,7 +291,7 @@ class ReceiptWidget extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        // Fee Receipt details - left aligned, page number right aligned
+        // Fee Receipt details - left aligned, Receipt Method/Status right aligned
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -314,8 +306,19 @@ class ReceiptWidget extends StatelessWidget {
               ],
             ),
             const Spacer(),
-            if (totalPages > 1)
-              Text('Page $pageNum of $totalPages', style: const TextStyle(fontFamily: _fontFamily, fontSize: 9, fontWeight: FontWeight.w500, color: _textMedium)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (totalPages > 1) ...[
+                  Text('Page $pageNum of $totalPages', style: const TextStyle(fontFamily: _fontFamily, fontSize: 9, fontWeight: FontWeight.w500, color: _textMedium)),
+                  const SizedBox(height: 6),
+                ] else
+                  const SizedBox(height: 22),
+                _labelValue('Receipt Method:', data.paymentMethod.toLowerCase() == 'razorpay' ? 'Online' : data.paymentMethod),
+                const SizedBox(height: 3),
+                _labelValue('Status:', data.status == 'paid' ? 'Paid' : data.status == 'failed' ? 'Failed' : data.status),
+              ],
+            ),
           ],
         ),
       ],
@@ -348,6 +351,8 @@ class ReceiptWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 _labelValue('Roll No:', data.admissionNo),
+                const SizedBox(height: 6),
+                _labelValue('Course:', data.courseName),
                 const SizedBox(height: 6),
                 _labelValue('Class:', data.className),
               ],
@@ -397,7 +402,7 @@ class ReceiptWidget extends StatelessWidget {
                   children: [
                     _headerCell('S.No', width: 46),
                     Container(width: 1, color: _borderColor),
-                    _headerCell('Term', width: 124),
+                    _headerCell('Semester', width: 124),
                     Container(width: 1, color: _borderColor),
                     _headerCell('Fee Type', flex: true),
                     Container(width: 1, color: _borderColor),

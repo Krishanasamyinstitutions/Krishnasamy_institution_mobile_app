@@ -20,6 +20,7 @@ class StudentModel {
   final String? stubloodgrp;
   final String? stuphoto;
   final String stuclass;
+  final String? stubatch;
   final int? courId;
   final String? courname;
   final String stuserId;
@@ -47,6 +48,7 @@ class StudentModel {
     this.stubloodgrp,
     this.stuphoto,
     required this.stuclass,
+    this.stubatch,
     this.courId,
     this.courname,
     required this.stuserId,
@@ -81,6 +83,7 @@ class StudentModel {
       stubloodgrp: json['stubloodgrp'],
       stuphoto: json['stuphoto'],
       stuclass: json['stuclass'] ?? '',
+      stubatch: json['stubatch']?.toString() ?? json['batch']?.toString(),
       courId: json['cour_id'] is int ? json['cour_id'] : (json['cour_id'] != null ? int.tryParse(json['cour_id'].toString()) : null),
       courname: json['courname'],
       stuserId: json['stuser_id'] ?? '',
@@ -114,6 +117,7 @@ class StudentModel {
       'stubloodgrp': stubloodgrp,
       'stuphoto': stuphoto,
       'stuclass': stuclass,
+      'stubatch': stubatch,
       'cour_id': courId,
       'courname': courname,
       'stuser_id': stuserId,
@@ -166,6 +170,7 @@ class StudentModel {
     String? stubloodgrp,
     String? stuphoto,
     String? stuclass,
+    String? stubatch,
     int? courId,
     String? courname,
     String? stuserId,
@@ -193,6 +198,7 @@ class StudentModel {
       stubloodgrp: stubloodgrp ?? this.stubloodgrp,
       stuphoto: stuphoto ?? this.stuphoto,
       stuclass: stuclass ?? this.stuclass,
+      stubatch: stubatch ?? this.stubatch,
       courId: courId ?? this.courId,
       courname: courname ?? this.courname,
       stuserId: stuserId ?? this.stuserId,

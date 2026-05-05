@@ -351,6 +351,12 @@ final notificationRealtimeProvider = Provider.autoDispose<void>((ref) {
           final newRow = payload.newRecord;
           if (newRow.isEmpty) return;
 
+          // Skip inserts that arrive already-inactive (activestatus != 1) so
+          // admin-created draft/archived notices don't push or refresh.
+          final activestatus = newRow['activestatus'];
+          final isActive = activestatus == 1 || activestatus == '1';
+          if (!isActive) return;
+
           final title = newRow['notititle'] as String? ?? 'New Notification';
           final body = newRow['notibody'] as String? ?? '';
           final notiId = newRow['noti_id'] as int? ?? DateTime.now().millisecondsSinceEpoch;

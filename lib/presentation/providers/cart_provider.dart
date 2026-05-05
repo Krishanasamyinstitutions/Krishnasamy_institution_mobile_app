@@ -125,8 +125,21 @@ class CartNotifier extends StateNotifier<CartState> {
     });
   }
 
+  // Serialize concurrent syncs. The 500ms debounce only prevents *pending*
+  // timers from stacking; once a sync is mid-flight, a new tap that fires the
+  // next timer raced the in-flight one — symptom was a FK violation where a
+  // delete + concurrent insert hit shoppingcartdetails for a freshly-removed
+  // car_id. Chain new syncs onto the previous future.
+  Future<void> _syncInFlight = Future.value();
+
+  Future<void> _syncToDatabase() {
+    final next = _syncInFlight.then((_) => _syncToDatabaseInner());
+    _syncInFlight = next.catchError((_) {});
+    return next;
+  }
+
   /// Sync current cart state to Supabase shoppingcart + shoppingcartdetails
-  Future<void> _syncToDatabase() async {
+  Future<void> _syncToDatabaseInner() async {
     final student = _ref.read(selectedStudentProvider);
     if (student == null) return;
 
