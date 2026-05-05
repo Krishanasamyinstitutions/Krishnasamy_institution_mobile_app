@@ -68,15 +68,22 @@ Future<pw.Document> generateReceiptPdf({
     } catch (_) {}
   }
 
-  // Group fees by term
+  // Group fees by term. Mirrors the admin app: any fine is listed as a
+  // separate "Fine" line item beneath the fee row, not bundled into the total.
   final terms = <_ReceiptTerm>[];
   if (feeDetails != null && feeDetails.isNotEmpty) {
     final feesByTerm = <String, List<(String, double)>>{};
     for (final fee in feeDetails) {
       final termKey = fee.demfeeterm;
+      final collected = fee.paidamount > 0 ? fee.paidamount : fee.feeamount;
+      final fine = fee.fineamount;
+      final feeOnly = (collected - fine).clamp(0, double.infinity).toDouble();
       feesByTerm.putIfAbsent(termKey, () => []).add(
-        (fee.feeTypeName, fee.paidamount > 0 ? fee.paidamount : fee.feeamount),
+        (fee.feeTypeName, feeOnly),
       );
+      if (fine > 0) {
+        feesByTerm[termKey]!.add(('  Fine', fine));
+      }
     }
     for (final entry in feesByTerm.entries) {
       terms.add(_ReceiptTerm(term: entry.key, fees: entry.value));
@@ -120,7 +127,7 @@ Future<pw.Document> generateReceiptPdf({
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               // Header
-              _buildPdfHeader(institution, logoImage, addressParts, dateStr, payment.paymentNumber, pageNum, totalPages),
+              _buildPdfHeader(institution, logoImage, addressParts, dateStr, payment.paymentNumber, pageNum, totalPages, payment.paymethod, isPaid, isFailed, payment.statusText),
               pw.SizedBox(height: 12),
               pw.Container(height: 1, color: _kDividerColor),
               pw.SizedBox(height: 12),
@@ -136,11 +143,6 @@ Future<pw.Document> generateReceiptPdf({
                 _buildPdfFeeTable(items, startIdx, isLast, payment.transtotalamount),
 
               if (isLast) ...[
-                pw.Spacer(),
-                // Payment info
-                _pdfLabelValue('Receipt Method:', payment.paymethod?.toLowerCase() == 'razorpay' ? 'Online' : (payment.paymethod ?? '-')),
-                pw.SizedBox(height: 6),
-                _pdfLabelValue('Status:', isPaid ? 'Paid' : isFailed ? 'Failed' : payment.statusText),
                 pw.Spacer(),
                 // Footer
                 pw.Center(
@@ -239,7 +241,13 @@ pw.Widget _buildPdfHeader(
   String receiptNo,
   int pageNum,
   int totalPages,
+  String? payMethod,
+  bool isPaid,
+  bool isFailed,
+  String statusText,
 ) {
+  final methodLabel = payMethod?.toLowerCase() == 'razorpay' ? 'Online' : (payMethod ?? '-');
+  final statusLabel = isPaid ? 'Paid' : isFailed ? 'Failed' : statusText;
   return pw.Column(
     children: [
       // Logo + school name
@@ -270,7 +278,7 @@ pw.Widget _buildPdfHeader(
         ),
       ),
       pw.SizedBox(height: 14),
-      // Fee Receipt + receipt no + date
+      // Fee Receipt + receipt no + date  ||  Receipt Method + Status
       pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
@@ -285,8 +293,19 @@ pw.Widget _buildPdfHeader(
             ],
           ),
           pw.Spacer(),
-          if (totalPages > 1)
-            pw.Text('Page $pageNum of $totalPages', style: const pw.TextStyle(fontSize: 9, color: _kTextMedium)),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              if (totalPages > 1) ...[
+                pw.Text('Page $pageNum of $totalPages', style: const pw.TextStyle(fontSize: 9, color: _kTextMedium)),
+                pw.SizedBox(height: 6),
+              ] else
+                pw.SizedBox(height: 22),
+              _pdfLabelValue('Receipt Method:', methodLabel),
+              pw.SizedBox(height: 3),
+              _pdfLabelValue('Status:', statusLabel),
+            ],
+          ),
         ],
       ),
     ],
@@ -329,6 +348,8 @@ pw.Widget _buildPdfStudentInfo(StudentModel student) {
             children: [
               _pdfLabelValue('Roll No:', student.stuadmno),
               pw.SizedBox(height: 6),
+              _pdfLabelValue('Course:', student.courseName),
+              pw.SizedBox(height: 6),
               _pdfLabelValue('Class:', student.stuclass),
             ],
           ),
@@ -351,7 +372,7 @@ pw.Widget _buildPdfFeeTable(List<_ReceiptTerm> items, int startIdx, bool isLast,
           children: [
             _pdfHeaderCell('S.No', 46),
             pw.Container(width: 1, color: _kBorderColor),
-            _pdfHeaderCell('Term', 124),
+            _pdfHeaderCell('Semester', 124),
             pw.Container(width: 1, color: _kBorderColor),
             pw.Expanded(child: _pdfHeaderCell('Fee Type', null)),
             pw.Container(width: 1, color: _kBorderColor),

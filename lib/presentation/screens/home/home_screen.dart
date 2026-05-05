@@ -35,6 +35,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   static const Color _textLight = Color(0xFF9E9E9E);
 
   bool _birthdayChecked = false;
+  bool _orphanSwept = false;
   ProviderSubscription? _studentSubscription;
 
   @override
@@ -42,12 +43,75 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAndShowBirthdayDialog();
+      _checkOrphanedPayments();
       _studentSubscription = ref.listenManual(selectedStudentProvider, (previous, next) {
         if (previous == null && next != null && !_birthdayChecked) {
           _checkAndShowBirthdayDialog();
         }
+        if (next != null) {
+          _orphanSwept = false;
+          _checkOrphanedPayments();
+        }
       });
     });
+  }
+
+  Future<void> _checkOrphanedPayments() async {
+    if (_orphanSwept) return;
+    final student = ref.read(selectedStudentProvider);
+    if (student == null) return;
+    _orphanSwept = true;
+
+    final result = await sweepOrphanedPayments(
+      insId: student.insId,
+      stuId: student.stuId,
+    );
+
+    if (!result.hasAny || !mounted) return;
+
+    final messages = <String>[];
+    if (result.recovered > 0) {
+      messages.add(
+        'Recovered ${result.recovered} pending payment${result.recovered > 1 ? 's' : ''} '
+        'that completed at the bank.',
+      );
+    }
+    if (result.failed > 0) {
+      messages.add(
+        'Marked ${result.failed} stale pending payment${result.failed > 1 ? 's' : ''} as failed.',
+      );
+    }
+
+    // Refresh providers so the user sees updated data
+    ref.invalidate(feesProvider);
+    ref.invalidate(paymentsProvider);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline_rounded, color: Colors.blue, size: 28),
+            SizedBox(width: 10),
+            Text('Pending Payment Update'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: messages.map((m) => Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(m, style: const TextStyle(fontSize: 14)),
+          )).toList(),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

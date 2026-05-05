@@ -167,13 +167,21 @@ class TransactionDetailsScreen extends ConsumerWidget {
     final dateFormat = DateFormat('dd MMM yyyy');
     final payDate = payment.paydate ?? payment.createdat;
 
-    // Group fees by term
+    // Group fees by term. Mirrors the admin app: split fine into its own
+    // ReceiptFeeItem so the receipt shows e.g. "TUITION FEES 1,400" + "Fine 100"
+    // instead of a single bundled "TUITION FEES 1,500".
     final feesByTerm = <String, List<ReceiptFeeItem>>{};
     for (final fee in fees) {
       final termKey = fee.demfeeterm;
+      final collected = fee.paidamount > 0 ? fee.paidamount : fee.feeamount;
+      final fine = fee.fineamount;
+      final feeOnly = (collected - fine).clamp(0, double.infinity).toDouble();
       feesByTerm.putIfAbsent(termKey, () => []).add(
-        ReceiptFeeItem(type: fee.feeTypeName, amount: fee.paidamount > 0 ? fee.paidamount : fee.feeamount),
+        ReceiptFeeItem(type: fee.feeTypeName, amount: feeOnly),
       );
+      if (fine > 0) {
+        feesByTerm[termKey]!.add(ReceiptFeeItem(type: '  Fine', amount: fine));
+      }
     }
 
     final termDetails = feesByTerm.entries
@@ -188,6 +196,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
       address: selectedStudent.fullAddress ?? '',
       admissionNo: selectedStudent.admissionNumber ?? '',
       className: selectedStudent.className ?? '',
+      courseName: (selectedStudent.courseName as String?) ?? '-',
       schoolName: institution?.insname ?? '',
       schoolAddress: institution?.fullAddress ?? '',
       schoolLogoUrl: institution?.inslogo,
@@ -646,8 +655,9 @@ class TransactionDetailsScreen extends ConsumerWidget {
 
     try {
       final student = ref.read(selectedStudentProvider);
-      final institutionAsync = ref.read(selectedStudentWithInstitutionProvider);
-      final institution = institutionAsync.valueOrNull;
+      // .future awaits the FutureProvider so the receipt always has the
+      // school header even on first open before the cache warms.
+      final institution = await ref.read(selectedStudentWithInstitutionProvider.future);
 
       if (student == null) {
         if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
@@ -768,8 +778,9 @@ class TransactionDetailsScreen extends ConsumerWidget {
 
     try {
       final student = ref.read(selectedStudentProvider);
-      final institutionAsync = ref.read(selectedStudentWithInstitutionProvider);
-      final institution = institutionAsync.valueOrNull;
+      // .future awaits the FutureProvider so the receipt always has the
+      // school header even on first open before the cache warms.
+      final institution = await ref.read(selectedStudentWithInstitutionProvider.future);
 
       if (student == null) {
         dismissLoading();
