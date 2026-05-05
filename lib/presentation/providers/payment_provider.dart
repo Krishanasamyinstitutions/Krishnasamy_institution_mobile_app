@@ -413,38 +413,13 @@ Future<int?> initiatePayment({
       debugPrint('check_fees_locked RPC not available: $e');
     }
 
-    // 3. Generate payment number
-    String payNumber;
-    try {
-      final rpcResult = await SupabaseService.client.rpc('generate_payment_number');
-      payNumber = rpcResult as String;
-    } catch (e) {
-      // Fallback: sequence table is in institution schema
-      debugPrint('generate_payment_number RPC not available, using fallback: $e');
-      try {
-        final sequence = await SupabaseService.fromSchema('sequence')
-            .select('seq_id, sequid, seqwidth, seqcurno')
-            .limit(1)
-            .single();
-
-        final sequid = sequence['sequid'] as String;
-        final seqWidth = sequence['seqwidth'] as int;
-        final seqCurNo = (sequence['seqcurno'] as num).toInt();
-        final newSeqNo = seqCurNo + 1;
-        final prefix = sequid.replaceAll(RegExp(r'\d+$'), '');
-        payNumber = '$prefix${newSeqNo.toString().padLeft(seqWidth, '0')}';
-
-        await SupabaseService.fromSchema('sequence').update({
-          'seqcurno': newSeqNo,
-        }).eq('seq_id', sequence['seq_id'] as int);
-      } catch (seqError) {
-        // Final fallback: generate from pay_id
-        debugPrint('Sequence table not available: $seqError');
-        payNumber = 'PAY${DateTime.now().millisecondsSinceEpoch}';
-      }
-    }
-
-    // 4. Create payment record with paynumber (paystatus = 'I' for Initiated)
+    // 3. Create payment record (paystatus = 'I' for Initiated, NO paynumber yet).
+    // The paynumber is assigned by `complete_payment_grouped` RPC ONLY when the
+    // payment succeeds (status 'C'). Failed payments stay paynumber-less so we
+    // don't waste sequence numbers on aborted attempts (matches admin app).
+    // recon_status='P' is set explicitly so admin's bank-reconciliation page
+    // (which filters by recon_status='P') sees this payment regardless of
+    // whether the column has a DB DEFAULT.
     final payResponse = await SupabaseService.fromSchema('payment').insert({
       'ins_id': student.insId,
       'inscode': student.inscode,
@@ -455,7 +430,7 @@ Future<int?> initiatePayment({
       'transcurrency': 'INR',
       'paydate': DateTime.now().toIso8601String(),
       'paystatus': 'I',
-      'paynumber': payNumber,
+      'recon_status': 'P',
       'createdby': parent?.payincharge ?? student.stuname,
     }).select('pay_id').single();
 
@@ -479,7 +454,7 @@ Future<int?> initiatePayment({
       }).eq('car_id', carId),
     ]);
 
-    debugPrint('Payment initiated: pay_id=$payId, paynumber=$payNumber, ${items.length} detail rows');
+    debugPrint('Payment initiated: pay_id=$payId, ${items.length} detail rows (paynumber assigned on success)');
     return payId;
   } catch (e, stackTrace) {
     lastPaymentError = e.toString();
@@ -553,7 +528,7 @@ Future<String?> createRazorpayOrder({
 
 /// Step 4: Handle payment gateway response.
 /// On success: update payment status, update feedemand, delete cart, clear memory.
-Future<bool> handlePaymentSuccess({
+Future<List<int>> handlePaymentSuccess({
   required WidgetRef ref,
   required int payId,
   required int carId,
@@ -564,6 +539,10 @@ Future<bool> handlePaymentSuccess({
 }) async {
 
 
+  // complete_payment_grouped splits the 'I' row into one 'C' row per fee group,
+  // so the original payId may no longer exist after success. Collect the new
+  // ids from the RPC response to navigate the user to a real receipt.
+  final List<int> newPayIds = [];
   try {
     final studentId = items.first.stuId;
     final student = ref.read(selectedStudentProvider);
@@ -581,7 +560,7 @@ Future<bool> handlePaymentSuccess({
         };
       }).toList();
 
-      await SupabaseService.client.rpc('complete_payment_grouped', params: {
+      final rpcResult = await SupabaseService.client.rpc('complete_payment_grouped', params: {
         'p_pay_id': payId,
         'p_pay_method': paymethod,
         'p_pay_reference': payreference,
@@ -590,7 +569,35 @@ Future<bool> handlePaymentSuccess({
         'p_status': 'C',
       });
 
-      debugPrint('Payment completed via RPC: pay_id=$payId');
+      if (rpcResult is List) {
+        for (final row in rpcResult) {
+          final id = row is Map ? row['pay_id'] : null;
+          if (id is int) {
+            newPayIds.add(id);
+          } else if (id is num) {
+            newPayIds.add(id.toInt());
+          }
+        }
+      }
+
+      debugPrint('Payment completed via RPC: pay_id=$payId, new_pay_ids=$newPayIds');
+
+      // Persist fineamount per demand so the admin dashboard's FINE column
+      // (which reads feedemand.fineamount) reflects mobile-collected fines.
+      // Mirrors the admin app's post-RPC write in _processDirectPayment.
+      if (fineMap != null && fineMap.isNotEmpty) {
+        for (final entry in fineMap.entries) {
+          if (entry.value > 0) {
+            try {
+              await SupabaseService.fromSchema('feedemand')
+                  .update({'fineamount': entry.value})
+                  .eq('dem_id', entry.key);
+            } catch (e) {
+              debugPrint('Fine column update failed for dem_id=${entry.key}: $e');
+            }
+          }
+        }
+      }
     } catch (rpcError) {
       // Fallback: manual updates if RPC not deployed
       debugPrint('complete_payment_grouped RPC not available, using fallback: $rpcError');
@@ -660,7 +667,9 @@ Future<bool> handlePaymentSuccess({
     ref.invalidate(notificationsProvider);
 
     debugPrint('Payment success: pay_id=$payId, feedemand updated, carts cleaned');
-    return true;
+    // Fallback: if the RPC was unavailable, the original payId is still 'I→C'
+    // on the same row, so it stays valid for the receipt view.
+    return newPayIds.isNotEmpty ? newPayIds : [payId];
   } catch (e, stackTrace) {
     debugPrint('Error handling payment success: $e');
     debugPrint('Stack trace: $stackTrace');
@@ -671,17 +680,20 @@ Future<bool> handlePaymentSuccess({
       ref.read(cartProvider.notifier).clearCart();
       debugPrint('Cart deleted in error recovery');
     } catch (_) {}
-    return false;
+    return [];
   }
 }
 
-/// Handle payment failure — marks payment as 'F' (failed) and resets the cart
+/// Handle payment failure — marks payment as 'F' (failed), resets the cart,
+/// and clears any stale fineamount on attempted demands so the next attempt
+/// recalculates the fine fresh (mirrors admin's `_processOnlinePayment` reset).
 Future<bool> handlePaymentFailure({
   required WidgetRef ref,
   required int payId,
   required int carId,
   String? payReference,
   String? errorReason,
+  List<int>? attemptedDemIds,
 }) async {
 
 
@@ -691,13 +703,49 @@ Future<bool> handlePaymentFailure({
         ? 'Razorpay Failed: $payReference'
         : 'Razorpay Failed';
 
+    // Reconstruct the items the original 'I' payment was attempting so the
+    // RPC can split-into-fee-groups and write a paymentdetails audit row per
+    // demand (matching admin's behaviour). Without this the 'F' row exists
+    // but has no per-demand breakdown.
+    List<Map<String, dynamic>> rpcItems = [];
+    try {
+      final details = await SupabaseService.fromSchema('paymentdetails')
+          .select('dem_id, transtotalamount')
+          .eq('pay_id', payId)
+          .eq('activestatus', 1);
+      final detailRows = (details as List).cast<Map<String, dynamic>>();
+      if (detailRows.isNotEmpty) {
+        final demIds = detailRows
+            .map((d) => d['dem_id'] is int ? d['dem_id'] as int : int.parse(d['dem_id'].toString()))
+            .toList();
+        final demands = await SupabaseService.fromSchema('feedemand')
+            .select('dem_id, demfeetype')
+            .inFilter('dem_id', demIds);
+        final typeByDem = <int, String>{};
+        for (final row in (demands as List).cast<Map<String, dynamic>>()) {
+          final id = row['dem_id'] is int ? row['dem_id'] as int : int.parse(row['dem_id'].toString());
+          typeByDem[id] = (row['demfeetype'] as String?) ?? '';
+        }
+        rpcItems = detailRows.map((d) {
+          final id = d['dem_id'] is int ? d['dem_id'] as int : int.parse(d['dem_id'].toString());
+          return {
+            'dem_id': id,
+            'amount': (d['transtotalamount'] as num?)?.toDouble() ?? 0,
+            'demfeetype': typeByDem[id] ?? '',
+          };
+        }).toList();
+      }
+    } catch (e) {
+      debugPrint('Failure-path items lookup error: $e');
+    }
+
     // Try atomic RPC first (same as admin app)
     try {
       await SupabaseService.client.rpc('complete_payment_grouped', params: {
         'p_pay_id': payId,
         'p_pay_method': 'razorpay',
         'p_pay_reference': reference,
-        'p_items': [],
+        'p_items': rpcItems,
         'p_ins_id': student?.insId,
         'p_status': 'F',
       });
@@ -719,6 +767,17 @@ Future<bool> handlePaymentFailure({
       'carinitiated': 'N',
     }).eq('car_id', carId);
 
+    // Reset fineamount on attempted demands so no stale fine value lingers
+    if (attemptedDemIds != null && attemptedDemIds.isNotEmpty) {
+      try {
+        await SupabaseService.fromSchema('feedemand')
+            .update({'fineamount': 0})
+            .inFilter('dem_id', attemptedDemIds);
+      } catch (e) {
+        debugPrint('Fine reset failed: $e');
+      }
+    }
+
     ref.invalidate(paymentsProvider);
     ref.invalidate(notificationsProvider);
 
@@ -728,6 +787,132 @@ Future<bool> handlePaymentFailure({
     debugPrint('Error handling payment failure: $e');
     return false;
   }
+}
+
+/// Result of an orphaned-payment sweep.
+class OrphanSweepResult {
+  final int recovered;  // 'I' payments that were captured by Razorpay (now 'C')
+  final int failed;     // 'I' payments that did not capture (now 'F')
+  const OrphanSweepResult({this.recovered = 0, this.failed = 0});
+  bool get hasAny => recovered > 0 || failed > 0;
+}
+
+/// Sweep any 'I' (Initiated) payments older than [minAgeMinutes] minutes for the
+/// given student. For each one:
+///   - Ask Razorpay (via Edge Function) for the actual status.
+///   - If captured → call complete_payment_grouped to assign paynumber + update feedemand.
+///   - Otherwise → mark paystatus = 'F'.
+///
+/// Mirrors the admin app's `_sweepOrphanedPayments` so failed/orphaned payments
+/// don't sit at 'I' forever.
+Future<OrphanSweepResult> sweepOrphanedPayments({
+  required int insId,
+  required int stuId,
+  int minAgeMinutes = 15,
+}) async {
+  int recovered = 0;
+  int failed = 0;
+
+  try {
+    final cutoff = DateTime.now()
+        .subtract(Duration(minutes: minAgeMinutes))
+        .toIso8601String();
+    final orphans = await SupabaseService.fromSchema('payment')
+        .select('pay_id, payorderid')
+        .eq('ins_id', insId)
+        .eq('stu_id', stuId)
+        .eq('paystatus', 'I')
+        .lt('createdat', cutoff);
+
+    for (final p in (orphans as List)) {
+      final payId = p['pay_id'] as int;
+      final orderId = p['payorderid']?.toString();
+      bool captured = false;
+      String? paymentId;
+
+      if (orderId != null && orderId.isNotEmpty) {
+        try {
+          final resp = await SupabaseService.client.functions.invoke(
+            'get-razorpay-payment',
+            body: {'order_id': orderId},
+          );
+          if (resp.status == 200 && resp.data is Map<String, dynamic>) {
+            final data = resp.data as Map<String, dynamic>;
+            if (data['status'] == 'captured' && data['payment_id'] != null) {
+              captured = true;
+              paymentId = data['payment_id'].toString();
+            }
+          }
+        } catch (e) {
+          debugPrint('sweepOrphanedPayments: Razorpay lookup failed for pay_id=$payId: $e');
+        }
+      }
+
+      if (captured) {
+        try {
+          // Load the real items from paymentdetails so the RPC takes its
+          // normal path (assigns paynumber, updates feedemand) instead of the
+          // empty-items short-circuit that just flips paystatus.
+          List<Map<String, dynamic>> rpcItems = [];
+          try {
+            final details = await SupabaseService.fromSchema('paymentdetails')
+                .select('dem_id, transtotalamount')
+                .eq('pay_id', payId)
+                .eq('activestatus', 1);
+            final detailRows = (details as List).cast<Map<String, dynamic>>();
+            if (detailRows.isNotEmpty) {
+              final demIds = detailRows
+                  .map((d) => d['dem_id'] is int ? d['dem_id'] as int : int.parse(d['dem_id'].toString()))
+                  .toList();
+              final demands = await SupabaseService.fromSchema('feedemand')
+                  .select('dem_id, demfeetype')
+                  .inFilter('dem_id', demIds);
+              final typeByDem = <int, String>{};
+              for (final row in (demands as List).cast<Map<String, dynamic>>()) {
+                final id = row['dem_id'] is int ? row['dem_id'] as int : int.parse(row['dem_id'].toString());
+                typeByDem[id] = (row['demfeetype'] as String?) ?? '';
+              }
+              rpcItems = detailRows.map((d) {
+                final id = d['dem_id'] is int ? d['dem_id'] as int : int.parse(d['dem_id'].toString());
+                return {
+                  'dem_id': id,
+                  'amount': (d['transtotalamount'] as num?)?.toDouble() ?? 0,
+                  'demfeetype': typeByDem[id] ?? '',
+                };
+              }).toList();
+            }
+          } catch (e) {
+            debugPrint('Orphan recovery items lookup failed for pay_id=$payId: $e');
+          }
+
+          await SupabaseService.client.rpc('complete_payment_grouped', params: {
+            'p_pay_id': payId,
+            'p_pay_method': 'razorpay',
+            'p_pay_reference': 'Razorpay: $paymentId (recovered)',
+            'p_items': rpcItems,
+            'p_ins_id': insId,
+            'p_status': 'C',
+          });
+          recovered++;
+        } catch (e) {
+          debugPrint('Recovery RPC failed for pay_id=$payId: $e');
+        }
+      } else {
+        try {
+          await SupabaseService.fromSchema('payment')
+              .update({'paystatus': 'F'})
+              .eq('pay_id', payId);
+          failed++;
+        } catch (e) {
+          debugPrint('Mark-failed update failed for pay_id=$payId: $e');
+        }
+      }
+    }
+  } catch (e) {
+    debugPrint('sweepOrphanedPayments error: $e');
+  }
+
+  return OrphanSweepResult(recovered: recovered, failed: failed);
 }
 
 /// Restores the in-memory cart from database on app restart.

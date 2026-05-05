@@ -19,6 +19,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/fee_provider.dart';
 import '../../providers/payment_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../../core/utils/extensions.dart';
 import '../../widgets/common/app_icon.dart';
@@ -993,7 +994,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     final student = ref.read(selectedStudentProvider);
     if (cartState.isEmpty || student == null) return;
 
-    // Step 0: Calculate fines for overdue items and confirm with user
+    // Block duplicate online attempts while a recent 'I' row exists for this
+    // student. Sweep clears orphans only after 5 minutes; within that window
+    // we warn the user instead of creating another pending row (matches admin).
+    if (await _checkPendingPaymentBlock(student.insId, student.stuId)) return;
+
+    // Calculate fines for overdue items (matches admin's client-side fine calc)
     final rules = await FineService.loadRules(student.insId);
     final fineMap = <int, double>{};
     double totalFine = 0;
@@ -1094,7 +1100,12 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       if (orderId == null) {
         debugPrint('PAYMENT STEP 3 FAILED: orderId is null. Error: $lastOrderCreationError');
         // Roll back payment since we can't proceed without an order
-        await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
+        await handlePaymentFailure(
+          ref: ref,
+          payId: payId,
+          carId: carId,
+          attemptedDemIds: _currentFineMap.keys.toList(),
+        );
         if (mounted) setState(() => _isPaymentLoading = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1220,6 +1231,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
             payId: payId,
             carId: carId,
             errorReason: description,
+            attemptedDemIds: _currentFineMap.keys.toList(),
           );
         } catch (e) {
           debugPrint('Error in handlePaymentFailure: $e');
@@ -1280,10 +1292,10 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       });
     }
 
-    bool success = false;
+    List<int> newPayIds = [];
     if (mounted) {
       try {
-        success = await handlePaymentSuccess(
+        newPayIds = await handlePaymentSuccess(
           ref: ref,
           payId: payId,
           carId: carId,
@@ -1300,15 +1312,26 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     // Hide processing overlay
     if (mounted) setState(() => _isPaymentLoading = false);
 
-    if (success && mounted) {
+    if (newPayIds.isNotEmpty && mounted) {
+      // complete_payment_grouped issues one receipt per fee group, so a cart
+      // mixing groups (e.g. TUITION + TRANSPORT) returns multiple ids. Single
+      // receipt: jump straight to it. Multiple: tell the user and land on the
+      // history list so all are visible at once.
+      final multi = newPayIds.length > 1;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payment successful!'),
+        SnackBar(
+          content: Text(multi
+              ? 'Payment successful — ${newPayIds.length} receipts created.'
+              : 'Payment successful!'),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
       );
-      context.go(Routes.paymentHistory);
+      if (multi) {
+        context.go(Routes.paymentHistory);
+      } else {
+        context.go('${Routes.transactionDetails}/${newPayIds.first}');
+      }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -1351,6 +1374,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         carId: carId,
         payReference: razorpayPaymentId,
         errorReason: errorReason,
+        attemptedDemIds: _currentFineMap.keys.toList(),
       );
     }
 
@@ -1392,8 +1416,204 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     }
   }
 
-  /// Desktop payment: opens Razorpay JS checkout in system browser,
-  /// then polls the Edge Function for payment status (same as admin app).
+  /// Returns true (and shows a popup) if there's a recent 'I' (in-progress)
+  /// payment for this student. Caller should abort the new payment attempt.
+  /// Mirrors admin's pending-payment guard.
+  Future<bool> _checkPendingPaymentBlock(int insId, int stuId) async {
+    try {
+      final pending = await SupabaseService.fromSchema('payment')
+          .select('pay_id, createdat')
+          .eq('ins_id', insId)
+          .eq('stu_id', stuId)
+          .eq('paystatus', 'I')
+          .order('createdat', ascending: false)
+          .limit(1)
+          .maybeSingle();
+
+      if (pending == null) return false;
+
+      final createdAtStr = pending['createdat']?.toString();
+      final createdAt = createdAtStr != null ? DateTime.tryParse(createdAtStr) : null;
+      if (createdAt == null) return false;
+
+      const blockWindowMin = 15;
+      final ageMin = DateTime.now().difference(createdAt).inMinutes;
+      if (ageMin >= blockWindowMin) return false;
+
+      final waitMin = blockWindowMin - ageMin;
+      final pendingPayId = pending['pay_id'] as int;
+      if (!mounted) return true;
+
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.hourglass_top_rounded, color: Colors.orange, size: 26),
+              SizedBox(width: 10),
+              Text('Payment in Progress'),
+            ],
+          ),
+          content: Text(
+            'A previous payment for this student is still pending.\n\n'
+            'Please wait about $waitMin minute${waitMin == 1 ? '' : 's'} and try again, '
+            'or check now to see whether it has cleared on Razorpay.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(ctx).pop();
+                await _resolvePendingPayment(insId, pendingPayId);
+              },
+              child: const Text('Check Status Now'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Pending-payment check failed: $e');
+      return false;
+    }
+  }
+
+  /// Look up the actual Razorpay status for a single pending 'I' payment and
+  /// finalise it: recover (status='C' with real items so paynumber + feedemand
+  /// update happen) or mark failed. Mirrors admin's `_resolvePendingPayment`.
+  Future<void> _resolvePendingPayment(int insId, int payId) async {
+    if (mounted) {
+      setState(() {
+        _isPaymentLoading = true;
+        _loadingMessage = 'Checking payment status...';
+      });
+    }
+
+    try {
+      final pay = await SupabaseService.fromSchema('payment')
+          .select('payorderid')
+          .eq('pay_id', payId)
+          .maybeSingle();
+      final orderId = pay?['payorderid']?.toString();
+
+      String? razorpayStatus;
+      String? razorpayPaymentId;
+      if (orderId != null && orderId.isNotEmpty) {
+        try {
+          final resp = await SupabaseService.client.functions.invoke(
+            'get-razorpay-payment',
+            body: {'order_id': orderId},
+          );
+          if (resp.status == 200 && resp.data is Map<String, dynamic>) {
+            final data = resp.data as Map<String, dynamic>;
+            razorpayStatus = data['status']?.toString();
+            razorpayPaymentId = data['payment_id']?.toString();
+          }
+        } catch (e) {
+          debugPrint('Razorpay status lookup failed: $e');
+        }
+      }
+
+      if (razorpayStatus == 'captured' || razorpayStatus == 'authorized') {
+        // Build the real items from paymentdetails so the RPC takes its normal
+        // path (paynumber + feedemand update), not the empty-items short-circuit.
+        final details = await SupabaseService.fromSchema('paymentdetails')
+            .select('dem_id, transtotalamount')
+            .eq('pay_id', payId)
+            .eq('activestatus', 1);
+        final detailRows = (details as List).cast<Map<String, dynamic>>();
+        final demIds = detailRows
+            .map((d) => d['dem_id'] is int ? d['dem_id'] as int : int.parse(d['dem_id'].toString()))
+            .toList();
+        final demands = await SupabaseService.fromSchema('feedemand')
+            .select('dem_id, demfeetype')
+            .inFilter('dem_id', demIds);
+        final typeByDem = <int, String>{};
+        for (final row in (demands as List).cast<Map<String, dynamic>>()) {
+          final id = row['dem_id'] is int ? row['dem_id'] as int : int.parse(row['dem_id'].toString());
+          typeByDem[id] = (row['demfeetype'] as String?) ?? '';
+        }
+        final rpcItems = detailRows.map((d) {
+          final id = d['dem_id'] is int ? d['dem_id'] as int : int.parse(d['dem_id'].toString());
+          return {
+            'dem_id': id,
+            'amount': (d['transtotalamount'] as num?)?.toDouble() ?? 0,
+            'demfeetype': typeByDem[id] ?? '',
+          };
+        }).toList();
+
+        final result = await SupabaseService.client.rpc('complete_payment_grouped', params: {
+          'p_pay_id': payId,
+          'p_pay_method': 'razorpay',
+          'p_pay_reference': razorpayPaymentId ?? orderId ?? 'recovered',
+          'p_items': rpcItems,
+          'p_ins_id': insId,
+          'p_status': 'C',
+        });
+
+        final newPayIds = <int>[];
+        if (result is List) {
+          for (final row in result) {
+            final id = row is Map ? row['pay_id'] : null;
+            if (id is int) newPayIds.add(id); else if (id is num) newPayIds.add(id.toInt());
+          }
+        }
+        if (newPayIds.isEmpty) newPayIds.add(payId);
+
+        ref.invalidate(feesProvider);
+        ref.invalidate(paymentsProvider);
+        ref.invalidate(notificationsProvider);
+        if (mounted) setState(() => _isPaymentLoading = false);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Payment recovered — receipt is ready.'),
+            backgroundColor: AppColors.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        if (newPayIds.length > 1) {
+          context.go(Routes.paymentHistory);
+        } else {
+          context.go('${Routes.transactionDetails}/${newPayIds.first}');
+        }
+        return;
+      }
+
+      // Not captured — mark failed so the user can retry.
+      await handlePaymentFailure(
+        ref: ref,
+        payId: payId,
+        carId: 0,
+        payReference: razorpayPaymentId,
+      );
+      ref.invalidate(paymentsProvider);
+      if (mounted) setState(() => _isPaymentLoading = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Previous payment did not complete. You can try again now.'),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      debugPrint('Pending-payment recovery error: $e');
+      if (mounted) setState(() => _isPaymentLoading = false);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not check payment status: $e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   /// Shows a dialog listing overdue fees and the fine applied to each.
   /// Returns true if the user confirms, false/null otherwise.
   Future<bool?> _showFineConfirmationDialog({
@@ -1412,7 +1632,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
       builder: (dialogCtx) => AlertDialog(
         title: Row(
           children: const [
-            AppIcon('warning-2', color: Colors.orange, size: 28),
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
             SizedBox(width: 10),
             Text('Late Fee Applicable'),
           ],
@@ -1505,6 +1725,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     );
   }
 
+  /// Desktop payment: opens Razorpay JS checkout in system browser,
+  /// then polls the Edge Function for payment status (same as admin app).
   Future<void> _openDesktopRazorpayCheckout({
     required int payId,
     required int carId,
@@ -1584,6 +1806,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
     Timer? pollTimer;
     final completer = Completer<String?>();
+    List<int> desktopNewPayIds = [];
 
     pollTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       try {
@@ -1599,14 +1822,13 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
           if (status == 'captured' || status == 'authorized') {
             timer.cancel();
-            if (!completer.isCompleted) completer.complete('C');
 
             // Update payment reference
             await SupabaseService.fromSchema('payment').update({
               'payreference': rpPaymentId,
             }).eq('pay_id', payId);
 
-            await handlePaymentSuccess(
+            desktopNewPayIds = await handlePaymentSuccess(
               ref: ref,
               payId: payId,
               carId: carId,
@@ -1615,6 +1837,9 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               items: items,
               fineMap: _currentFineMap,
             );
+            // Signal completion only after the receipt ids are captured so the
+            // outer flow can navigate to the correct transaction.
+            if (!completer.isCompleted) completer.complete('C');
           } else if (status == 'failed') {
             timer.cancel();
             if (!completer.isCompleted) completer.complete('F');
@@ -1624,6 +1849,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               payId: payId,
               carId: carId,
               payReference: rpPaymentId,
+              attemptedDemIds: _currentFineMap.keys.toList(),
             );
           }
         }
@@ -1663,13 +1889,32 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     pollTimer?.cancel();
 
     if (result == null) {
-      await handlePaymentFailure(ref: ref, payId: payId, carId: carId);
+      await handlePaymentFailure(
+        ref: ref,
+        payId: payId,
+        carId: carId,
+        attemptedDemIds: _currentFineMap.keys.toList(),
+      );
     }
 
     if (result == 'C' && mounted) {
       Navigator.of(context).pop(); // Close dialog if still open
       ref.invalidate(feesProvider);
       ref.invalidate(paymentsProvider);
+      if (desktopNewPayIds.isNotEmpty) {
+        if (desktopNewPayIds.length > 1) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Payment successful — ${desktopNewPayIds.length} receipts created.'),
+              backgroundColor: AppColors.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          context.go(Routes.paymentHistory);
+        } else {
+          context.go('${Routes.transactionDetails}/${desktopNewPayIds.first}');
+        }
+      }
     }
   }
 

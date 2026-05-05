@@ -119,7 +119,19 @@ final studentsByParentProvider = FutureProvider<List<StudentModel>>((ref) async 
     return [];
   }
 
-  final schemas = SupabaseService.parentSchemas;
+  // On page refresh the in-memory schema cache is empty even though the
+  // parent session is restored. Re-scan now (auth_provider does this too,
+  // but unawaited — we'd otherwise lose the multi-institution students until
+  // a manual invalidate). Skip the rescan when the cache is already warm.
+  var schemas = SupabaseService.parentSchemas;
+  if (schemas.isEmpty && parent.payinchargemob.isNotEmpty) {
+    final matches = await SupabaseService.findParentInstitutions(parent.payinchargemob);
+    if (matches.isNotEmpty) {
+      SupabaseService.setParentSchemas(matches);
+      schemas = matches;
+    }
+  }
+
   final allStudents = <StudentModel>[];
 
   // Query each schema where this parent exists
@@ -137,11 +149,12 @@ final studentsByParentProvider = FutureProvider<List<StudentModel>>((ref) async 
       if (parentRows == null) continue;
       final parId = parentRows['par_id'] as int;
 
-      // Get student IDs from parentdetail in this schema
+      // Get student IDs from parentdetail in this schema (only active links)
       final parentDetailResponse = await SupabaseService.client.schema(entry.schema)
           .from('parentdetail')
           .select('stu_id')
-          .eq('par_id', parId);
+          .eq('par_id', parId)
+          .eq('activestatus', 1);
 
       final studentIds = (parentDetailResponse as List<dynamic>)
           .map((e) => e['stu_id'] as int)
@@ -170,7 +183,8 @@ final studentsByParentProvider = FutureProvider<List<StudentModel>>((ref) async 
     try {
       final parentDetailResponse = await SupabaseService.fromSchema('parentdetail')
           .select('stu_id')
-          .eq('par_id', parent.parId);
+          .eq('par_id', parent.parId)
+          .eq('activestatus', 1);
 
       final studentIds = (parentDetailResponse as List<dynamic>)
           .map((e) => e['stu_id'] as int)

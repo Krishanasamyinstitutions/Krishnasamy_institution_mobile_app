@@ -126,6 +126,7 @@ class FeeModel {
   final double conamount;
   final double paidamount;
   final double balancedue;
+  final double fineamount;
   final int? payId;
   final String paidstatus;
   final String createdby;
@@ -157,6 +158,7 @@ class FeeModel {
     this.conamount = 0,
     this.paidamount = 0,
     required this.balancedue,
+    this.fineamount = 0,
     this.payId,
     required this.paidstatus,
     required this.createdby,
@@ -193,6 +195,7 @@ class FeeModel {
       conamount: (json['conamount'] as num?)?.toDouble() ?? 0,
       paidamount: (json['paidamount'] as num?)?.toDouble() ?? 0,
       balancedue: (json['balancedue'] as num?)?.toDouble() ?? 0,
+      fineamount: (json['fineamount'] as num?)?.toDouble() ?? 0,
       payId: json['pay_id'] != null
           ? (json['pay_id'] is int ? json['pay_id'] : int.parse(json['pay_id'].toString()))
           : null,
@@ -234,6 +237,7 @@ class FeeModel {
       'conamount': conamount,
       'paidamount': paidamount,
       'balancedue': balancedue,
+      'fineamount': fineamount,
       'pay_id': payId,
       'paidstatus': paidstatus,
       'createdby': createdby,
@@ -286,6 +290,7 @@ class FeeModel {
     double? conamount,
     double? paidamount,
     double? balancedue,
+    double? fineamount,
     int? payId,
     String? paidstatus,
     String? createdby,
@@ -315,6 +320,7 @@ class FeeModel {
       conamount: conamount ?? this.conamount,
       paidamount: paidamount ?? this.paidamount,
       balancedue: balancedue ?? this.balancedue,
+      fineamount: fineamount ?? this.fineamount,
       payId: payId ?? this.payId,
       paidstatus: paidstatus ?? this.paidstatus,
       createdby: createdby ?? this.createdby,
