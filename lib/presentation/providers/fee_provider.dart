@@ -5,7 +5,7 @@ import '../../data/models/fee_model.dart';
 import '../../core/services/supabase_service.dart';
 import 'student_provider.dart';
 
-/// Fetch fees for currently selected student from Supabase 'feedemand' table
+/// Fetch fees for currently selected student from Supabase 'feedemand' table.
 final feesProvider = FutureProvider<List<FeeModel>>((ref) async {
   final student = ref.watch(selectedStudentProvider);
 

@@ -28,11 +28,17 @@ class SupabaseService {
   }
 
   /// Query from institution-specific schema table.
-  /// Falls back to public if no schema is set.
+  /// Falls back to public if no schema is set, but logs a loud warning so
+  /// schema-not-set bugs surface during development instead of silently
+  /// reading/writing the wrong schema.
   static SupabaseQueryBuilder fromSchema(String table) {
     if (_currentSchema != null && _currentSchema!.isNotEmpty) {
       return client.schema(_currentSchema!).from(table);
     }
+    debugPrint(
+      '⚠️  fromSchema("$table") called with NO schema set — falling back to public. '
+      'This usually means a query ran before login/student selection completed.',
+    );
     return client.from(table);
   }
 
@@ -159,6 +165,13 @@ class SupabaseService {
             final hasPassword = pwd != null && pwd.isNotEmpty;
             debugPrint('Found parent in schema: $schema (ins_id=$insId, hasPassword=$hasPassword)');
             matches.add((insId: insId, schema: schema, hasPassword: hasPassword));
+          }
+        } on PostgrestException catch (e) {
+          // PGRST106 = schema not exposed in PostgREST. Happens when an
+          // institution row exists but its schema isn't in db-schemas.
+          // e.code holds the HTTP status ('406'), so match on message.
+          if (!e.message.contains('PGRST106')) {
+            debugPrint('Schema $schema search failed: $e');
           }
         } catch (e) {
           debugPrint('Schema $schema search failed: $e');

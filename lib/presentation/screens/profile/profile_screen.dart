@@ -79,6 +79,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             'name': selectedStudent.name,
             'class': selectedStudent.className,
             'adminNo': selectedStudent.admissionNumber,
+            'batch': StudentModel.hasValue(selectedStudent.stubatch) ? selectedStudent.stubatch! : 'N/A',
             'gender': selectedStudent.gender,
             'dob': _formatDate(selectedStudent.dateOfBirth),
             'blood': StudentModel.hasValue(selectedStudent.stubloodgrp) ? selectedStudent.stubloodgrp! : 'N/A',
@@ -92,6 +93,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             'name': 'Student',
             'class': 'N/A',
             'adminNo': 'N/A',
+            'batch': 'N/A',
             'gender': 'N/A',
             'dob': 'N/A',
             'blood': 'N/A',
@@ -341,6 +343,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final items = [
       _GridStat(value: studentData['adminNo']!, label: 'Roll No'),
       _GridStat(value: studentData['class']!, label: 'Class'),
+      _GridStat(value: studentData['batch']!, label: 'Batch'),
       _GridStat(value: studentData['course']!, label: 'Course'),
       _GridStat(value: studentData['dob']!, label: 'Date of Birth'),
       _GridStat(value: studentData['gender']!, label: 'Gender'),
