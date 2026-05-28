@@ -1,511 +1,404 @@
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
 import '../../data/models/payment_model.dart';
 import '../../data/models/student_model.dart';
 import '../../data/models/institution_model.dart';
 import '../../data/models/fee_model.dart';
+import '../../receipt_widget.dart';
 
-// Figma color palette (matching receipt_widget.dart)
-const _kPrimaryBlue = PdfColor.fromInt(0xFF6C8EEF);
-const _kDarkBlue = PdfColor.fromInt(0xFF4A6CD4);
-const _kTextDark = PdfColor.fromInt(0xFF2a2a2a);
-const _kTextMedium = PdfColor.fromInt(0xFF4c4c4c);
-const _kHeaderBg = PdfColor.fromInt(0xFFE9EEFF);
-const _kBorderColor = PdfColor.fromInt(0xFFd9d9d9);
-const _kDividerColor = PdfColor.fromInt(0xFFACBEDD);
-
-/// Term + fee items for receipt table
-class _ReceiptTerm {
-  final String term;
-  final List<(String type, double amount)> fees;
-  _ReceiptTerm({required this.term, required this.fees});
-}
-
-Future<pw.Document> generateReceiptPdf({
+/// Builds a ReceiptData from the mobile-app's payment/student/institution/fees
+/// models. Mirrors `_buildReceiptData` in transaction_details_screen.dart so
+/// the PDF and the on-screen preview always show the same numbers.
+ReceiptData _buildReceiptData({
   required PaymentModel payment,
   required StudentModel student,
   InstitutionModel? institution,
   List<FeeModel>? feeDetails,
-}) async {
-  // Load fonts that support Rupee symbol (₹)
-  final fontRegular = await PdfGoogleFonts.notoSansRegular();
-  final fontBold = await PdfGoogleFonts.notoSansBold();
-  final fontItalic = await PdfGoogleFonts.notoSansItalic();
-
-  final pdf = pw.Document();
-  final isPaid = payment.paystatus == 'C';
-  final isFailed = payment.paystatus == 'F';
-
-  // Theme with Unicode-supporting font
-  final theme = pw.ThemeData.withFont(
-    base: fontRegular,
-    bold: fontBold,
-    italic: fontItalic,
-    boldItalic: fontBold,
-  );
-
+}) {
   final dateFormat = DateFormat('dd MMM yyyy');
   final payDate = payment.paydate ?? payment.createdat;
-  final dateStr = dateFormat.format(payDate);
 
-  final addressParts = <String>[
-    if (institution?.insaddress1 != null) institution!.insaddress1!,
-    if (institution?.insaddress2 != null) institution!.insaddress2!,
-    if (institution?.inspincode != null) institution!.inspincode!,
-  ];
-
-  // Try to load school logo
-  pw.MemoryImage? logoImage;
-  if (institution?.inslogo != null) {
-    try {
-      final response = await http.get(Uri.parse(institution!.inslogo!));
-      if (response.statusCode == 200) {
-        logoImage = pw.MemoryImage(response.bodyBytes);
-      }
-    } catch (_) {}
-  }
-
-  // Group fees by term. Mirrors the admin app: any fine is listed as a
-  // separate "Fine" line item beneath the fee row, not bundled into the total.
-  final terms = <_ReceiptTerm>[];
-  if (feeDetails != null && feeDetails.isNotEmpty) {
-    final feesByTerm = <String, List<(String, double)>>{};
+  // Group fees by term. Mirrors the admin app: split fine into its own
+  // ReceiptFeeItem so the receipt shows e.g. "TUITION FEES 1,400" + "Fine 100"
+  // instead of a single bundled "TUITION FEES 1,500".
+  final feesByTerm = <String, List<ReceiptFeeItem>>{};
+  if (feeDetails != null) {
     for (final fee in feeDetails) {
       final termKey = fee.demfeeterm;
       final collected = fee.paidamount > 0 ? fee.paidamount : fee.feeamount;
       final fine = fee.fineamount;
       final feeOnly = (collected - fine).clamp(0, double.infinity).toDouble();
       feesByTerm.putIfAbsent(termKey, () => []).add(
-        (fee.feeTypeName, feeOnly),
-      );
+            ReceiptFeeItem(type: fee.feeTypeName, amount: feeOnly),
+          );
       if (fine > 0) {
-        feesByTerm[termKey]!.add(('  Fine', fine));
+        feesByTerm[termKey]!.add(ReceiptFeeItem(type: '  Fine', amount: fine));
       }
     }
-    for (final entry in feesByTerm.entries) {
-      terms.add(_ReceiptTerm(term: entry.key, fees: entry.value));
-    }
   }
 
-  // Pagination: max items per page
-  const maxItemsFirstPage = 8;
-  const maxItemsContinuation = 12;
+  final termDetails = feesByTerm.entries
+      .map((e) => ReceiptTermDetail(term: e.key, fees: e.value))
+      .toList();
 
-  final List<(int startIdx, List<_ReceiptTerm> items, bool isFirst, bool isLast)> pages = [];
-  if (terms.isEmpty) {
-    pages.add((0, <_ReceiptTerm>[], true, true));
-  } else if (terms.length <= maxItemsFirstPage) {
-    pages.add((0, terms, true, true));
-  } else {
-    pages.add((0, terms.sublist(0, maxItemsFirstPage), true, false));
-    int offset = maxItemsFirstPage;
-    int remaining = terms.length - maxItemsFirstPage;
-    while (remaining > 0) {
-      final count = remaining <= maxItemsContinuation ? remaining : maxItemsContinuation;
-      final isLast = count >= remaining;
-      pages.add((offset, terms.sublist(offset, offset + count), false, isLast));
-      offset += count;
-      remaining -= count;
-    }
-  }
-
-  for (int pageIdx = 0; pageIdx < pages.length; pageIdx++) {
-    final (startIdx, items, isFirst, isLast) = pages[pageIdx];
-    final pageNum = pageIdx + 1;
-    final totalPages = pages.length;
-
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        theme: theme,
-        margin: const pw.EdgeInsets.symmetric(horizontal: 60, vertical: 40),
-        build: (context) {
-          final content = pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              // Header
-              _buildPdfHeader(institution, logoImage, addressParts, dateStr, payment.paymentNumber, pageNum, totalPages, payment.paymethod, isPaid, isFailed, payment.statusText),
-              pw.SizedBox(height: 12),
-              pw.Container(height: 1, color: _kDividerColor),
-              pw.SizedBox(height: 12),
-
-              // Student info (first page only)
-              if (isFirst) ...[
-                _buildPdfStudentInfo(student),
-                pw.SizedBox(height: 20),
-              ],
-
-              // Fee table
-              if (items.isNotEmpty)
-                _buildPdfFeeTable(items, startIdx, isLast, payment.transtotalamount),
-
-              if (isLast) ...[
-                pw.Spacer(),
-                // Footer
-                pw.Center(
-                  child: pw.Text(
-                    'Thank you for your payment.',
-                    style: pw.TextStyle(fontSize: 14, color: _kTextDark, fontStyle: pw.FontStyle.italic),
-                  ),
-                ),
-                pw.SizedBox(height: 8),
-                if (institution?.insmail != null || institution?.insmobno != null)
-                  pw.Center(
-                    child: pw.Text(
-                      'For any further inquiries, please contact us at ${institution?.insmail ?? ''}'
-                      '${institution?.insmail != null && institution?.insmobno != null ? ' or call ' : ''}'
-                      '${institution?.insmobno ?? ''}',
-                      style: const pw.TextStyle(fontSize: 10, color: _kTextMedium),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-              ] else ...[
-                pw.Spacer(),
-                pw.Center(
-                  child: pw.Text(
-                    'Continued on next page...',
-                    style: pw.TextStyle(fontSize: 10, color: _kTextMedium, fontStyle: pw.FontStyle.italic),
-                  ),
-                ),
-              ],
-            ],
-          );
-
-          return pw.Stack(
-            children: [
-              // Background logo watermark (center of page)
-              if (logoImage != null)
-                pw.Positioned.fill(
-                  child: pw.Center(
-                    child: pw.Opacity(
-                      opacity: 0.05,
-                      child: pw.Image(logoImage, width: 200, height: 200, fit: pw.BoxFit.contain),
-                    ),
-                  ),
-                ),
-              // Main content
-              content,
-              // PAID/FAILED stamp overlay — over Term & Fee Type columns
-              if (isPaid || isFailed)
-                pw.Positioned(
-                  left: 130,
-                  top: isFirst ? 310 : 80,
-                  child: pw.Transform.rotateBox(
-                    angle: -0.35,
-                    child: pw.Opacity(
-                      opacity: 0.55,
-                      child: pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                        decoration: pw.BoxDecoration(
-                          color: isPaid
-                              ? const PdfColor.fromInt(0x66c2eecd)
-                              : const PdfColor.fromInt(0x66FFD6D6),
-                          border: pw.Border.all(
-                            color: isPaid ? const PdfColor.fromInt(0xFF34c759) : const PdfColor.fromInt(0xFFFF3B30),
-                            width: 2,
-                          ),
-                          borderRadius: pw.BorderRadius.circular(8),
-                        ),
-                        child: pw.Text(
-                          isPaid ? 'PAID' : 'FAILED',
-                          style: pw.TextStyle(
-                            fontSize: 18,
-                            fontWeight: pw.FontWeight.bold,
-                            color: isPaid ? const PdfColor.fromInt(0xFF34c759) : const PdfColor.fromInt(0xFFFF3B30),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  return pdf;
+  return ReceiptData(
+    receiptNo: payment.paymentNumber,
+    date: dateFormat.format(payDate),
+    studentName: student.name,
+    mobileNo: student.stumobile,
+    address: student.fullAddress,
+    admissionNo: student.admissionNumber,
+    className: student.className,
+    courseName: student.courseName,
+    schoolName: institution?.insname ?? '',
+    schoolAddress: institution?.fullAddress ?? '',
+    schoolLogoUrl: institution?.inslogo,
+    schoolMobile: institution?.insmobno,
+    schoolEmail: institution?.insmail,
+    feeDetails: termDetails,
+    paymentMethod: payment.paymentMethod,
+    paymentDate: dateFormat.format(payDate),
+    status: payment.paystatus == 'C'
+        ? 'paid'
+        : payment.paystatus == 'F'
+            ? 'failed'
+            : 'pending',
+    total: payment.transtotalamount,
+  );
 }
 
-// ── PDF Helpers ──────────────────────────────────────────────────────────
-
-pw.Widget _buildPdfHeader(
+/// Wrapper kept for the existing call site in transaction_details_screen.dart.
+/// Builds a [ReceiptData] from the supplied models and renders via
+/// [buildReceiptPdf], which is a 1:1 port of the admin app's receipt PDF.
+Future<pw.Document> generateReceiptPdf({
+  required PaymentModel payment,
+  required StudentModel student,
   InstitutionModel? institution,
-  pw.MemoryImage? logoImage,
-  List<String> addressParts,
-  String dateStr,
-  String receiptNo,
-  int pageNum,
-  int totalPages,
-  String? payMethod,
-  bool isPaid,
-  bool isFailed,
-  String statusText,
-) {
-  final methodLabel = payMethod?.toLowerCase() == 'razorpay' ? 'Online' : (payMethod ?? '-');
-  final statusLabel = isPaid ? 'Paid' : isFailed ? 'Failed' : statusText;
-  return pw.Column(
-    children: [
-      // Logo + school name
-      pw.Center(
-        child: pw.Row(
+  List<FeeModel>? feeDetails,
+}) {
+  final data = _buildReceiptData(
+    payment: payment,
+    student: student,
+    institution: institution,
+    feeDetails: feeDetails,
+  );
+  return buildReceiptPdf(data);
+}
+
+/// Builds the B5 fee-receipt PDF — a 1:1 match of [ReceiptWidget] and the
+/// admin app's Figma "Receipt" design.
+Future<pw.Document> buildReceiptPdf(ReceiptData data) async {
+  // Prefer bundled Inter fonts (already shipped in assets/fonts) — falls back
+  // to PdfGoogleFonts CDN if the bundled assets can't be loaded.
+  pw.Font reg, med, semi, bold;
+  try {
+    reg = pw.Font.ttf(await rootBundle.load('assets/fonts/Inter-Regular.ttf'));
+    med = pw.Font.ttf(await rootBundle.load('assets/fonts/Inter-Medium.ttf'));
+    semi = pw.Font.ttf(await rootBundle.load('assets/fonts/Inter-SemiBold.ttf'));
+    bold = pw.Font.ttf(await rootBundle.load('assets/fonts/Inter-Bold.ttf'));
+  } catch (_) {
+    reg = await PdfGoogleFonts.interRegular();
+    med = await PdfGoogleFonts.interMedium();
+    semi = await PdfGoogleFonts.interSemiBold();
+    bold = await PdfGoogleFonts.interBold();
+  }
+
+  pw.ImageProvider? logo;
+  if ((data.schoolLogoUrl ?? '').isNotEmpty) {
+    try {
+      logo = await networkImage(data.schoolLogoUrl!);
+    } catch (_) {/* fall back to a logo-less header */}
+  }
+
+  // College header banner (kcet/kmptc/kcsam), chosen by institution name.
+  pw.ImageProvider? banner;
+  pw.ImageProvider? crest;
+  final bannerAsset = receiptHeaderImage(data.schoolName);
+  if (bannerAsset != null) {
+    try {
+      banner = await imageFromAssetBundle(bannerAsset);
+      crest = await imageFromAssetBundle('assets/images/KMPTC Logo.jpg');
+    } catch (_) {/* fall back to logo + text */}
+  }
+
+  const black = PdfColors.black;
+  // ISO B5 — 176 × 250 mm.
+  final b5 = PdfPageFormat(176 * PdfPageFormat.mm, 250 * PdfPageFormat.mm);
+  const divider = pw.BorderSide(color: black, width: 1);
+  const amountColWidth = 120.0;
+
+  pw.TextStyle st(double size, pw.Font f) =>
+      pw.TextStyle(font: f, fontSize: size, color: black);
+
+  pw.Widget kv(String label, String value) => pw.RichText(
+        text: pw.TextSpan(children: [
+          pw.TextSpan(text: '$label : ', style: st(10, semi)),
+          pw.TextSpan(
+              text: value.trim().isEmpty ? '-' : value, style: st(10, reg)),
+        ]),
+      );
+
+  pw.Widget infoCell(List<pw.Widget> lines) => pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
           mainAxisSize: pw.MainAxisSize.min,
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            if (logoImage != null) ...[
-              pw.Image(logoImage, width: 48, height: 48, fit: pw.BoxFit.cover),
-              pw.SizedBox(width: 12),
+            for (var i = 0; i < lines.length; i++) ...[
+              if (i > 0) pw.SizedBox(height: 8),
+              lines[i],
             ],
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  institution?.insname ?? '',
-                  style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: _kDarkBlue),
-                ),
-                pw.SizedBox(height: 3),
-                pw.Text(
-                  addressParts.join(', '),
-                  style: const pw.TextStyle(fontSize: 9, color: _kTextMedium),
-                ),
-              ],
-            ),
           ],
         ),
-      ),
-      pw.SizedBox(height: 14),
-      // Fee Receipt + receipt no + date  ||  Receipt Method + Status
-      pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.end,
-        children: [
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('Fee Receipt', style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold, color: _kPrimaryBlue)),
-              pw.SizedBox(height: 6),
-              _pdfLabelValue('Receipt No:', receiptNo),
-              pw.SizedBox(height: 3),
-              _pdfLabelValue('Date:', dateStr),
-            ],
-          ),
-          pw.Spacer(),
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.end,
-            children: [
-              if (totalPages > 1) ...[
-                pw.Text('Page $pageNum of $totalPages', style: const pw.TextStyle(fontSize: 9, color: _kTextMedium)),
-                pw.SizedBox(height: 6),
-              ] else
-                pw.SizedBox(height: 22),
-              _pdfLabelValue('Receipt Method:', methodLabel),
-              pw.SizedBox(height: 3),
-              _pdfLabelValue('Status:', statusLabel),
-            ],
-          ),
-        ],
-      ),
-    ],
-  );
-}
+      );
 
-pw.Widget _buildPdfStudentInfo(StudentModel student) {
-  return pw.Column(
-    crossAxisAlignment: pw.CrossAxisAlignment.start,
-    children: [
-      pw.Text('To:', style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: _kTextDark)),
-      pw.SizedBox(height: 8),
-      pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Expanded(
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                _pdfLabelValue('Name:', student.stuname),
-                pw.SizedBox(height: 6),
-                _pdfLabelValue('Mobile No:', student.stumobile),
-                pw.SizedBox(height: 6),
-                pw.Row(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('Address:', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _kTextDark)),
-                    pw.SizedBox(width: 6),
-                    pw.Expanded(
-                      child: pw.Text(student.fullAddress, style: const pw.TextStyle(fontSize: 10, color: _kTextMedium)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          pw.SizedBox(width: 20),
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.end,
-            children: [
-              _pdfLabelValue('Roll No:', student.stuadmno),
-              pw.SizedBox(height: 6),
-              _pdfLabelValue('Course:', student.courseName),
-              pw.SizedBox(height: 6),
-              _pdfLabelValue('Class:', student.stuclass),
-            ],
-          ),
-        ],
-      ),
-    ],
-  );
-}
+  final particulars = flattenParticulars(data);
 
-pw.Widget _buildPdfFeeTable(List<_ReceiptTerm> items, int startIdx, bool isLast, double total) {
-  return pw.Column(
-    children: [
-      // Table header
-      pw.Container(
-        decoration: pw.BoxDecoration(
-          color: _kHeaderBg,
-          border: pw.Border.all(color: _kBorderColor, width: 1),
-        ),
-        child: pw.Row(
+  final pdf = pw.Document();
+  pdf.addPage(
+    pw.Page(
+      pageFormat: b5,
+      margin: const pw.EdgeInsets.all(40),
+      theme: pw.ThemeData.withFont(base: reg, bold: bold),
+      build: (ctx) {
+        return pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
-            _pdfHeaderCell('S.No', 46),
-            pw.Container(width: 1, color: _kBorderColor),
-            _pdfHeaderCell('Semester', 124),
-            pw.Container(width: 1, color: _kBorderColor),
-            pw.Expanded(child: _pdfHeaderCell('Fee Type', null)),
-            pw.Container(width: 1, color: _kBorderColor),
-            _pdfHeaderCell('Amount', 119),
-          ],
-        ),
-      ),
-      // Data rows
-      for (int i = 0; i < items.length; i++)
-        _buildPdfDataRow(startIdx + i, items[i]),
-      // Sub total (last page only)
-      if (isLast)
-        pw.Row(
-          children: [
-            pw.SizedBox(width: 172),
-            pw.Expanded(
-              child: pw.Container(
-                decoration: const pw.BoxDecoration(
-                  color: _kPrimaryBlue,
-                  borderRadius: pw.BorderRadius.only(
-                    bottomLeft: pw.Radius.circular(4),
-                    bottomRight: pw.Radius.circular(4),
-                  ),
-                ),
-                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            // Header — centered college banner, or logo + text fallback.
+            if (banner != null)
+              // Three-grid header: 25% logo | 50% banner | 25% empty.
+              pw.SizedBox(
+                height: 100,
                 child: pw.Row(
                   children: [
+                    // 16% logo | 4% gap | 60% banner | 4% gap | 16% empty.
                     pw.Expanded(
-                      child: pw.Text('Sub Total', textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                      flex: 4,
+                      child: pw.Center(
+                        child: crest != null
+                            ? pw.Image(crest, height: 88)
+                            : pw.SizedBox(),
+                      ),
                     ),
-                    pw.SizedBox(
-                      width: 119,
-                      child: pw.Text('\u20B9${_formatAmount(total)}', textAlign: pw.TextAlign.right,
-                        style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                    pw.Expanded(flex: 1, child: pw.SizedBox()),
+                    pw.Expanded(
+                      flex: 15,
+                      child: pw.Center(
+                        child: pw.Image(banner, fit: pw.BoxFit.contain),
+                      ),
+                    ),
+                    pw.Expanded(flex: 1, child: pw.SizedBox()),
+                    pw.Expanded(flex: 4, child: pw.SizedBox()),
+                  ],
+                ),
+              )
+            else
+              pw.SizedBox(
+                height: 82,
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  children: [
+                    if (logo != null) ...[
+                      pw.SizedBox(
+                          width: 70,
+                          height: 70,
+                          child: pw.Image(logo, fit: pw.BoxFit.contain)),
+                      pw.SizedBox(width: 14),
+                    ],
+                    pw.Flexible(
+                      child: pw.Column(
+                        mainAxisSize: pw.MainAxisSize.min,
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          pw.Text(data.schoolName, style: st(15, bold)),
+                          pw.SizedBox(height: 3),
+                          pw.Text(data.schoolAddress,
+                              maxLines: 2, style: st(9, med)),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
+            pw.SizedBox(height: 10),
+            pw.Center(child: pw.Text('RECEIPT', style: st(13, bold))),
+            pw.SizedBox(height: 8),
+            // Bordered receipt table — content-sized (no Expanded), so the
+            // PDF layout engine renders every row reliably.
+            pw.Container(
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: black, width: 1),
+                borderRadius: pw.BorderRadius.circular(4),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                  // Info row — student details | receipt details.
+                  pw.Container(
+                    height: 74,
+                    child: pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: infoCell([
+                            kv('Name', data.studentName),
+                            kv('Reg. No', data.admissionNo),
+                            kv('Branch', data.courseName),
+                          ]),
+                        ),
+                        pw.Container(width: 1, height: 74, color: black),
+                        pw.Expanded(
+                          child: infoCell([
+                            kv('Receipt No', data.receiptNo),
+                            kv('Date', data.date),
+                            kv('Semester', receiptSemesterLabel(data)),
+                          ]),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Column headings.
+                  pw.Container(
+                    height: 30,
+                    decoration: const pw.BoxDecoration(
+                        border: pw.Border(top: divider)),
+                    child: pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: pw.Container(
+                            height: 30,
+                            alignment: pw.Alignment.center,
+                            child: pw.Text('PARTICULARS',
+                                style: st(11, bold)),
+                          ),
+                        ),
+                        pw.Container(width: 1, height: 30, color: black),
+                        pw.Container(
+                          width: amountColWidth,
+                          height: 30,
+                          alignment: pw.Alignment.centerRight,
+                          padding:
+                              const pw.EdgeInsets.symmetric(horizontal: 12),
+                          child: pw.Text('AMOUNTS (Rs)',
+                              style: st(11, bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Particulars.
+                  pw.Container(
+                    height: 240,
+                    decoration: const pw.BoxDecoration(
+                        border: pw.Border(top: divider)),
+                    child: pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: pw.Container(
+                            height: 240,
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                            child: pw.Column(
+                              crossAxisAlignment:
+                                  pw.CrossAxisAlignment.start,
+                              children: [
+                                for (var i = 0;
+                                    i < particulars.length;
+                                    i++) ...[
+                                  if (i > 0) pw.SizedBox(height: 6),
+                                  pw.Text(
+                                      '${i + 1}. ${particulars[i].type}',
+                                      style: st(10.5, reg)),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        pw.Container(width: 1, height: 240, color: black),
+                        pw.Container(
+                          width: amountColWidth,
+                          height: 240,
+                          padding: const pw.EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          child: pw.Column(
+                            crossAxisAlignment: pw.CrossAxisAlignment.end,
+                            children: [
+                              for (var i = 0;
+                                  i < particulars.length;
+                                  i++) ...[
+                                if (i > 0) pw.SizedBox(height: 6),
+                                pw.Text(
+                                    formatReceiptAmount(
+                                        particulars[i].amount),
+                                    style: st(10.5, reg)),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Total row.
+                  pw.Container(
+                    height: 32,
+                    decoration: const pw.BoxDecoration(
+                        border: pw.Border(top: divider)),
+                    child: pw.Row(
+                      children: [
+                        pw.Expanded(
+                          child: pw.Container(
+                            height: 32,
+                            alignment: pw.Alignment.centerRight,
+                            padding: const pw.EdgeInsets.symmetric(
+                                horizontal: 12),
+                            child: pw.Text('TOTAL', style: st(12, bold)),
+                          ),
+                        ),
+                        pw.Container(width: 1, height: 32, color: black),
+                        pw.Container(
+                          width: amountColWidth,
+                          height: 32,
+                          alignment: pw.Alignment.centerRight,
+                          padding:
+                              const pw.EdgeInsets.symmetric(horizontal: 12),
+                          child: pw.Text(formatReceiptAmount(data.total),
+                              style: st(12, bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Footer — amount in words + cashier signature line.
+                  pw.Container(
+                    height: 110,
+                    decoration: const pw.BoxDecoration(
+                        border: pw.Border(top: divider)),
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text(amountInWords(data.total),
+                            style: st(11, med)),
+                        pw.Spacer(),
+                        pw.Container(
+                          width: double.infinity,
+                          padding: const pw.EdgeInsets.only(right: 34),
+                          child: pw.Text('Cashier',
+                              textAlign: pw.TextAlign.right,
+                              style: st(12, bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
-        ),
-    ],
-  );
-}
-
-pw.Widget _pdfHeaderCell(String text, double? width) {
-  final child = pw.Container(
-    padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-    alignment: pw.Alignment.center,
-    child: pw.Text(text, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _kPrimaryBlue)),
-  );
-  return width != null ? pw.SizedBox(width: width, child: child) : child;
-}
-
-pw.Widget _buildPdfDataRow(int index, _ReceiptTerm term) {
-  return pw.Container(
-    constraints: const pw.BoxConstraints(minHeight: 36),
-    decoration: const pw.BoxDecoration(
-      border: pw.Border(
-        left: pw.BorderSide(color: _kBorderColor, width: 1),
-        right: pw.BorderSide(color: _kBorderColor, width: 1),
-        bottom: pw.BorderSide(color: _kBorderColor, width: 1),
-      ),
-    ),
-    child: pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.SizedBox(
-          width: 46,
-          child: pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            alignment: pw.Alignment.topCenter,
-            child: pw.Text('${index + 1}.', style: const pw.TextStyle(fontSize: 10, color: _kTextDark)),
-          ),
-        ),
-        pw.Container(width: 1, color: _kBorderColor),
-        pw.SizedBox(
-          width: 124,
-          child: pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            alignment: pw.Alignment.topCenter,
-            child: pw.Text(term.term, style: const pw.TextStyle(fontSize: 10, color: _kTextDark)),
-          ),
-        ),
-        pw.Container(width: 1, color: _kBorderColor),
-        pw.Expanded(
-          child: pw.Column(
-            children: [
-              for (final fee in term.fees)
-                pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  child: pw.Text(fee.$1, textAlign: pw.TextAlign.center,
-                    style: const pw.TextStyle(fontSize: 10, color: _kTextDark)),
-                ),
-            ],
-          ),
-        ),
-        pw.Container(width: 1, color: _kBorderColor),
-        pw.SizedBox(
-          width: 119,
-          child: pw.Column(
-            children: [
-              for (final fee in term.fees)
-                pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  child: pw.Text('\u20B9${_formatAmount(fee.$2)}', textAlign: pw.TextAlign.right,
-                    style: const pw.TextStyle(fontSize: 10, color: _kTextDark)),
-                ),
-            ],
-          ),
-        ),
-      ],
+        );
+      },
     ),
   );
-}
-
-pw.Widget _pdfLabelValue(String label, String value) {
-  return pw.Row(
-    mainAxisSize: pw.MainAxisSize.min,
-    children: [
-      pw.Text(label, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: _kTextDark)),
-      pw.SizedBox(width: 6),
-      pw.Text(value, style: const pw.TextStyle(fontSize: 10, color: _kTextMedium)),
-    ],
-  );
-}
-
-String _formatAmount(double amount) {
-  if (amount == amount.truncateToDouble()) {
-    return amount.toInt().toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'(\d)(?=(\d{3})+(?!\d))'), (m) => '${m[1]},');
-  }
-  return amount.toStringAsFixed(2).replaceAllMapped(
-    RegExp(r'(\d)(?=(\d{3})+\.)'), (m) => '${m[1]},');
+  return pdf;
 }

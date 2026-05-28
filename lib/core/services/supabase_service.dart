@@ -128,10 +128,24 @@ class SupabaseService {
   /// Returns list of (insId, schema, hasPassword) records.
   /// Active schema is set to the FIRST match that has a password already configured
   /// (falls back to first match overall if none have passwords yet).
+  ///
+  /// Searches every academic-year schema per institution (most recent first),
+  /// not just the latest active year. The admin app's year-rollover doesn't
+  /// copy parent records forward, so a parent's password may live in an older
+  /// year's schema even after the institution promotes to a new year.
   static Future<List<({int insId, String schema, bool hasPassword})>> findParentInstitutions(String mobile) async {
     final matches = <({int insId, String schema, bool hasPassword})>[];
 
     try {
+      // Best-effort: ask the DB to refresh PostgREST's db_schemas list so any
+      // recently-created institution schema becomes queryable. Safe to call
+      // every login — the RPC is a no-op when the list is already current.
+      try {
+        await client.rpc('expose_all_schemas');
+      } catch (e) {
+        debugPrint('expose_all_schemas RPC skipped: $e');
+      }
+
       // 1. Get all active institutions with their short names
       final institutions = await client
           .from('institution')
@@ -140,41 +154,51 @@ class SupabaseService {
 
       if ((institutions as List).isEmpty) return matches;
 
-      // 2. For each institution, build schema and search parents table
+      // 2. For each institution, walk every academic year (most recent first)
+      //    and stop at the first schema containing this mobile.
       for (final inst in institutions) {
         final insId = inst['ins_id'] as int;
         final shortName = inst['inshortname'] as String?;
         if (shortName == null || shortName.isEmpty) continue;
 
-        final yearLabel = await fetchActiveYearLabel(insId);
-        if (yearLabel == null) continue;
+        final yearLabels = await _fetchAllYearLabels(insId);
+        if (yearLabels.isEmpty) continue;
 
-        final schema = buildSchemaName(shortName, yearLabel);
+        for (final yearLabel in yearLabels) {
+          final schema = buildSchemaName(shortName, yearLabel);
 
-        try {
-          final result = await client.schema(schema)
-              .from('parents')
-              .select('par_id, parpassword')
-              .eq('payinchargemob', mobile)
-              .eq('activestatus', 1)
-              .limit(1)
-              .maybeSingle();
+          try {
+            final result = await client.schema(schema)
+                .from('parents')
+                .select('par_id, parpassword')
+                .eq('payinchargemob', mobile)
+                .eq('activestatus', 1)
+                .limit(1)
+                .maybeSingle();
 
-          if (result != null) {
-            final pwd = result['parpassword']?.toString();
-            final hasPassword = pwd != null && pwd.isNotEmpty;
-            debugPrint('Found parent in schema: $schema (ins_id=$insId, hasPassword=$hasPassword)');
-            matches.add((insId: insId, schema: schema, hasPassword: hasPassword));
-          }
-        } on PostgrestException catch (e) {
-          // PGRST106 = schema not exposed in PostgREST. Happens when an
-          // institution row exists but its schema isn't in db-schemas.
-          // e.code holds the HTTP status ('406'), so match on message.
-          if (!e.message.contains('PGRST106')) {
+            if (result != null) {
+              final pwd = result['parpassword']?.toString();
+              final hasPassword = pwd != null && pwd.isNotEmpty;
+              debugPrint('Found parent in schema: $schema (ins_id=$insId, hasPassword=$hasPassword)');
+              // Replace any earlier password-less match for this institution
+              // so login picks the year where the password actually lives.
+              matches.removeWhere((m) => m.insId == insId && !m.hasPassword);
+              matches.add((insId: insId, schema: schema, hasPassword: hasPassword));
+              // Stop scanning older years for this institution only once we've
+              // found a password — otherwise keep looking back in case the
+              // password lives in a previous year's schema.
+              if (hasPassword) break;
+            }
+          } on PostgrestException catch (e) {
+            // PGRST106 = schema not exposed in PostgREST. Happens when an
+            // institution row exists but its schema isn't in db-schemas.
+            // e.code holds the HTTP status ('406'), so match on message.
+            if (!e.message.contains('PGRST106')) {
+              debugPrint('Schema $schema search failed: $e');
+            }
+          } catch (e) {
             debugPrint('Schema $schema search failed: $e');
           }
-        } catch (e) {
-          debugPrint('Schema $schema search failed: $e');
         }
       }
 
@@ -193,6 +217,37 @@ class SupabaseService {
     }
 
     return matches;
+  }
+
+  /// Every academic-year label registered for an institution, most-recent
+  /// first. Used by [findParentInstitutions] so parent records that live in
+  /// an older year's schema are still found after a year rollover.
+  static Future<List<String>> _fetchAllYearLabels(int insId) async {
+    final labels = <String>[];
+    final seen = <String>{};
+
+    try {
+      final rows = await client
+          .from('institutionyear')
+          .select('yrlabel')
+          .eq('ins_id', insId)
+          .order('iyr_id', ascending: false);
+      for (final r in (rows as List)) {
+        final l = r['yrlabel']?.toString();
+        if (l != null && l.isNotEmpty && seen.add(l)) labels.add(l);
+      }
+    } catch (e) {
+      debugPrint('institutionyear scan failed for ins_id=$insId: $e');
+    }
+
+    // Always include the current calendar academic year as a final fallback
+    // so brand-new institutions that haven't populated institutionyear yet
+    // still get scanned.
+    final now = DateTime.now();
+    final currentYear = '${now.year}-${now.year + 1}';
+    if (seen.add(currentYear)) labels.add(currentYear);
+
+    return labels;
   }
 
   /// Convenience wrapper — returns first match for backward compat.

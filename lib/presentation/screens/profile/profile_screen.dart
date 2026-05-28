@@ -342,9 +342,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildStudentSummaryCard(Map<String, String> studentData) {
     final items = [
       _GridStat(value: studentData['adminNo']!, label: 'Roll No'),
+      _GridStat(value: studentData['course']!, label: 'Course'),
       _GridStat(value: studentData['class']!, label: 'Class'),
       _GridStat(value: studentData['batch']!, label: 'Batch'),
-      _GridStat(value: studentData['course']!, label: 'Course'),
       _GridStat(value: studentData['dob']!, label: 'Date of Birth'),
       _GridStat(value: studentData['gender']!, label: 'Gender'),
       _GridStat(value: studentData['blood']!, label: 'Blood Group'),

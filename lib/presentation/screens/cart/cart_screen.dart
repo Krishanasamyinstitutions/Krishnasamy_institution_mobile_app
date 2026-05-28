@@ -1067,6 +1067,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
         carId: carId,
         cartItems: cartState.items,
         cartTotal: cartState.totalAmount,
+        fineMap: _currentFineMap,
       );
 
       if (payId == null) {
@@ -1243,7 +1244,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           await Future.wait([
             SupabaseService.fromSchema('payment').update({
               'paystatus': 'F',
-              'paymethod': 'razorpay',
+              'paymethod': 'online',
               'paydate': DateTime.now().toIso8601String(),
             }).eq('pay_id', payId),
             SupabaseService.fromSchema('shoppingcart').update({
@@ -1299,7 +1300,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
           ref: ref,
           payId: payId,
           carId: carId,
-          paymethod: 'razorpay',
+          paymethod: 'online',
           payreference: paymentId,
           items: items,
           fineMap: _currentFineMap,
@@ -1547,7 +1548,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
 
         final result = await SupabaseService.client.rpc('complete_payment_grouped', params: {
           'p_pay_id': payId,
-          'p_pay_method': 'razorpay',
+          'p_pay_method': 'online',
           'p_pay_reference': razorpayPaymentId ?? orderId ?? 'recovered',
           'p_items': rpcItems,
           'p_ins_id': insId,
@@ -1832,7 +1833,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
               ref: ref,
               payId: payId,
               carId: carId,
-              paymethod: 'razorpay',
+              paymethod: 'online',
               payreference: rpPaymentId ?? orderId,
               items: items,
               fineMap: _currentFineMap,

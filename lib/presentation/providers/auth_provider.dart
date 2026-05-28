@@ -378,38 +378,78 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     try {
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
-      // Verify OTP was verified for this mobile
-      final rows = await SupabaseService.fromSchema('parents')
+      // Verify OTP was verified for this mobile (in the active schema where
+      // requestOtp stored it).
+      final otpRows = await SupabaseService.fromSchema('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
           .eq('parotpstatus', 1) // Must be verified
           .eq('activestatus', 1)
           .limit(1);
 
-      if (rows.isEmpty) {
+      if (otpRows.isEmpty) {
         throw Exception('Please verify OTP first');
       }
 
-      final parent = ParentModel.fromJson(rows.first);
+      // Propagate the new password to EVERY schema where this parent's mobile
+      // is registered. Parents whose mobile is on multiple institutions
+      // should be able to sign in to any of them with one password — there's
+      // no UI for setting per-school passwords, so they must stay in sync.
+      final activeSchema = SupabaseService.currentSchema;
+      final activeInsId = SupabaseService.currentInsId;
+      final matches = await SupabaseService.findParentInstitutions(cleanMobile);
+      // findParentInstitutions may have re-targeted the active schema;
+      // restore the OTP-verified one so auto-login uses it.
+      if (activeSchema != null) SupabaseService.setSchema(activeSchema);
 
-      // Update parent record with password and verify update succeeded
-      final updateRows = await SupabaseService.fromSchema('parents').update({
-        'parpassword': password,
-        // Clear OTP after successful password set
-        'parmobotp': null,
-      }).eq('par_id', parent.parId).select().limit(1);
+      final targets = matches.isEmpty
+          ? <({int insId, String schema, bool hasPassword})>[
+              (insId: activeInsId!, schema: activeSchema!, hasPassword: false)
+            ]
+          : matches;
 
-      if (updateRows.isEmpty) {
+      ParentModel? activeParent;
+      for (final m in targets) {
+        try {
+          final updateRows = await SupabaseService.client
+              .schema(m.schema)
+              .from('parents')
+              .update({
+                'parpassword': password,
+                'parmobotp': null,
+              })
+              .eq('payinchargemob', cleanMobile)
+              .eq('activestatus', 1)
+              .select()
+              .limit(1);
+          if (updateRows.isEmpty) continue;
+          if (m.schema == activeSchema) {
+            activeParent = ParentModel.fromJson(updateRows.first);
+          }
+        } catch (_) {
+          // Peer-schema failure shouldn't abort sign-up — the user can still
+          // log into the active schema, and the new sign-in loop will let
+          // them in if any one schema has the matching password. Peers can
+          // be repaired on next forgot-password.
+        }
+      }
+
+      if (activeParent == null) {
         throw Exception('Failed to create account. Please try again.');
       }
+
+      // Refresh cache so every updated schema is now marked hasPassword=true.
+      SupabaseService.setParentSchemas([
+        for (final m in matches)
+          (insId: m.insId, schema: m.schema, hasPassword: true)
+      ]);
 
       // Auto-login: set session directly instead of going through signIn
       // (signIn uses verify_password RPC which may not work immediately
       //  if the DB hashes the password via a trigger)
-      final updatedParent = ParentModel.fromJson(updateRows.first);
       await _ref.read(parentAuthStateProvider.notifier).setAuthenticatedSession(
-            parent: updatedParent,
-            insId: SupabaseService.currentInsId!,
+            parent: activeParent,
+            insId: activeInsId!,
           );
 
       state = const AsyncValue.data(null);
@@ -438,25 +478,84 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
       // Cache all schemas for multi-institution student fetching
       SupabaseService.setParentSchemas(matches);
 
-      // Prefer a schema where password is already set for authentication.
-      // If no school has a password, require sign-up first.
-      final authMatch = matches.firstWhere(
-        (m) => m.hasPassword,
-        orElse: () => (insId: -1, schema: '', hasPassword: false),
-      );
-      if (authMatch.insId == -1) {
+      final passwordMatches = matches.where((m) => m.hasPassword).toList();
+      if (passwordMatches.isEmpty) {
         throw Exception('Account setup incomplete. Please create your account first.');
       }
 
-      // Ensure the active schema is the one we're authenticating against
-      SupabaseService.setSchema(authMatch.schema);
+      // A parent may have set different passwords at different institutions
+      // (e.g. registered first at one school, then again at another). Try the
+      // typed password against every schema where a password is set and accept
+      // the first match — only fail if none of them verify.
+      Object? lastError;
+      for (final m in passwordMatches) {
+        SupabaseService.setSchema(m.schema);
+        try {
+          final rows = await SupabaseService.fromSchema('parents')
+              .select()
+              .eq('payinchargemob', cleanMobile)
+              .eq('activestatus', 1)
+              .limit(1);
+          if (rows.isEmpty) continue;
 
-      await _ref.read(parentAuthStateProvider.notifier).signIn(
-            mobile: mobile,
-            password: password,
-            insId: authMatch.insId,
-          );
-      state = const AsyncValue.data(null);
+          final parent = ParentModel.fromJson(rows.first);
+          if (parent.parpassword == null || parent.parpassword!.isEmpty) continue;
+
+          final verifyResult = await _client.rpc('verify_password', params: {
+            'plain_password': password,
+            'hashed_password': parent.parpassword,
+          });
+          final isValid = verifyResult == true ||
+              verifyResult == 'true' ||
+              verifyResult == 't' ||
+              verifyResult.toString() == 'true';
+
+          if (isValid) {
+            // Backfill the same password into any schema where this parent
+            // exists but no password is set yet (e.g. a new institution that
+            // just got the parent record). After this, future sign-ins
+            // verify against any of the schemas seamlessly.
+            final passwordless =
+                matches.where((peer) => !peer.hasPassword).toList();
+            for (final peer in passwordless) {
+              try {
+                await SupabaseService.client
+                    .schema(peer.schema)
+                    .from('parents')
+                    .update({'parpassword': password, 'parmobotp': null})
+                    .eq('payinchargemob', cleanMobile)
+                    .eq('activestatus', 1);
+              } catch (_) {
+                // Peer backfill is best-effort — login still succeeds via
+                // the verified schema even if a peer update is rejected.
+              }
+            }
+            if (passwordless.isNotEmpty) {
+              SupabaseService.setParentSchemas([
+                for (final peer in matches)
+                  (insId: peer.insId, schema: peer.schema, hasPassword: true),
+              ]);
+            }
+
+            await _ref
+                .read(parentAuthStateProvider.notifier)
+                .setAuthenticatedSession(parent: parent, insId: m.insId);
+            state = const AsyncValue.data(null);
+            return;
+          }
+        } catch (e) {
+          // Keep trying other schemas — a transient query failure on one
+          // shouldn't block sign-in via another.
+          lastError = e;
+        }
+      }
+
+      // No schema's password matched. Prefer "Invalid password" when at least
+      // one verification actually ran without throwing; surface the underlying
+      // error only when every attempt blew up before verification.
+      throw Exception(lastError == null
+          ? 'Invalid password'
+          : 'Sign-in failed. Please try again.');
     } catch (e, st) {
       state = AsyncValue.error(e, st);
       rethrow;
@@ -581,17 +680,18 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
     }
   }
 
-  /// Reset password for existing parent
+  /// Reset password for existing parent. Updates the password in EVERY
+  /// schema where this mobile is registered so the new password works
+  /// across all of the parent's institutions (matches the sign-up flow).
   Future<void> resetPassword({
     required String mobile,
     required String newPassword,
   }) async {
     state = const AsyncValue.loading();
     try {
-      // Clean mobile number
       final cleanMobile = mobile.replaceAll(RegExp(r'[^0-9]'), '');
 
-      // Verify OTP was verified for this mobile
+      // Verify OTP was verified for this mobile in the active schema.
       final verifyRows = await SupabaseService.fromSchema('parents')
           .select()
           .eq('payinchargemob', cleanMobile)
@@ -603,21 +703,53 @@ class AuthNotifier extends StateNotifier<AsyncValue<void>> {
         throw Exception('Please verify OTP first');
       }
 
-      final verifyResponse = verifyRows.first;
+      // Fan the new password out across every institution schema where this
+      // parent's mobile is registered.
+      final activeSchema = SupabaseService.currentSchema;
+      final matches = await SupabaseService.findParentInstitutions(cleanMobile);
+      if (activeSchema != null) SupabaseService.setSchema(activeSchema);
 
-      // Update password in parents table using par_id
-      final updateRows = await SupabaseService.fromSchema('parents')
-          .update({
-            'parpassword': newPassword,
-            'parmobotp': null, // Clear OTP after password reset
-          })
-          .eq('par_id', verifyResponse['par_id'])
-          .select()
-          .limit(1);
+      final targets = matches.isEmpty
+          ? <({int insId, String schema, bool hasPassword})>[
+              (
+                insId: SupabaseService.currentInsId!,
+                schema: activeSchema!,
+                hasPassword: false
+              )
+            ]
+          : matches;
 
-      if (updateRows.isEmpty) {
+      var updateCount = 0;
+      for (final m in targets) {
+        try {
+          final updateRows = await SupabaseService.client
+              .schema(m.schema)
+              .from('parents')
+              .update({
+                'parpassword': newPassword,
+                'parmobotp': null, // Clear OTP after password reset
+              })
+              .eq('payinchargemob', cleanMobile)
+              .eq('activestatus', 1)
+              .select()
+              .limit(1);
+          if (updateRows.isNotEmpty) updateCount++;
+        } catch (_) {
+          // Peer-schema failures are non-fatal: as long as at least one
+          // schema accepted the new password, the parent can sign in.
+        }
+      }
+
+      if (updateCount == 0) {
         throw Exception('Failed to reset password');
       }
+
+      // Refresh the cached parentSchemas list so hasPassword=true on every
+      // updated peer (the next sign-in loop relies on this).
+      SupabaseService.setParentSchemas([
+        for (final m in matches)
+          (insId: m.insId, schema: m.schema, hasPassword: true)
+      ]);
 
       state = const AsyncValue.data(null);
     } catch (e, st) {

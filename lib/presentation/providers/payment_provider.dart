@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/fee_model.dart';
@@ -342,6 +343,7 @@ Future<int?> initiatePayment({
   required int carId,
   required List<FeeModel> cartItems,
   required double cartTotal,
+  Map<int, double>? fineMap,
 }) async {
   lastPaymentError = null;
 
@@ -413,6 +415,138 @@ Future<int?> initiatePayment({
       debugPrint('check_fees_locked RPC not available: $e');
     }
 
+    // 2b. Walk items → feedemand.fee_id → feetype.fg_id → feegroup once and
+    // use the result for two checks:
+    //   (i)  Every involved fee group must have a `sequence` row, otherwise
+    //        the RPC falls back to a synthetic `PAY<pay_id>` receipt number
+    //        — block here so the parent isn't charged for a payment that
+    //        will end up with an ugly receipt and silent misconfiguration.
+    //   (ii) Pick the most common ban_id across involved groups to stamp as
+    //        the beneficiary bank on the 'I' row (admin parity; Razorpay
+    //        batches all groups into one transaction so we pick a majority).
+    int? razorpayBanId;
+    try {
+      final fdRows = await SupabaseService.fromSchema('feedemand')
+          .select('fee_id')
+          .inFilter('dem_id', items.map((f) => f.demId).toList());
+      final feeIds = (fdRows as List)
+          .map((r) => r['fee_id'])
+          .whereType<int>()
+          .toSet()
+          .toList();
+      if (feeIds.isNotEmpty) {
+        final ftRows = await SupabaseService.fromSchema('feetype')
+            .select('fg_id')
+            .inFilter('fee_id', feeIds);
+        final fgIds = (ftRows as List)
+            .map((r) => r['fg_id'])
+            .whereType<int>()
+            .toSet()
+            .toList();
+        if (fgIds.isNotEmpty) {
+          // (i) Sequence-configured check. Mirrors the WHERE used inside
+          // process_grouped_payment / complete_payment_grouped at the
+          // `SELECT seq_id,sequid,seqwidth,seqcurno FROM <schema>.sequence
+          //  WHERE ins_id=$1 AND fg_id=$2 LIMIT 1` step.
+          final seqRows = await SupabaseService.fromSchema('sequence')
+              .select('fg_id')
+              .eq('ins_id', student.insId)
+              .inFilter('fg_id', fgIds);
+          final configured = (seqRows as List)
+              .map((r) => r['fg_id'])
+              .whereType<int>()
+              .toSet();
+          final missing =
+              fgIds.where((fg) => !configured.contains(fg)).toList();
+          if (missing.isNotEmpty) {
+            // Log the specific misconfiguration so support can diagnose,
+            // but show the parent a generic "try again later" message —
+            // exposing fee-group names just confuses end users.
+            try {
+              final missingRows = await SupabaseService.fromSchema('feegroup')
+                  .select('fg_id, fgdesc')
+                  .inFilter('fg_id', missing);
+              final names = (missingRows as List)
+                  .map((r) =>
+                      (r['fgdesc'] as String?)?.trim().isNotEmpty == true
+                          ? r['fgdesc'] as String
+                          : 'group #${r['fg_id']}')
+                  .join(', ');
+              debugPrint('Sequence missing for fee groups: $names');
+            } catch (_) {/* logging only */}
+            lastPaymentError = 'Server is down. Please try again later.';
+            return null;
+          }
+
+          // (ii) feegroup ban_id check: every involved fee group must have a
+          // beneficiary bank mapped, otherwise Razorpay payments end up with
+          // ban_id=NULL on the payment row and the per-bank routing reports
+          // can't classify them. Block here with the same generic message
+          // the sequence check uses so end users don't see implementation
+          // details.
+          final fgRows = await SupabaseService.fromSchema('feegroup')
+              .select('fg_id, ban_id, fgdesc')
+              .inFilter('fg_id', fgIds);
+          final fgWithBan = <int, int>{};
+          final fgNames = <int, String>{};
+          for (final r in (fgRows as List)) {
+            final fg = r['fg_id'];
+            final ban = r['ban_id'];
+            final name = (r['fgdesc'] as String?) ?? '';
+            if (fg is int) {
+              fgNames[fg] = name.trim().isEmpty ? 'group #$fg' : name;
+              if (ban is int) fgWithBan[fg] = ban;
+            }
+          }
+          final missingBank =
+              fgIds.where((fg) => !fgWithBan.containsKey(fg)).toList();
+          if (missingBank.isNotEmpty) {
+            debugPrint(
+              'Bank not mapped for fee groups: '
+              '${missingBank.map((fg) => fgNames[fg] ?? 'group #$fg').join(', ')}',
+            );
+            lastPaymentError = 'Server is down. Please try again later.';
+            return null;
+          }
+
+          // ban_id majority vote across mapped groups.
+          if (fgWithBan.isNotEmpty) {
+            final counts = <int, int>{};
+            for (final id in fgWithBan.values) {
+              counts[id] = (counts[id] ?? 0) + 1;
+            }
+            final entry = counts.entries
+                .reduce((a, b) => a.value >= b.value ? a : b);
+            razorpayBanId = entry.key;
+          }
+        }
+      }
+    } catch (e) {
+      // The sequence check above sets lastPaymentError + returns null on its
+      // own failure path. This catch handles unexpected lookup failures
+      // (table not found, network, etc.) — log and let the payment proceed;
+      // the RPC's own fallback paynumber generation will still produce a row.
+      debugPrint('Fee-group config check failed: $e');
+    }
+
+    // Build the per-demand items list in the shape admin's orphan-recovery
+    // sweep expects. Stored on the 'I' row as `payitems` so if Razorpay
+    // captures the payment but the success callback never fires, the admin's
+    // `_sweepOrphanedPayments` can read these items and replay them through
+    // `complete_payment_grouped` — same recovery path admin-initiated
+    // payments use.
+    final payItems = [
+      for (final fee in items)
+        {
+          'dem_id': fee.demId,
+          'yr_id': fee.yrId,
+          'yrlabel': fee.demfeeyear,
+          'ins_id': fee.insId,
+          'amount': fee.balancedue + (fineMap?[fee.demId] ?? 0),
+          'demfeetype': fee.demfeetype,
+        },
+    ];
+
     // 3. Create payment record (paystatus = 'I' for Initiated, NO paynumber yet).
     // The paynumber is assigned by `complete_payment_grouped` RPC ONLY when the
     // payment succeeds (status 'C'). Failed payments stay paynumber-less so we
@@ -432,6 +566,8 @@ Future<int?> initiatePayment({
       'paystatus': 'I',
       'recon_status': 'P',
       'createdby': parent?.payincharge ?? student.stuname,
+      'payitems': jsonEncode(payItems),
+      if (razorpayBanId != null) 'ban_id': razorpayBanId,
     }).select('pay_id').single();
 
     final payId = payResponse['pay_id'] as int;
@@ -599,6 +735,40 @@ Future<List<int>> handlePaymentSuccess({
         }
       }
     } catch (rpcError) {
+      // SQLSTATE P0001 is raised by complete_payment_grouped when a
+      // concurrent collector already cleared one of the demands. The
+      // Razorpay capture has already happened, so the safe thing is to
+      // surface the situation for staff to refund manually — NOT to run
+      // the manual fallback below, which would silently over-credit the
+      // feedemand row by the same amount the concurrent collector posted.
+      final errStr = rpcError.toString();
+      final isRace = errStr.contains('P0001') ||
+          errStr.contains('already paid') ||
+          errStr.contains('concurrent payment');
+      if (isRace) {
+        debugPrint('Race detected on complete_payment_grouped: $rpcError');
+        // Mark the original 'I' row so admin reconciliation surfaces it as
+        // "captured but needs refund" rather than letting the orphan sweep
+        // retry it later (which would hit the same race guard).
+        try {
+          await SupabaseService.fromSchema('payment').update({
+            'paystatus': 'F',
+            'paymethod': paymethod,
+            'payreference': '$payreference (REFUND-NEEDED: concurrent payment)',
+            'paydate': DateTime.now().toIso8601String(),
+          }).eq('pay_id', payId);
+        } catch (e) {
+          debugPrint('Failed to mark race payment for refund: $e');
+        }
+        lastPaymentError =
+            'Payment captured by Razorpay, but the fee was just paid through another channel. '
+            'Staff will refund this amount.';
+        // Stop here — don't run the manual fallback (it would double-credit)
+        // and don't pretend success. Return empty so the caller routes to a
+        // failure / refund-pending screen instead of a receipt.
+        return [];
+      }
+
       // Fallback: manual updates if RPC not deployed
       debugPrint('complete_payment_grouped RPC not available, using fallback: $rpcError');
 
@@ -743,7 +913,7 @@ Future<bool> handlePaymentFailure({
     try {
       await SupabaseService.client.rpc('complete_payment_grouped', params: {
         'p_pay_id': payId,
-        'p_pay_method': 'razorpay',
+        'p_pay_method': 'online',
         'p_pay_reference': reference,
         'p_items': rpcItems,
         'p_ins_id': student?.insId,
@@ -753,7 +923,7 @@ Future<bool> handlePaymentFailure({
       // Fallback: manual update
       final paymentUpdate = <String, dynamic>{
         'paystatus': 'F',
-        'paymethod': 'razorpay',
+        'paymethod': 'online',
         'paydate': DateTime.now().toIso8601String(),
       };
       if (payReference != null) {
@@ -887,7 +1057,7 @@ Future<OrphanSweepResult> sweepOrphanedPayments({
 
           await SupabaseService.client.rpc('complete_payment_grouped', params: {
             'p_pay_id': payId,
-            'p_pay_method': 'razorpay',
+            'p_pay_method': 'online',
             'p_pay_reference': 'Razorpay: $paymentId (recovered)',
             'p_items': rpcItems,
             'p_ins_id': insId,
