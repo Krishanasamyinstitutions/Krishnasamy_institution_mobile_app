@@ -61,7 +61,6 @@ dependencies:
   # Notifications & Background Tasks
   awesome_notifications: ^0.10.0
   responsive_builder2: ^0.9.0
-  upi_india: ^3.0.1
 
 dev_dependencies:
   flutter_test:
