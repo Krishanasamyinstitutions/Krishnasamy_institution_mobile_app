@@ -326,7 +326,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
-                                  color: AppColors.primary,
+                                  color: AppColors.buttonPrimary,
                                 ),
                               ),
                             ),
@@ -586,11 +586,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFF121212),
+          color: AppColors.buttonPrimary,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.4),
+              color: AppColors.buttonPrimary.withValues(alpha: 0.4),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),
@@ -645,7 +645,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: AppColors.primary,
+              color: AppColors.buttonPrimary,
             ),
           ),
         ),
