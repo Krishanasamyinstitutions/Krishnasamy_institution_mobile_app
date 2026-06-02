@@ -30,7 +30,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
   static const Color _cardBorder = Color(0xFFE8E7E4);
   static const Color _textDark = Color(0xFF1A1A1A);
   static const Color _textMedium = Color(0xFF6B6B6B);
-  static const Color _textLight = Color(0xFF9E9E9E);
+  static const Color _textLight = Color(0xFF6B6B6B);
 
   // Mock data for preview (remove this when real data is available)
   List<FeeModel> get _mockFees => [
@@ -237,7 +237,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary,
+              color: AppColors.avatarBg,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),
@@ -315,7 +315,7 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFF121212),
+          color: AppColors.secondary,
           shape: BoxShape.circle,
           boxShadow: const [
             BoxShadow(
@@ -699,12 +699,12 @@ class _FeesScreenState extends ConsumerState<FeesScreen> {
       duration: const Duration(milliseconds: 200),
       width: double.infinity,
       decoration: BoxDecoration(
-        color: isEnabled ? AppColors.primary : AppColors.filterBg(context),
+        color: isEnabled ? AppColors.buttonPrimary : AppColors.filterBg(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: isEnabled
             ? [
                 BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.3),
+                  color: AppColors.buttonPrimary.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),

@@ -69,7 +69,7 @@ class AppButton extends StatelessWidget {
         return ElevatedButton(
           onPressed: isDisabled ? null : onPressed,
           style: ElevatedButton.styleFrom(
-            backgroundColor: backgroundColor ?? AppColors.primary,
+            backgroundColor: backgroundColor ?? AppColors.buttonPrimary,
             disabledBackgroundColor: AppColors.gray300,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -84,18 +84,18 @@ class AppButton extends StatelessWidget {
             side: BorderSide(
               color: isDisabled
                   ? AppColors.gray300
-                  : (backgroundColor ?? AppColors.primary),
+                  : (backgroundColor ?? AppColors.buttonPrimary),
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: _buildContent(textColor ?? AppColors.primary),
+          child: _buildContent(textColor ?? AppColors.buttonPrimary),
         );
       case AppButtonVariant.text:
         return TextButton(
           onPressed: isDisabled ? null : onPressed,
-          child: _buildContent(textColor ?? AppColors.primary),
+          child: _buildContent(textColor ?? AppColors.buttonPrimary),
         );
     }
   }

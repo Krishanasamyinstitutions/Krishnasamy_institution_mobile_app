@@ -83,7 +83,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
                 height: 44,
                 margin: const EdgeInsets.only(right: 14),
                 decoration: const BoxDecoration(
-                  color: Color(0xFF121212),
+                  color: AppColors.secondary,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
@@ -246,11 +246,7 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
               width: 52,
               height: 52,
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.primary, AppColors.primary600],
-                ),
+                color: AppColors.avatarBg,
                 shape: BoxShape.circle,
               ),
               clipBehavior: Clip.antiAlias,
@@ -399,12 +395,14 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: isNewSelection ? const Color(0xFF121212) : AppColors.borderC(context),
+            color: isNewSelection
+                ? AppColors.buttonPrimary
+                : AppColors.borderC(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: isNewSelection
                 ? [
                     BoxShadow(
-                      color: const Color(0x30000000),
+                      color: AppColors.buttonPrimary.withValues(alpha: 0.4),
                       blurRadius: 16,
                       offset: const Offset(0, 8),
                     ),

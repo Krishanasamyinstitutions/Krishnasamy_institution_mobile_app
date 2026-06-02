@@ -23,7 +23,7 @@ class WelcomeScreen extends StatelessWidget {
   // ─── Mobile layout — reference image style ───────────────────────────────
   Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -189,8 +189,15 @@ class WelcomeScreen extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          color: const Color(0xFF121212),
+          color: AppColors.buttonPrimary,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.buttonPrimary.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -225,22 +232,22 @@ class WelcomeScreen extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
-          color: isMobile ? Colors.white : AppColors.cardBg(context),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isMobile ? const Color(0xFFE8E7E4) : AppColors.primary,
-            width: isMobile ? 1 : 2,
+            color: AppColors.secondary,
+            width: isMobile ? 1.5 : 2,
           ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
+            const Text(
               'Create Account',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: isMobile ? const Color(0xFF1A1A1A) : AppColors.primary,
+                color: AppColors.secondary,
               ),
             ),
             const SizedBox(width: 10),
@@ -248,8 +255,8 @@ class WelcomeScreen extends StatelessWidget {
               'assets/icons/linear/user-add.svg',
               width: 20,
               height: 20,
-              colorFilter: ColorFilter.mode(
-                isMobile ? const Color(0xFF1A1A1A) : AppColors.primary,
+              colorFilter: const ColorFilter.mode(
+                AppColors.secondary,
                 BlendMode.srcIn,
               ),
             ),
@@ -266,11 +273,17 @@ class WelcomeScreen extends StatelessWidget {
     required Color color,
     required Color iconColor,
   }) {
+    final isMobile = !context.isDesktop;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.cardBg(context),
         borderRadius: BorderRadius.circular(12),
+        // Spec: card border navy on desktop / #E8E7E4 on mobile
+        border: Border.all(
+          color: isMobile ? const Color(0xFFE8E7E4) : AppColors.primary,
+          width: isMobile ? 1 : 1.5,
+        ),
         boxShadow: Theme.of(context).brightness == Brightness.dark
             ? []
             : [BoxShadow(color: AppColors.shadowLight, blurRadius: 12, offset: const Offset(0, 4))],
