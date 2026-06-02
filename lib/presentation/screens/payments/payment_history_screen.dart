@@ -31,7 +31,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
   static const Color _cardBorder = Color(0xFFE8E7E4);
   static const Color _textDark = Color(0xFF1A1A1A);
   static const Color _textMedium = Color(0xFF6B6B6B);
-  static const Color _textLight = Color(0xFF9E9E9E);
+  static const Color _textLight = Color(0xFF6B6B6B);
 
   late String _activeFilter;
   int _currentPage = 0;
@@ -365,7 +365,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
               height: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary,
+                color: AppColors.avatarBg,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
@@ -444,7 +444,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFF121212),
+          color: AppColors.secondary,
           shape: BoxShape.circle,
           boxShadow: const [
             BoxShadow(
@@ -517,14 +517,16 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  color: isActive ? const Color(0xFF121212) : Colors.transparent,
+                  // Active filter chip = amber filled + amber glow (matches the
+                  // app's amber action affordances)
+                  color: isActive ? AppColors.buttonPrimary : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                   boxShadow: isActive
-                      ? const [
+                      ? [
                           BoxShadow(
-                            color: Color(0x20000000),
+                            color: AppColors.buttonPrimary.withValues(alpha: 0.3),
                             blurRadius: 8,
-                            offset: Offset(0, 2),
+                            offset: const Offset(0, 2),
                           ),
                         ]
                       : null,

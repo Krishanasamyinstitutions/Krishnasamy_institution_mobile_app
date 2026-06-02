@@ -480,8 +480,10 @@ class MainScaffold extends ConsumerWidget {
       'Provide either lineSvg + fillSvg or a fallbackIcon (AppIcon name).',
     );
     final isSelected = index == selectedIndex;
-    final Color fg =
-        isSelected ? Colors.white : AppColors.textSecondaryC(context);
+    // Spec: selected nav item = amber tint bg, amber icon + label
+    final Color fg = isSelected
+        ? AppColors.secondary
+        : AppColors.textSecondaryC(context);
     final Widget iconWidget = (lineSvg != null && fillSvg != null)
         ? SvgPicture.asset(
             isSelected ? fillSvg : lineSvg,
@@ -499,7 +501,9 @@ class MainScaffold extends ConsumerWidget {
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.transparent,
+          color: isSelected
+              ? AppColors.secondary.withValues(alpha: 0.15)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Row(
@@ -521,9 +525,7 @@ class MainScaffold extends ConsumerWidget {
                 height: 20,
                 padding: const EdgeInsets.symmetric(horizontal: 6),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? Colors.white.withValues(alpha: 0.25)
-                      : AppColors.error,
+                  color: AppColors.error,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Center(

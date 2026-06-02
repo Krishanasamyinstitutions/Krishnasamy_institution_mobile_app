@@ -26,7 +26,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   static const Color _cardBorder = Color(0xFFE8E7E4);
   static const Color _textDark = Color(0xFF1A1A1A);
   static const Color _textMedium = Color(0xFF6B6B6B);
-  static const Color _textLight = Color(0xFF9E9E9E);
+  static const Color _textLight = Color(0xFF6B6B6B);
 
   int _currentPage = 0;
 
@@ -581,7 +581,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
               height: 48,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.primary,
+                color: AppColors.avatarBg,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.08),
@@ -653,7 +653,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFF121212),
+          color: AppColors.secondary,
           shape: BoxShape.circle,
           boxShadow: const [
             BoxShadow(
@@ -980,53 +980,28 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   }
 
   Widget _buildNotificationIcon(NotificationType type, bool isUnread) {
-    String icon;
-    Color bgColor;
-    Color iconColor;
+    final String icon = switch (type) {
+      NotificationType.feeReminder ||
+      NotificationType.dueDateApproaching =>
+        'notification',
+      NotificationType.paymentSuccess => 'tick-circle',
+      NotificationType.paymentFailed ||
+      NotificationType.alert =>
+        'warning-2',
+      NotificationType.newFeeAdded => 'add-circle',
+      NotificationType.announcement => 'message',
+      NotificationType.general => 'info-circle',
+    };
 
-    switch (type) {
-      case NotificationType.feeReminder:
-      case NotificationType.dueDateApproaching:
-        icon = 'notification';
-        bgColor = AppColors.cardOrange;
-        iconColor = AppColors.cardOrangeDark;
-        break;
-      case NotificationType.paymentSuccess:
-        icon = 'tick-circle';
-        bgColor = AppColors.cardGreen;
-        iconColor = AppColors.cardGreenDark;
-        break;
-      case NotificationType.paymentFailed:
-      case NotificationType.alert:
-        icon = 'warning-2';
-        bgColor = AppColors.cardRose;
-        iconColor = AppColors.cardRoseDark;
-        break;
-      case NotificationType.newFeeAdded:
-        icon = 'add-circle';
-        bgColor = AppColors.cardPurple;
-        iconColor = AppColors.cardPurpleDark;
-        break;
-      case NotificationType.announcement:
-        icon = 'message';
-        bgColor = AppColors.cardBlue;
-        iconColor = AppColors.cardBlueDark;
-        break;
-      case NotificationType.general:
-        icon = 'info-circle';
-        bgColor = AppColors.cardCyan;
-        iconColor = AppColors.cardCyanDark;
-        break;
-    }
-
+    // Per spec (color-usage.md): small 36 notification icon → navy bg, white SVG
     return Container(
       width: 36,
       height: 36,
-      decoration: BoxDecoration(
-        color: bgColor,
+      decoration: const BoxDecoration(
+        color: AppColors.primary,
         shape: BoxShape.circle,
       ),
-      child: Center(child: AppIcon(icon, size: 16, color: iconColor)),
+      child: Center(child: AppIcon(icon, size: 16, color: Colors.white)),
     );
   }
 

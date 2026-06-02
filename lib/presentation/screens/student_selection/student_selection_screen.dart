@@ -245,16 +245,12 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
         ),
         child: Row(
           children: [
-            // Avatar - Circular like profile page
+            // Avatar - Circular like profile page (amber per spec)
             Container(
               width: 48,
               height: 48,
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.primary, AppColors.primary600],
-                ),
+                color: AppColors.avatarBg,
                 shape: BoxShape.circle,
               ),
               clipBehavior: Clip.antiAlias,
@@ -418,14 +414,16 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: isEnabled ? const Color(0xFF121212) : AppColors.borderC(context),
+            color: isEnabled
+                ? AppColors.buttonPrimary
+                : AppColors.borderC(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: isEnabled
-                ? const [
+                ? [
                     BoxShadow(
-                      color: Color(0x30000000),
+                      color: AppColors.buttonPrimary.withValues(alpha: 0.4),
                       blurRadius: 16,
-                      offset: Offset(0, 8),
+                      offset: const Offset(0, 8),
                     ),
                   ]
                 : null,

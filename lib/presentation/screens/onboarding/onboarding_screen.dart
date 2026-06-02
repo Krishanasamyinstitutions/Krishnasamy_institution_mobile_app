@@ -167,7 +167,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     final currentData = _pages[_currentPage];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F5F9),
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           // Top illustration area — takes ~55% of screen
@@ -239,15 +239,23 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       // Pagination dots
                       _buildPaginationDots(),
                       const Spacer(flex: 1),
-                      // Full-width dark Next button
+                      // Full-width amber Next button
                       GestureDetector(
                         onTap: _nextPage,
                         child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(vertical: 18),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF121212),
+                            color: AppColors.buttonPrimary,
                             borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.buttonPrimary
+                                    .withValues(alpha: 0.35),
+                                blurRadius: 14,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
                           ),
                           child: Center(
                             child: Text(
@@ -491,11 +499,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.primary,
+          color: AppColors.buttonPrimary,
           borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.24),
+              color: AppColors.buttonPrimary.withValues(alpha: 0.24),
               blurRadius: 1,
               offset: Offset.zero,
             ),
@@ -539,11 +547,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFF121212),
+          color: AppColors.buttonPrimary,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.4),
+              color: AppColors.buttonPrimary.withValues(alpha: 0.4),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),

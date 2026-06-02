@@ -28,7 +28,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static const Color _cardBorder = Colors.transparent;
   static const Color _textDark = Color(0xFF1A1A1A);
   static const Color _textMedium = Color(0xFF6B6B6B);
-  static const Color _textLight = Color(0xFF9E9E9E);
+  static const Color _textLight = Color(0xFF6B6B6B);
   static const Color _divider = Color(0xFFD6F5E5);
   static const Color _iconBg = Color(0xFFF1F5F9);
 
@@ -197,7 +197,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary,
+              color: AppColors.avatarBg,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),
@@ -296,7 +296,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFF121212),
+          color: AppColors.secondary,
           shape: BoxShape.circle,
           boxShadow: const [
             BoxShadow(
@@ -675,26 +675,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required bool filled,
     required VoidCallback onTap,
   }) {
+    // Spec: filled = amber bg + white icon/label
+    //       outlined = white bg + amber 1.5px stroke + amber icon/label
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 13),
         decoration: BoxDecoration(
-          color: filled ? const Color(0xFF121212) : _cardBg,
+          color: filled ? AppColors.buttonPrimary : _cardBg,
           borderRadius: BorderRadius.circular(12),
-          border: filled ? null : Border.all(color: _cardBorder, width: 1.5),
+          border: filled
+              ? null
+              : Border.all(color: AppColors.secondary, width: 1.5),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AppIcon(iconName, size: 18, color: filled ? Colors.white : const Color(0xFF121212)),
+            AppIcon(
+              iconName,
+              size: 18,
+              color: filled ? Colors.white : AppColors.secondary,
+            ),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: filled ? Colors.white : const Color(0xFF121212),
+                color: filled ? Colors.white : AppColors.secondary,
               ),
             ),
           ],
@@ -1025,7 +1033,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               width: 200,
               height: 200,
               decoration: BoxDecoration(
-                color: photoUrl == null ? AppColors.primary : null,
+                color: photoUrl == null ? AppColors.avatarBg : null,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
@@ -1043,7 +1051,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       width: 200,
                       height: 200,
                       errorWidget: (context, url, error) => Container(
-                        color: AppColors.primary,
+                        color: AppColors.avatarBg,
                         child: Center(
                           child: Text(
                             _getInitials(name),

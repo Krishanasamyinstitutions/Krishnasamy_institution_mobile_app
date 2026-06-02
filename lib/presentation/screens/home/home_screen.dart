@@ -32,7 +32,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   static const Color _cardBg = Color(0xFFFFFFFF);
   static const Color _textDark = Color(0xFF1A1A1A);
   static const Color _textMedium = Color(0xFF6B6B6B);
-  static const Color _textLight = Color(0xFF9E9E9E);
+  static const Color _textLight = Color(0xFF6B6B6B);
 
   bool _birthdayChecked = false;
   bool _orphanSwept = false;
@@ -252,7 +252,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             height: 48,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: AppColors.primary,
+              color: AppColors.avatarBg,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),
@@ -330,7 +330,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: const Color(0xFF121212),
+          color: AppColors.secondary,
           shape: BoxShape.circle,
           boxShadow: const [
             BoxShadow(
@@ -398,13 +398,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.primary,
+        gradient: AppColors.brandGradient,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withValues(alpha: 0.4),
             blurRadius: 20,
-            offset: Offset(0, 8),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -669,7 +669,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         width: fixedWidth ? 160 : null,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: hasColoredBg ? primaryColor : AppColors.cardBg(context),
+          color: hasColoredBg ? null : AppColors.cardBg(context),
+          gradient: hasColoredBg ? AppColors.brandGradient : null,
           borderRadius: BorderRadius.circular(12),
           border: hasColoredBg
               ? null
@@ -680,7 +681,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           boxShadow: hasColoredBg
               ? [
                   BoxShadow(
-                    color: primaryColor.withValues(alpha: 0.3),
+                    color: AppColors.primary.withValues(alpha: 0.3),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -886,7 +887,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         width: 170,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.primary : _cardBg,
+          color: isDark ? null : _cardBg,
+          gradient: isDark ? AppColors.brandGradient : null,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
