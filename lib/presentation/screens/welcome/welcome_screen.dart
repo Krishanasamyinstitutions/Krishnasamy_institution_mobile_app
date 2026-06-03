@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/utils/extensions.dart';
 import '../../../config/routes.dart';
+import '../../widgets/common/app_action_button.dart';
 import '../../widgets/common/desktop_left_panel.dart';
 import '../../widgets/common/screen_illustrations.dart';
 
@@ -29,7 +30,14 @@ class WelcomeScreen extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(
             children: [
-              const SizedBox(height: 60),
+              const SizedBox(height: 40),
+                  // Brand logo
+                  Image.asset(
+                    'assets/images/educore360_logo.png',
+                    height: 96,
+                    fit: BoxFit.contain,
+                  ),
+                  const SizedBox(height: 24),
                   // Title
                   const Text(
                     'Welcome to\nSchoolPay',
@@ -178,89 +186,35 @@ class WelcomeScreen extends StatelessWidget {
 
   // ─── Shared widgets ────────────────────────────────────────────────
 
-  Widget _buildLogo(BuildContext context, double size) {
-    return ScreenIllustrations.welcome(size: size);
-  }
-
   Widget _buildSignInButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.push(Routes.signIn),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        decoration: BoxDecoration(
-          color: AppColors.buttonPrimary,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.buttonPrimary.withValues(alpha: 0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Sign In',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(width: 10),
-            SvgPicture.asset(
-              'assets/icons/linear/login.svg',
-              width: 20,
-              height: 20,
-              colorFilter:
-                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-            ),
-          ],
-        ),
+    return AppActionButton(
+      onPressed: () => context.push(Routes.signIn),
+      label: 'Sign In',
+      borderRadius: 16,
+      verticalPadding: 18,
+      trailing: SvgPicture.asset(
+        'assets/icons/linear/login.svg',
+        width: 20,
+        height: 20,
+        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
       ),
     );
   }
 
   Widget _buildCreateAccountButton(BuildContext context) {
-    final isMobile = !context.isDesktop;
-    return GestureDetector(
-      onTap: () => context.push(Routes.signUp),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: AppColors.secondary,
-            width: isMobile ? 1.5 : 2,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              'Create Account',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.secondary,
-              ),
-            ),
-            const SizedBox(width: 10),
-            SvgPicture.asset(
-              'assets/icons/linear/user-add.svg',
-              width: 20,
-              height: 20,
-              colorFilter: const ColorFilter.mode(
-                AppColors.secondary,
-                BlendMode.srcIn,
-              ),
-            ),
-          ],
+    return AppActionButton(
+      onPressed: () => context.push(Routes.signUp),
+      label: 'Create Account',
+      variant: AppActionButtonVariant.outlined,
+      borderRadius: 16,
+      verticalPadding: 18,
+      trailing: SvgPicture.asset(
+        'assets/icons/linear/user-add.svg',
+        width: 20,
+        height: 20,
+        colorFilter: const ColorFilter.mode(
+          AppColors.secondary,
+          BlendMode.srcIn,
         ),
       ),
     );

@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_sizes.dart';
 import '../../../config/routes.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/common/app_action_button.dart';
 import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/auth_desktop_wrapper.dart';
 import '../../widgets/common/screen_illustrations.dart';
@@ -448,49 +449,26 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Widget _buildGetOtpButton() {
-    return GestureDetector(
-      onTap: _isLoading ? null : _handleRequestOtp,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: AppColors.buttonPrimary,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.buttonPrimary.withValues(alpha: 0.4),
-              blurRadius: 16,
-              offset: const Offset(0, 8),
-            ),
-          ],
+    if (_isLoading) {
+      return AppActionButton(
+        onPressed: null,
+        label: 'Sending OTP...',
+        borderRadius: 16,
+        leading: const SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (_isLoading)
-              const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            else ...[
-              const Text(
-                'Get OTP',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 10),
-              const AppIcon('send', size: 22, color: Colors.white),
-            ],
-          ],
-        ),
-      ),
+      );
+    }
+    return AppActionButton(
+      onPressed: _handleRequestOtp,
+      label: 'Get OTP',
+      borderRadius: 16,
+      trailing: const AppIcon('send', size: 22, color: Colors.white),
     );
   }
 

@@ -95,51 +95,13 @@ class AppTheme {
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.s6,
-            vertical: AppSizes.s4,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.roundedLg),
-          ),
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: AppSizes.buttonText,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        style: _amberFilledButtonStyle(),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.s6,
-            vertical: AppSizes.s4,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.roundedLg),
-          ),
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: AppSizes.buttonText,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        style: _amberOutlinedButtonStyle(),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: AppSizes.buttonText,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        style: _amberTextButtonStyle(),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -289,51 +251,13 @@ class AppTheme {
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.s6,
-            vertical: AppSizes.s4,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.roundedLg),
-          ),
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: AppSizes.buttonText,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        style: _amberFilledButtonStyle(),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          side: const BorderSide(color: AppColors.primary),
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.s6,
-            vertical: AppSizes.s4,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.roundedLg),
-          ),
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: AppSizes.buttonText,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        style: _amberOutlinedButtonStyle(),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.primary,
-          textStyle: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: AppSizes.buttonText,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        style: _amberTextButtonStyle(),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -388,6 +312,183 @@ class AppTheme {
       ),
       dividerTheme: const DividerThemeData(
         color: _darkBorder,
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Button styles with full state handling
+  //
+  // Five states are supported via WidgetStateProperty:
+  //   default   — idle (no interaction)
+  //   hovered   — mouse pointer over the button (web / desktop only)
+  //   focused   — keyboard focus ring (web / desktop)
+  //   pressed   — finger / mouse down
+  //   disabled  — onPressed: null
+  //
+  // Color tokens used:
+  //   buttonPrimary       (#D2913C, amber base)
+  //   buttonPrimaryHover  (#B5752A, darker amber for hover / pressed)
+  //   gray300             (#D1D1DB, disabled fill)
+  // ──────────────────────────────────────────────────────────────────────────
+
+  static ButtonStyle _amberFilledButtonStyle() {
+    return ButtonStyle(
+      backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+        if (states.contains(WidgetState.disabled)) return AppColors.gray300;
+        if (states.contains(WidgetState.pressed)) {
+          return AppColors.buttonPrimaryHover;
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return AppColors.buttonPrimaryHover;
+        }
+        if (states.contains(WidgetState.focused)) {
+          return AppColors.buttonPrimaryHover;
+        }
+        return AppColors.buttonPrimary;
+      }),
+      foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return Colors.white.withValues(alpha: 0.7);
+        }
+        return Colors.white;
+      }),
+      overlayColor: WidgetStateProperty.resolveWith<Color>((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return Colors.black.withValues(alpha: 0.08);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return Colors.white.withValues(alpha: 0.08);
+        }
+        if (states.contains(WidgetState.focused)) {
+          return Colors.white.withValues(alpha: 0.12);
+        }
+        return Colors.transparent;
+      }),
+      elevation: WidgetStateProperty.resolveWith<double>((states) {
+        if (states.contains(WidgetState.disabled)) return 0;
+        if (states.contains(WidgetState.pressed)) return 1;
+        if (states.contains(WidgetState.hovered)) return 4;
+        return 0;
+      }),
+      mouseCursor: WidgetStateProperty.resolveWith<MouseCursor>((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return SystemMouseCursors.forbidden;
+        }
+        return SystemMouseCursors.click;
+      }),
+      padding: WidgetStateProperty.all(
+        const EdgeInsets.symmetric(
+          horizontal: AppSizes.s6,
+          vertical: AppSizes.s4,
+        ),
+      ),
+      shape: WidgetStateProperty.all(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.roundedLg),
+        ),
+      ),
+      textStyle: WidgetStateProperty.all(
+        const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: AppSizes.buttonText,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  static ButtonStyle _amberOutlinedButtonStyle() {
+    return ButtonStyle(
+      foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+        if (states.contains(WidgetState.disabled)) return AppColors.gray400;
+        if (states.contains(WidgetState.pressed)) {
+          return AppColors.buttonPrimaryHover;
+        }
+        return AppColors.buttonPrimary;
+      }),
+      backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+        if (states.contains(WidgetState.hovered)) {
+          return AppColors.buttonPrimary.withValues(alpha: 0.08);
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return AppColors.buttonPrimary.withValues(alpha: 0.12);
+        }
+        if (states.contains(WidgetState.focused)) {
+          return AppColors.buttonPrimary.withValues(alpha: 0.06);
+        }
+        return Colors.transparent;
+      }),
+      side: WidgetStateProperty.resolveWith<BorderSide>((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return const BorderSide(color: AppColors.gray300);
+        }
+        if (states.contains(WidgetState.pressed)) {
+          return const BorderSide(
+              color: AppColors.buttonPrimaryHover, width: 1.5);
+        }
+        return const BorderSide(color: AppColors.buttonPrimary, width: 1.5);
+      }),
+      mouseCursor: WidgetStateProperty.resolveWith<MouseCursor>((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return SystemMouseCursors.forbidden;
+        }
+        return SystemMouseCursors.click;
+      }),
+      padding: WidgetStateProperty.all(
+        const EdgeInsets.symmetric(
+          horizontal: AppSizes.s6,
+          vertical: AppSizes.s4,
+        ),
+      ),
+      shape: WidgetStateProperty.all(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.roundedLg),
+        ),
+      ),
+      textStyle: WidgetStateProperty.all(
+        const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: AppSizes.buttonText,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  static ButtonStyle _amberTextButtonStyle() {
+    return ButtonStyle(
+      foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+        if (states.contains(WidgetState.disabled)) return AppColors.gray400;
+        if (states.contains(WidgetState.pressed)) {
+          return AppColors.buttonPrimaryHover;
+        }
+        return AppColors.buttonPrimary;
+      }),
+      overlayColor: WidgetStateProperty.resolveWith<Color>((states) {
+        if (states.contains(WidgetState.pressed)) {
+          return AppColors.buttonPrimary.withValues(alpha: 0.12);
+        }
+        if (states.contains(WidgetState.hovered)) {
+          return AppColors.buttonPrimary.withValues(alpha: 0.08);
+        }
+        if (states.contains(WidgetState.focused)) {
+          return AppColors.buttonPrimary.withValues(alpha: 0.10);
+        }
+        return Colors.transparent;
+      }),
+      mouseCursor: WidgetStateProperty.resolveWith<MouseCursor>((states) {
+        if (states.contains(WidgetState.disabled)) {
+          return SystemMouseCursors.forbidden;
+        }
+        return SystemMouseCursors.click;
+      }),
+      textStyle: WidgetStateProperty.all(
+        const TextStyle(
+          fontFamily: 'Inter',
+          fontSize: AppSizes.buttonText,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

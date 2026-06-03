@@ -21,7 +21,9 @@ import '../../providers/notification_provider.dart';
 import '../../providers/payment_provider.dart';
 import '../../providers/student_provider.dart';
 import '../../../core/utils/extensions.dart';
+import '../../widgets/common/app_action_button.dart';
 import '../../widgets/common/app_icon.dart';
+import '../../widgets/common/app_icon_circle_button.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -218,33 +220,21 @@ class TransactionDetailsScreen extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Back Button
-          GestureDetector(
-            onTap: () {
+          // Back Button — amber circle + state handling
+          AppIconCircleButton(
+            onPressed: () {
               if (context.canPop()) {
                 context.pop();
               } else {
                 context.go(Routes.paymentHistory);
               }
             },
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.iconButtonBg(context),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.iconButtonBorder(context)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x26000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: SvgPicture.asset('assets/icons/arrow-left.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
-              ),
+            icon: SvgPicture.asset(
+              'assets/icons/arrow-left.svg',
+              width: 20,
+              height: 20,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
           ),
 
@@ -258,54 +248,16 @@ class TransactionDetailsScreen extends ConsumerWidget {
             ),
           ),
 
-          // Notification Icon - Dark theme with badge
-          GestureDetector(
-            onTap: () => context.go(Routes.notifications),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.iconButtonBg(context),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.iconButtonBorder(context)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x26000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  SvgPicture.asset('assets/main icons/line icons/notification.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
-                  if (notificationCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
-                        ),
-                        child: Text(
-                          notificationCount > 9 ? '9+' : '$notificationCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+          // Notification Icon — amber circle + badge + state handling
+          AppIconCircleButton(
+            onPressed: () => context.go(Routes.notifications),
+            badgeCount: notificationCount,
+            icon: SvgPicture.asset(
+              'assets/main icons/line icons/notification.svg',
+              width: 20,
+              height: 20,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
           ),
         ],
@@ -560,39 +512,22 @@ class TransactionDetailsScreen extends ConsumerWidget {
       children: [
         // Primary Button (Download for success, Retry for failed)
         Expanded(
-          child: GestureDetector(
-            onTap: () async {
+          child: AppActionButton(
+            onPressed: () async {
               if (isPaid) {
-                await _handleDownloadOrShare(context, ref, payment, isShare: false);
+                await _handleDownloadOrShare(context, ref, payment,
+                    isShare: false);
               } else {
                 await _handleRetryPayment(context, ref, payment);
               }
             },
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF121212),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  AppIcon(
-                    isPaid ? 'document-download' : 'refresh',
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    isPaid ? 'Download' : 'Retry',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
+            label: isPaid ? 'Download' : 'Retry',
+            borderRadius: 12,
+            verticalPadding: 14,
+            leading: AppIcon(
+              isPaid ? 'document-download' : 'refresh',
+              size: 24,
+              color: Colors.white,
             ),
           ),
         ),
@@ -953,7 +888,7 @@ class TransactionDetailsScreen extends ConsumerWidget {
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.buttonPrimary,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('OK'),
