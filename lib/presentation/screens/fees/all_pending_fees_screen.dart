@@ -12,7 +12,9 @@ import '../../providers/fee_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../widgets/common/app_action_button.dart';
 import '../../widgets/common/app_icon.dart';
+import '../../widgets/common/app_icon_circle_button.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -340,27 +342,15 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Row(
         children: [
-          // Back Button - Dark theme
-          GestureDetector(
-            onTap: () => context.go(Routes.home),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.iconButtonBg(context),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.iconButtonBorder(context)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x26000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: SvgPicture.asset('assets/icons/arrow-left.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
-              ),
+          // Back Button — amber circle + state handling
+          AppIconCircleButton(
+            onPressed: () => context.go(Routes.home),
+            icon: SvgPicture.asset(
+              'assets/icons/arrow-left.svg',
+              width: 20,
+              height: 20,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
           ),
 
@@ -383,54 +373,16 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
             const SizedBox(width: 12),
           ],
 
-          // Notification Button - Dark theme
-          GestureDetector(
-            onTap: () => context.go(Routes.notifications),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.iconButtonBg(context),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.iconButtonBorder(context)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x26000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  SvgPicture.asset('assets/main icons/line icons/notification.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
-                  if (notificationCount > 0)
-                    Positioned(
-                      top: -4,
-                      right: -4,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                        decoration: BoxDecoration(
-                          color: AppColors.error,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.iconButtonBg(context), width: 2),
-                        ),
-                        child: Text(
-                          notificationCount > 9 ? '9+' : '$notificationCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+          // Notification Button — amber circle + badge + state handling
+          AppIconCircleButton(
+            onPressed: () => context.go(Routes.notifications),
+            badgeCount: notificationCount,
+            icon: SvgPicture.asset(
+              'assets/main icons/line icons/notification.svg',
+              width: 20,
+              height: 20,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
           ),
         ],
@@ -2332,78 +2284,34 @@ class _AllPendingFeesScreenState extends ConsumerState<AllPendingFeesScreen> {
               ),
               // Button changes based on state
               if (_showCartPreview)
-                GestureDetector(
-                  onTap: () => context.push(Routes.cart),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.buttonPrimary,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'View List',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        AppIcon('arrow-right-1', size: 20, color: Colors.white),
-                      ],
-                    ),
+                AppActionButton(
+                  onPressed: () => context.push(Routes.cart),
+                  label: 'View List',
+                  borderRadius: 16,
+                  fullWidth: false,
+                  horizontalPadding: 28,
+                  trailing: const AppIcon(
+                    'arrow-right-1',
+                    size: 20,
+                    color: Colors.white,
                   ),
                 )
               else
-                GestureDetector(
-                  onTap: (selectedAmount > 0 && !hasTermOutOfOrder)
+                AppActionButton(
+                  onPressed: (selectedAmount > 0 && !hasTermOutOfOrder)
                       ? () {
                           _addSelectedFeesToCart(filteredFees);
                           setState(() => _showCartPreview = true);
                         }
                       : null,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: (selectedAmount > 0 && !hasTermOutOfOrder)
-                          ? const Color(0xFF121212)
-                          : const Color(0xFF121212).withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: (selectedAmount > 0 && !hasTermOutOfOrder)
-                          ? [
-                              BoxShadow(
-                                color: AppColors.primary.withValues(alpha: 0.4),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ]
-                          : [],
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const AppIcon('shopping-cart', size: 20, color: Colors.white),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Add to Queue',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
+                  label: 'Add to Queue',
+                  borderRadius: 16,
+                  fullWidth: false,
+                  horizontalPadding: 28,
+                  leading: const AppIcon(
+                    'shopping-cart',
+                    size: 20,
+                    color: Colors.white,
                   ),
                 ),
             ],

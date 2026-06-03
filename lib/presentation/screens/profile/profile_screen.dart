@@ -12,7 +12,9 @@ import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/institution_provider.dart';
+import '../../widgets/common/app_action_button.dart';
 import '../../widgets/common/app_icon.dart';
+import '../../widgets/common/app_icon_circle_button.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -290,51 +292,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required int badgeCount,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.secondary,
-          shape: BoxShape.circle,
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x26000000),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            svgPath != null
-                ? SvgPicture.asset(svgPath, width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))
-                : Icon(icon, size: 20, color: Colors.white),
-            if (badgeCount > 0)
-              Positioned(
-                top: -3,
-                right: -3,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.error,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                  child: Text(
-                    badgeCount > 9 ? '9+' : '$badgeCount',
-                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+    return AppIconCircleButton(
+      onPressed: onTap,
+      badgeCount: badgeCount,
+      icon: svgPath != null
+          ? SvgPicture.asset(
+              svgPath,
+              width: 20,
+              height: 20,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            )
+          : Icon(icon, size: 20, color: Colors.white),
     );
   }
 
@@ -677,63 +646,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }) {
     // Spec: filled = amber bg + white icon/label
     //       outlined = white bg + amber 1.5px stroke + amber icon/label
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-          color: filled ? AppColors.buttonPrimary : _cardBg,
-          borderRadius: BorderRadius.circular(12),
-          border: filled
-              ? null
-              : Border.all(color: AppColors.secondary, width: 1.5),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AppIcon(
-              iconName,
-              size: 18,
-              color: filled ? Colors.white : AppColors.secondary,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: filled ? Colors.white : AppColors.secondary,
-              ),
-            ),
-          ],
-        ),
+    return AppActionButton(
+      onPressed: onTap,
+      label: label,
+      variant: filled
+          ? AppActionButtonVariant.filled
+          : AppActionButtonVariant.outlined,
+      borderRadius: 12,
+      verticalPadding: 13,
+      horizontalPadding: 12,
+      leading: AppIcon(
+        iconName,
+        size: 18,
+        color: filled ? Colors.white : AppColors.secondary,
       ),
+      textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
     );
   }
 
   Widget _buildSignOutButton() {
-    return GestureDetector(
-      onTap: () => _showLogoutDialog(context),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 15),
-        decoration: BoxDecoration(
-          color: _cardBg,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _cardBorder),
-        ),
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AppIcon('logout', size: 18, color: _textMedium),
-            SizedBox(width: 8),
-            Text(
-              'Sign Out',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _textMedium),
-            ),
-          ],
-        ),
-      ),
+    return AppActionButton(
+      onPressed: () => _showLogoutDialog(context),
+      label: 'Sign Out',
+      variant: AppActionButtonVariant.outlined,
+      backgroundColor: _textMedium, // gray border + gray label
+      borderRadius: 14,
+      verticalPadding: 15,
+      showShadow: false,
+      leading: const AppIcon('logout', size: 18, color: _textMedium),
+      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
     );
   }
 
@@ -806,30 +747,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF121212),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AppIcon(iconName, size: 20, color: Colors.white),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
+    return AppActionButton(
+      onPressed: onTap,
+      label: label,
+      leading: AppIcon(iconName, size: 20, color: Colors.white),
+      textStyle: const TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
       ),
     );
   }

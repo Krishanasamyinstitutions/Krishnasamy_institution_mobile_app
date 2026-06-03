@@ -9,7 +9,9 @@ import '../../../config/routes.dart';
 import '../../../data/models/student_model.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/institution_provider.dart';
+import '../../widgets/common/app_action_button.dart';
 import '../../widgets/common/app_icon.dart';
+import '../../widgets/common/app_icon_circle_button.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -70,36 +72,22 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
       child: Row(
         children: [
           if (!context.isDesktop)
-            GestureDetector(
-              onTap: () {
-                if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                } else {
-                  context.go(Routes.profile);
-                }
-              },
-              child: Container(
-                width: 44,
-                height: 44,
-                margin: const EdgeInsets.only(right: 14),
-                decoration: const BoxDecoration(
-                  color: AppColors.secondary,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x26000000),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: SvgPicture.asset(
-                    'assets/icons/arrow-left.svg',
-                    width: 18,
-                    height: 18,
-                    colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-                  ),
+            Padding(
+              padding: const EdgeInsets.only(right: 14),
+              child: AppIconCircleButton(
+                onPressed: () {
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  } else {
+                    context.go(Routes.profile);
+                  }
+                },
+                icon: SvgPicture.asset(
+                  'assets/icons/arrow-left.svg',
+                  width: 18,
+                  height: 18,
+                  colorFilter: const ColorFilter.mode(
+                      Colors.white, BlendMode.srcIn),
                 ),
               ),
             ),
@@ -389,48 +377,14 @@ class _SwitchStudentScreenState extends ConsumerState<SwitchStudentScreen> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: GestureDetector(
-        onTap: isNewSelection ? _handleSwitch : null,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: isNewSelection
-                ? AppColors.buttonPrimary
-                : AppColors.borderC(context),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: isNewSelection
-                ? [
-                    BoxShadow(
-                      color: AppColors.buttonPrimary.withValues(alpha: 0.4),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                isNewSelection ? 'Switch Student' : 'Select a Different Student',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: isNewSelection ? Colors.white : AppColors.textHintC(context),
-                ),
-              ),
-              if (isNewSelection) ...[
-                const SizedBox(width: 10),
-                const AppIcon(
-                  'arrow-swap-horizontal',
-                  size: 22,
-                  color: Colors.white,
-                ),
-              ],
-            ],
-          ),
-        ),
+      child: AppActionButton(
+        onPressed: isNewSelection ? _handleSwitch : null,
+        label: isNewSelection ? 'Switch Student' : 'Select a Different Student',
+        borderRadius: 16,
+        trailing: isNewSelection
+            ? const AppIcon('arrow-swap-horizontal',
+                size: 22, color: Colors.white)
+            : null,
       ),
     );
   }
