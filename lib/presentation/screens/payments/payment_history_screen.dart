@@ -13,6 +13,7 @@ import '../../providers/student_provider.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/common/app_icon.dart';
+import '../../widgets/common/app_icon_circle_button.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
   final String? initialTab;
@@ -438,51 +439,18 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
     required int badgeCount,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: AppColors.secondary,
-          shape: BoxShape.circle,
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x26000000),
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            svgPath != null
-                ? SvgPicture.asset(svgPath, width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn))
-                : Icon(icon, size: 20, color: Colors.white),
-            if (badgeCount > 0)
-              Positioned(
-                top: -3,
-                right: -3,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                  decoration: BoxDecoration(
-                    color: AppColors.error,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5),
-                  ),
-                  child: Text(
-                    badgeCount > 9 ? '9+' : '$badgeCount',
-                    style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+    return AppIconCircleButton(
+      onPressed: onTap,
+      badgeCount: badgeCount,
+      icon: svgPath != null
+          ? SvgPicture.asset(
+              svgPath,
+              width: 20,
+              height: 20,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+            )
+          : Icon(icon, size: 20, color: Colors.white),
     );
   }
 

@@ -7,6 +7,7 @@ import '../../../config/routes.dart';
 import '../../../data/models/student_model.dart';
 import '../../providers/student_provider.dart';
 import '../../providers/institution_provider.dart';
+import '../../widgets/common/app_action_button.dart';
 import '../../widgets/common/app_icon.dart';
 import '../../widgets/common/auth_desktop_wrapper.dart';
 import '../../widgets/common/screen_illustrations.dart';
@@ -397,57 +398,23 @@ class _StudentSelectionScreenState extends ConsumerState<StudentSelectionScreen>
 
   Widget _buildContinueButton() {
     final isEnabled = _selectedStudentIndex != null;
-
-    return GestureDetector(
-        onTap: isEnabled
-            ? () async {
-                final studentsAsync = ref.read(studentsByParentProvider);
-                final students = studentsAsync.valueOrNull;
-                if (students != null && _selectedStudentIndex != null) {
-                  final selectedStudent = students[_selectedStudentIndex!];
-                  await ref.read(selectedStudentProvider.notifier).selectStudent(selectedStudent);
-                }
-                if (mounted) context.go(Routes.home);
+    return AppActionButton(
+      onPressed: isEnabled
+          ? () async {
+              final studentsAsync = ref.read(studentsByParentProvider);
+              final students = studentsAsync.valueOrNull;
+              if (students != null && _selectedStudentIndex != null) {
+                final selectedStudent = students[_selectedStudentIndex!];
+                await ref
+                    .read(selectedStudentProvider.notifier)
+                    .selectStudent(selectedStudent);
               }
-            : null,
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: isEnabled
-                ? AppColors.buttonPrimary
-                : AppColors.borderC(context),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: isEnabled
-                ? [
-                    BoxShadow(
-                      color: AppColors.buttonPrimary.withValues(alpha: 0.4),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Continue',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: isEnabled ? Colors.white : AppColors.textHintC(context),
-                ),
-              ),
-              const SizedBox(width: 8),
-              AppIcon(
-                'arrow-right-1',
-                size: 20,
-                color: isEnabled ? Colors.white : AppColors.textHintC(context),
-              ),
-            ],
-          ),
-        ),
+              if (mounted) context.go(Routes.home);
+            }
+          : null,
+      label: 'Continue',
+      borderRadius: 16,
+      trailing: const AppIcon('arrow-right-1', size: 20, color: Colors.white),
     );
   }
 }

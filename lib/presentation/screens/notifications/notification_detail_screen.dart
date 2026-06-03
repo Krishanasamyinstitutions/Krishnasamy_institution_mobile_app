@@ -12,7 +12,9 @@ import '../../../core/services/supabase_service.dart';
 import '../../providers/cart_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/student_provider.dart';
+import '../../widgets/common/app_action_button.dart';
 import '../../widgets/common/app_icon.dart';
+import '../../widgets/common/app_icon_circle_button.dart';
 import '../../widgets/common/breadcrumb_bar.dart';
 import '../../widgets/common/desktop_detail_scaffold.dart';
 
@@ -265,27 +267,15 @@ class _NotificationDetailScreenState
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          // Back Button - Dark theme
-          GestureDetector(
-            onTap: () => context.pop(),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppColors.iconButtonBg(context),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.iconButtonBorder(context)),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x26000000),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: SvgPicture.asset('assets/icons/arrow-left.svg', width: 20, height: 20, colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn)),
-              ),
+          // Back Button — amber circle + state handling
+          AppIconCircleButton(
+            onPressed: () => context.pop(),
+            icon: SvgPicture.asset(
+              'assets/icons/arrow-left.svg',
+              width: 20,
+              height: 20,
+              colorFilter:
+                  const ColorFilter.mode(Colors.white, BlendMode.srcIn),
             ),
           ),
           // Title
@@ -361,17 +351,16 @@ class _NotificationDetailScreenState
     switch (type) {
       case NotificationType.feeReminder:
       case NotificationType.dueDateApproaching:
-        return const Color(0xFFFFF8E1);
+        return AppColors.cardYellow; // #FFFBE6
       case NotificationType.paymentSuccess:
-        return const Color(0xFFE8F5E9);
+        return AppColors.cardGreen; // #E6F9F0
       case NotificationType.paymentFailed:
-        return const Color(0xFFFFEBEE);
       case NotificationType.alert:
-        return const Color(0xFFFFEBEE);
+        return AppColors.cardRose; // #FFF1F2
       case NotificationType.announcement:
-        return const Color(0xFFE3F2FD);
+        return AppColors.cardBlue; // #E8F4FD
       default:
-        return const Color(0xFFF5F5F5);
+        return AppColors.gray100;
     }
   }
 
@@ -384,33 +373,33 @@ class _NotificationDetailScreenState
       case NotificationType.feeReminder:
       case NotificationType.dueDateApproaching:
         icon = 'notification';
-        bgColor = const Color(0xFFFEF3C7);
-        iconColor = const Color(0xFFF59E0B);
+        bgColor = AppColors.warningLight;
+        iconColor = AppColors.warningDark;
         break;
       case NotificationType.paymentSuccess:
         icon = 'tick-circle';
-        bgColor = const Color(0xFFD1FAE5);
-        iconColor = const Color(0xFF10B981);
+        bgColor = AppColors.successLight;
+        iconColor = AppColors.successDark;
         break;
       case NotificationType.paymentFailed:
         icon = 'close-circle';
-        bgColor = const Color(0xFFFEE2E2);
-        iconColor = const Color(0xFFEF4444);
+        bgColor = AppColors.errorLight;
+        iconColor = AppColors.errorDark;
         break;
       case NotificationType.alert:
         icon = 'warning-2';
-        bgColor = const Color(0xFFFEE2E2);
-        iconColor = const Color(0xFFEF4444);
+        bgColor = AppColors.errorLight;
+        iconColor = AppColors.errorDark;
         break;
       case NotificationType.announcement:
         icon = 'message';
-        bgColor = const Color(0xFFDBEAFE);
-        iconColor = const Color(0xFF3B82F6);
+        bgColor = AppColors.infoLight;
+        iconColor = AppColors.infoDark;
         break;
       default:
         icon = 'notification';
-        bgColor = const Color(0xFFF3F4F6);
-        iconColor = const Color(0xFF6B7280);
+        bgColor = AppColors.gray100;
+        iconColor = AppColors.gray500;
     }
 
     return Container(
@@ -439,33 +428,33 @@ class _NotificationDetailScreenState
       case NotificationType.feeReminder:
       case NotificationType.dueDateApproaching:
         label = 'Fee Reminder';
-        bgColor = const Color(0xFFFEF3C7);
-        textColor = const Color(0xFFB45309);
+        bgColor = AppColors.warningLight;
+        textColor = AppColors.warningDark;
         break;
       case NotificationType.paymentSuccess:
         label = 'Payment Success';
-        bgColor = const Color(0xFFD1FAE5);
-        textColor = const Color(0xFF047857);
+        bgColor = AppColors.successLight;
+        textColor = AppColors.successDark;
         break;
       case NotificationType.paymentFailed:
         label = 'Payment Failed';
-        bgColor = const Color(0xFFFEE2E2);
-        textColor = const Color(0xFFDC2626);
+        bgColor = AppColors.errorLight;
+        textColor = AppColors.errorDark;
         break;
       case NotificationType.alert:
         label = 'Alert';
-        bgColor = const Color(0xFFFEE2E2);
-        textColor = const Color(0xFFDC2626);
+        bgColor = AppColors.errorLight;
+        textColor = AppColors.errorDark;
         break;
       case NotificationType.announcement:
         label = 'Announcement';
-        bgColor = const Color(0xFFDBEAFE);
-        textColor = const Color(0xFF1D4ED8);
+        bgColor = AppColors.infoLight;
+        textColor = AppColors.infoDark;
         break;
       default:
         label = 'Notification';
-        bgColor = const Color(0xFFF3F4F6);
-        textColor = const Color(0xFF4B5563);
+        bgColor = AppColors.gray100;
+        textColor = AppColors.gray600;
     }
 
     return Container(
@@ -572,7 +561,7 @@ class _NotificationDetailScreenState
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF121212),
+                  backgroundColor: AppColors.buttonPrimary,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('OK'),
@@ -665,7 +654,7 @@ class _NotificationDetailScreenState
               ElevatedButton(
                 onPressed: () => Navigator.pop(context),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF121212),
+                  backgroundColor: AppColors.buttonPrimary,
                   foregroundColor: Colors.white,
                 ),
                 child: const Text('OK'),
@@ -721,7 +710,20 @@ class _NotificationDetailScreenState
             );
         break;
       case NotificationType.paymentSuccess:
-        return const SizedBox.shrink();
+        // Navigate to transaction details for the successful payment.
+        // `payId` is the int id of the payment row.
+        if (payId == null) return const SizedBox.shrink();
+        return AppActionButton(
+          onPressed: () =>
+              context.push('${Routes.transactionDetails}/$payId'),
+          label: 'View Transaction',
+          borderRadius: 16,
+          trailing: const AppIcon(
+            'arrow-right-1',
+            size: 20,
+            color: Colors.white,
+          ),
+        );
       case NotificationType.paymentFailed:
         buttonText = 'Retry Payment';
         buttonIcon = 'refresh';
